@@ -107,12 +107,12 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
     - Include evidence: source_ip, syn_packet_count, time_window_seconds, destination_ips, sample_timestamps (≤5)
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
-  - [ ] 9.3 Write unit tests for SynFloodRule
+  - [x] 9.3 Write unit tests for SynFloodRule
     - Test threshold boundary, severity tiers, confidence formula, evidence fields, cooldown behavior
     - File: `tests/test_syn_flood.py`
     - _Requirements: 4.1–4.7_
 
-  - [ ] 9.4 Write property tests for SYN Flood (Properties 4–7)
+  - [x] 9.4 Write property tests for SYN Flood (Properties 4–7)
     - **Property 4:** count ≥ threshold → ThreatEvent emitted with correct attack_type
     - **Property 5:** Severity tiers for Medium/High/Critical
     - **Property 6:** Confidence formula result always in [0, 100]
@@ -128,12 +128,12 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
     - Include evidence: source_ip, scanned_ports, unique_port_count, time_window_seconds, confidence_score
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
 
-  - [ ] 9.6 Write unit tests for PortScanRule
+  - [x] 9.6 Write unit tests for PortScanRule
     - Test threshold boundary, severity tiers, confidence formula, evidence, cooldown
     - File: `tests/test_port_scan.py`
     - _Requirements: 5.1–5.6_
 
-  - [ ] 9.7 Write property tests for Port Scan (Properties 8–11)
+  - [x] 9.7 Write property tests for Port Scan (Properties 8–11)
     - **Property 8:** unique_count ≥ threshold → ThreatEvent with "Port Scan" and "PORT_SCAN_001"
     - **Property 9:** Severity tiers for Medium/High/Critical
     - **Property 10:** Confidence formula always in [0, 100]
@@ -149,7 +149,7 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
     - Include evidence: source_ip, destination_ip, http_method, request_url, matched_pattern
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-  - [ ] 9.9 Write unit tests for SqlInjectionRule
+  - [x] 9.9 Write unit tests for SqlInjectionRule
     - Test each pattern (case-insensitive), severity escalation on repeated IP, confidence=100, evidence fields
     - File: `tests/test_sql_injection.py`
     - _Requirements: 6.1–6.6_

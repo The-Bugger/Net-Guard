@@ -13,6 +13,7 @@ Tests cover Requirements 5.1–5.6:
 from __future__ import annotations
 
 import time
+from datetime import datetime, timezone
 
 import pytest
 
@@ -24,6 +25,11 @@ from detection.rules.port_scan import PortScanRule, _scan_confidence, _scan_seve
 # Helper factory
 # ---------------------------------------------------------------------------
 
+def _now_ts() -> str:
+    """Return the current UTC time as an ISO-8601 timestamp string."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def make_tcp_packet(src_ip: str, dst_port: int, dst_ip: str = "10.0.0.1") -> Packet:
     """Build a minimal TCP SYN packet for port scan testing."""
     return Packet(
@@ -33,7 +39,23 @@ def make_tcp_packet(src_ip: str, dst_port: int, dst_ip: str = "10.0.0.1") -> Pac
         dst_port=dst_port,
         protocol="TCP",
         flags="S",
-        timestamp="2024-01-01T00:00:00Z",
+        timestamp=_now_ts(),
+        length=60,
+        payload=None,
+    )
+
+
+# Alias matching the task's factory name
+def make_tcp(src: str = "1.2.3.4", dst_port: int = 80, dst: str = "10.0.0.1") -> Packet:
+    """Alias factory used in task specification."""
+    return Packet(
+        src_ip=src,
+        dst_ip=dst,
+        src_port=5000,
+        dst_port=dst_port,
+        protocol="TCP",
+        flags="S",
+        timestamp=_now_ts(),
         length=60,
         payload=None,
     )
@@ -48,7 +70,7 @@ def make_udp_packet(src_ip: str, dst_port: int, dst_ip: str = "10.0.0.1") -> Pac
         dst_port=dst_port,
         protocol="UDP",
         flags=None,
-        timestamp="2024-01-01T00:00:00Z",
+        timestamp=_now_ts(),
         length=40,
         payload=None,
     )
@@ -63,7 +85,7 @@ def make_icmp_packet(src_ip: str = "192.168.1.1") -> Packet:
         dst_port=None,
         protocol="ICMP",
         flags=None,
-        timestamp="2024-01-01T00:00:00Z",
+        timestamp=_now_ts(),
         length=28,
         payload=None,
     )
@@ -78,7 +100,7 @@ def make_arp_packet(src_ip: str = "192.168.1.1") -> Packet:
         dst_port=None,
         protocol="ARP",
         flags=None,
-        timestamp="2024-01-01T00:00:00Z",
+        timestamp=_now_ts(),
         length=42,
         payload=None,
     )

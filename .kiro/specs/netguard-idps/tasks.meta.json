@@ -1,1480 +1,345 @@
 {
-  "pbtResults": {
-    "2.2 Write property test for ConfigurationManager (Property 1)": {
-      "status": "passed",
-      "lastRunTimestamp": 1785238928747
-    },
-    "7.3 Write property tests for Packet_Decoder (Properties 2–3)": {
-      "status": "passed",
-      "lastRunTimestamp": 1785240707773
-    },
-    "3.3 Write property tests for database constraints (Properties 39–40)": {
-      "status": "passed",
-      "lastRunTimestamp": 1785242616051
-    }
-  },
+  "pbtResults": {},
   "executionHistory": {
-    "2.2 Write property test for ConfigurationManager (Property 1)": [
+    "25.1 Create `frontend/index.html` — main dashboard HTML skeleton with four KPI card slots, traffic rate chart canvas, severity doughnut chart canvas, threat timeline table, evidence panel div, active blocks panel, whitelist panel, SocketIO script tag, Chart.js script tag": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235157739
+        "timestamp": 1785251122672
       },
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785236885354
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785238953135
-      }
-    ],
-    "3.2 Create `database/init_db.py` with `initialize_db()` function that creates all tables on first startup if `database/netguard.db` does not exist": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235161416
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785236894029
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785238961541
-      }
-    ],
-    "3.3 Write property tests for database constraints (Properties 39–40)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235162528
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785238985810
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241596724
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241800580
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243279336
-      }
-    ],
-    "4. Implement logging system": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235163229
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785236901732
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785238969292
-      }
-    ],
-    "5. Create utility modules": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235164345
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235279944
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785236868041
-      }
-    ],
-    "6. Checkpoint — Phase 1 complete": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235165285
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241597183
-      }
-    ],
-    "7.1 Create `detection/parsers/packet_decoder.py` with `Packet` dataclass (src_ip, dst_ip, src_port, dst_port, protocol, flags, timestamp, length, payload) and `PacketDecoder` class with `decode()` method": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235166269
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785236910481
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785238977512
-      }
-    ],
-    "7.2 Write unit tests for PacketDecoder": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235166939
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785238993832
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241597733
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241801322
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243282764
-      }
-    ],
-    "7.3 Write property tests for Packet_Decoder (Properties 2–3)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235167617
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785239002399
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241598453
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241802035
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243283979
-      }
-    ],
-    "8.1 Create `detection/capture/sniffer.py` with `CaptureEngine` class implementing `start(interface)`, `stop()`, `_capture_loop()`, `_on_packet(raw_pkt)` methods": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235168280
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785239010189
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241598854
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241804177
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243286338
-      }
-    ],
-    "9.1 Create `detection/rules/base_rule.py` with abstract `BaseRule` class defining `initialize()`, `process_packet()`, `evaluate()`, `generate_event()`, `explain()`, `cleanup()` abstract methods; define `FlowData` dataclass with timestamps deque, ports set, macs dict": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235169005
-      },
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785239017509
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241599204
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241804792
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243286731
-      }
-    ],
-    "9.2 Create `detection/rules/syn_flood.py` — `SynFloodRule`": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235169930
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241599543
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243297318
-      },
-      {
-        "executionId": "1c76a5f6-4ba4-41cc-ad7b-b8a5f522a5f2",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243548654
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244617678
-      }
-    ],
-    "9.3 Write unit tests for SynFloodRule": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235170620
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241599898
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244680854
-      }
-    ],
-    "9.4 Write property tests for SYN Flood (Properties 4–7)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235171353
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241600724
-      }
-    ],
-    "9.5 Create `detection/rules/port_scan.py` — `PortScanRule`": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235172037
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241601372
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243300627
-      },
-      {
-        "executionId": "1c76a5f6-4ba4-41cc-ad7b-b8a5f522a5f2",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243549259
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244619575
-      }
-    ],
-    "9.6 Write unit tests for PortScanRule": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235172744
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241601804
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244681945
-      }
-    ],
-    "9.7 Write property tests for Port Scan (Properties 8–11)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235173690
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241602186
-      }
-    ],
-    "9.8 Create `detection/rules/sql_injection.py` — `SqlInjectionRule`": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235174786
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241602545
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243301909
-      },
-      {
-        "executionId": "1c76a5f6-4ba4-41cc-ad7b-b8a5f522a5f2",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243552081
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244623148
-      }
-    ],
-    "9.9 Write unit tests for SqlInjectionRule": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235175444
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241602904
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244682277
-      }
-    ],
-    "9.10 Write property tests for SQL Injection (Properties 12–14)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235176180
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241603285
-      }
-    ],
-    "9.11 Create `detection/rules/brute_force.py` — `BruteForceRule`": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235176853
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241603649
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243303682
-      },
-      {
-        "executionId": "1c76a5f6-4ba4-41cc-ad7b-b8a5f522a5f2",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243554614
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244625693
-      }
-    ],
-    "9.12 Write unit tests for BruteForceRule": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235177554
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241603986
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244683907
-      }
-    ],
-    "9.13 Write property tests for Brute Force (Properties 15–18)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235178207
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241604439
-      }
-    ],
-    "9.14 Create `detection/rules/arp_spoof.py` — `ArpSpoofRule`": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235178931
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241604786
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243316350
-      },
-      {
-        "executionId": "1c76a5f6-4ba4-41cc-ad7b-b8a5f522a5f2",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243557529
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244626182
-      }
-    ],
-    "9.15 Write unit tests for ArpSpoofRule": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235179612
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241605135
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244684347
-      }
-    ],
-    "9.16 Write property tests for ARP Spoofing (Properties 19–22)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235180390
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241605508
-      }
-    ],
-    "10.1 Create `backend/services/detection_service.py` with `DetectionEngine` class implementing `start()`, `stop()`, `_detection_loop()`, `_dispatch()`, `reload_rules()` methods": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235181358
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241605937
-      }
-    ],
-    "10.2 Write property tests for Detection_Engine general rules (Properties 23–25)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235182081
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241606305
-      }
-    ],
-    "10.3 Write unit tests for threading behavior": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235182786
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241606872
-      }
-    ],
-    "11.1 Create `backend/services/explain_service.py` with `ExplainabilityEngine` class implementing `explain()`, `_build_text()`, `_get_recommendation()`, `_fallback_explanation()` methods": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235183608
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241607558
-      }
-    ],
-    "11.2 Write unit tests for ExplainabilityEngine": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235184324
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241607999
-      }
-    ],
-    "11.3 Write property tests for Explainability_Engine (Properties 26–30)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235185054
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241608614
-      }
-    ],
-    "12. Checkpoint — Phase 2 complete": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235185798
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241609009
-      }
-    ],
-    "13.1 Create `backend/repositories/event_repository.py` with CRUD methods for `events` table: `insert(event)`, `get_by_id(event_id)`, `get_all(filters)` using SQLAlchemy ORM; use parameterized queries only": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235186586
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241609352
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244661137
-      }
-    ],
-    "13.2 Create `backend/repositories/block_repository.py` with CRUD for `blocked_ips` table: `insert(record)`, `get_active(ip)`, `get_all_active()`, `set_inactive(ip)`, `extend_expiry(ip, new_expires_at)`, `get_expired()`": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235187486
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241609702
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244664669
-      }
-    ],
-    "13.3 Create `backend/repositories/whitelist_repository.py` with CRUD for `whitelist` table: `insert(entry)`, `delete(ip)`, `get_all()`, `exists(ip)` within single DB transactions": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235188374
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241610081
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244666455
-      }
-    ],
-    "13.4 Create `backend/repositories/log_repository.py` with `insert(log_entry)` for `system_logs` table; complete each insert in under 20 ms": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235189309
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241610466
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244666862
-      }
-    ],
-    "13.5 Create `backend/repositories/settings_repository.py` with `get(key)`, `set(key, value)`, `get_all()` for `settings` table": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235190233
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241610843
-      },
-      {
-        "executionId": "dd211327-ac39-4953-bf7e-237137115e04",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785244668039
-      }
-    ],
-    "13.6 Write unit tests for database schema and repositories": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235191028
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241611197
-      }
-    ],
-    "14.1 Create `backend/services/whitelist_service.py` with `WhitelistManager` implementing `is_whitelisted(ip)` (O(1) in-memory set lookup), `add(ip, description, created_by)`, `remove(ip)`, `get_all()`, `_sync_from_db()` methods": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235191851
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241611574
-      }
-    ],
-    "14.3 Write property tests for Whitelist (Properties 31, 35–36)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235192757
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241611968
-      }
-    ],
-    "15.1 Create `backend/services/prevention_service.py` with `PreventionEngine` implementing `handle_event(event, explanation)`, `block_ip(ip, reason, event_id)`, `unblock_ip(ip)`, `_run_iptables(cmd)`, `verify_privileges()` methods": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235193571
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241612356
-      }
-    ],
-    "15.2 Write unit tests for PreventionEngine": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235194418
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241612764
-      }
-    ],
-    "15.3 Write property tests for Prevention_Engine (Properties 32–34)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235195272
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241613129
-      }
-    ],
-    "16. Implement Expiry_Thread": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235196120
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241613526
-      }
-    ],
-    "17. Checkpoint — Phase 3 complete": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235197003
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241613912
-      }
-    ],
-    "18.1 Create `backend/api/__init__.py` with Flask app factory `create_app()`, Flask-SocketIO initialization with eventlet backend, eventlet monkey-patch applied before any other imports; register all blueprints": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235197869
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241614313
-      }
-    ],
-    "18.2 Create `backend/services/monitor_service.py` with `MonitorService` that coordinates `CaptureEngine.start(interface)` / `stop()`, validates interface against OS list, manages shared `MonitoringState`, emits `monitoring_status` SocketIO events": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235198757
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241614693
-      }
-    ],
-    "18.3 Create `backend/services/stats_service.py` with `StatsService` that aggregates detection counts by attack_type, severity, rule, packets-per-second, active threats, alerts today from DB + in-memory counters": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235199656
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241615046
-      }
-    ],
-    "19.1 Create `backend/routes/health_routes.py` — `GET /api/v1/health` returns `{\"status\":\"ok\"}`, `GET /api/v1/status` returns monitoring status, uptime, thread states; delegate to MonitorService": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235200549
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241615397
-      }
-    ],
-    "19.2 Create `backend/routes/monitor_routes.py` — `POST /api/v1/monitor/start`, `POST /api/v1/monitor/stop`, `GET /api/v1/monitor/interfaces`; delegate to MonitorService; validate interface name": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235201522
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241616119
-      }
-    ],
-    "19.3 Create `backend/routes/detection_routes.py` — `GET /api/v1/detections` with filters (severity, attack_type, source_ip, date), `GET /api/v1/detections/{event_id}`, `POST /api/v1/detect`; delegate to EventRepository/DetectionEngine": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235202479
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241616475
-      }
-    ],
-    "19.4 Create `backend/routes/block_routes.py` — `POST /api/v1/block`, `POST /api/v1/unblock`, `GET /api/v1/blocked`; delegate to PreventionEngine/BlockRepository; validate IP": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235203452
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241616872
-      }
-    ],
-    "19.5 Create `backend/routes/whitelist_routes.py` — `GET /api/v1/whitelist`, `POST /api/v1/whitelist`, `DELETE /api/v1/whitelist/{ip}`; delegate to WhitelistManager; validate IP": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235204522
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241617219
-      }
-    ],
-    "19.6 Create `backend/routes/dashboard_routes.py` — `GET /api/v1/dashboard` (full snapshot: KPIs + recent 20 events + active blocks + whitelist), `GET /api/v1/dashboard/live` (lightweight: packets/s, active_threats, alerts_today); delegate to StatsService": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235205529
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241617573
-      }
-    ],
-    "19.7 Create `backend/routes/stats_routes.py` — `GET /api/v1/statistics`, `GET /api/v1/statistics/rules`; delegate to StatsService": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235206530
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241617943
-      }
-    ],
-    "19.8 Create `backend/routes/evidence_routes.py` — `GET /api/v1/evidence/{event_id}` returns full Explanation for event; delegate to EventRepository + ExplainabilityEngine": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235208130
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241618304
-      }
-    ],
-    "19.9 Create `backend/routes/logs_routes.py` — `GET /api/v1/logs` with pagination (default page_size=50) and filters (severity, date, module, attack_type, source_ip); delegate to LogRepository": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235209126
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241618665
-      }
-    ],
-    "19.10 Create `backend/routes/settings_routes.py` — `PUT /api/v1/settings` validates all fields against Settings schema, returns HTTP 422 VALIDATION_ERROR with invalid field name on out-of-range value; delegate to ConfigurationManager": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235211130
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241619040
-      }
-    ],
-    "20. Create application entry point": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235213039
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241619392
-      }
-    ],
-    "21.1 Write REST API tests for `/monitor` endpoints": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235213926
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241619748
-      }
-    ],
-    "21.2 Write REST API tests for `/detections` endpoints": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235215549
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241620125
-      }
-    ],
-    "21.3 Write REST API tests for `/block` and `/unblock` endpoints": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235216556
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241620491
-      }
-    ],
-    "21.4 Write REST API tests for `/whitelist` endpoints": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235217666
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241620855
-      }
-    ],
-    "21.5 Write REST API tests for `PUT /settings`": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235218739
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241621346
-      }
-    ],
-    "21.6 Write property tests for API envelope and filtering (Properties 37–38)": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235219761
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241621994
-      }
-    ],
-    "21.7 Write unit tests for LogService": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235220808
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241622447
-      }
-    ],
-    "22. Checkpoint — Phase 4 complete": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235221848
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241623002
-      }
-    ],
-    "23. Build dark-theme CSS": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235222924
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241623439
-      }
-    ],
-    "24.1 Create `frontend/js/socket.js` — Socket.IO connection management with automatic reconnect at 5-second intervals, emit `reconnecting` status indicator on disconnect, emit `monitoring_status` handler": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235223921
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241623869
+        "timestamp": 1785251127406
       }
     ],
     "24.2 Create `frontend/js/api.js` — fetch wrapper that enforces standard envelope, extracts `data` field on success, throws structured error on `success: false`, handles HTTP 4xx/5xx": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235224870
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241624568
-      }
-    ],
-    "25.1 Create `frontend/index.html` — main dashboard HTML skeleton with four KPI card slots, traffic rate chart canvas, severity doughnut chart canvas, threat timeline table, evidence panel div, active blocks panel, whitelist panel, SocketIO script tag, Chart.js script tag": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235225947
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241625134
-      }
-    ],
-    "25.2 Create `frontend/js/dashboard.js` — KPI cards (total packets, active threats, blocked IPs, detection rate), SocketIO listeners for `new_threat`/`ip_blocked`/`ip_unblocked`/`live_stats`/`monitoring_status`, updates all KPI values within 1 s of SocketIO event, fallback polling GET /dashboard/live at 1-second intervals when WebSocket unavailable": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235227060
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241625523
+        "timestamp": 1785251125748
       }
     ],
     "25.3 Create `frontend/js/charts.js` — Chart.js initialization for traffic rate line chart (updates every 1 s from `live_stats` event) and severity distribution doughnut chart (updated on each `new_threat` event)": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235228106
+        "timestamp": 1785251126265
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241625963
+        "timestamp": 1785251132209
       }
     ],
     "25.4 Create `frontend/js/threats.js` — threat timeline table displaying 20 most recent ThreatEvents in reverse-chronological order with columns (timestamp, attack_type, source_ip, severity badge, confidence %); expand inline evidence panel on row click showing full Explanation fields": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235229300
+        "timestamp": 1785251128868
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241626513
+        "timestamp": 1785251133678
+      }
+    ],
+    "25.2 Create `frontend/js/dashboard.js` — KPI cards (total packets, active threats, blocked IPs, detection rate), SocketIO listeners for `new_threat`/`ip_blocked`/`ip_unblocked`/`live_stats`/`monitoring_status`, updates all KPI values within 1 s of SocketIO event, fallback polling GET /dashboard/live at 1-second intervals when WebSocket unavailable": [
+      {
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
+        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
+        "timestamp": 1785251130544
       }
     ],
     "26.1 Create `frontend/blocked.html` and `frontend/js/blocked.js` — active blocks table with ip_address, reason, blocked_at, live countdown to expiry, Manual Unblock button that calls POST /api/v1/unblock": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235230236
+        "timestamp": 1785251131079
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241627119
+        "timestamp": 1785251135243
       }
     ],
     "26.2 Create `frontend/whitelist.html` and `frontend/js/whitelist.js` — whitelist table with current entries, inline Add IP form with optional description, Remove button per entry; calls GET/POST/DELETE /api/v1/whitelist endpoints": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235231320
+        "timestamp": 1785251132911
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241627702
-      }
-    ],
-    "26.3 Create `frontend/threats.html` — full threat list page with column filters (severity, attack_type, source_ip, date) calling GET /api/v1/detections with query params": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235232420
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241628068
+        "timestamp": 1785251137587
       }
     ],
     "26.4 Create `frontend/logs.html` and `frontend/js/logs.js` — log viewer with filters (severity, date, module, attack_type, source_ip), paginated entries from GET /api/v1/logs": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235233557
+        "timestamp": 1785251135601
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241628520
+        "timestamp": 1785251140680
       }
     ],
     "26.5 Create `frontend/rules.html` and `frontend/js/rules.js` — detection rules configuration toggles (enable/disable per rule), threshold displays; reads from GET /api/v1/statistics/rules": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235234698
+        "timestamp": 1785251138709
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241629186
+        "timestamp": 1785251142587
+      }
+    ],
+    "26.3 Create `frontend/threats.html` — full threat list page with column filters (severity, attack_type, source_ip, date) calling GET /api/v1/detections with query params": [
+      {
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
+        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
+        "timestamp": 1785251139091
       }
     ],
     "26.6 Create `frontend/settings.html` and `frontend/js/settings.js` — settings form for all configurable fields with client-side range validation before submission; calls PUT /api/v1/settings; shows validation errors from HTTP 422 response": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235235735
+        "timestamp": 1785251139515
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241629561
+        "timestamp": 1785251144274
       }
     ],
     "26.7 Create `frontend/about.html` — about page with architecture overview, component descriptions, and link to docs/API.md": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235236841
+        "timestamp": 1785251141942
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241629925
+        "timestamp": 1785251145836
       }
     ],
     "27. Checkpoint — Phase 5 complete": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235237938
+        "timestamp": 1785251142839
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241630382
+        "timestamp": 1785251148182
       }
     ],
     "28.1 Write unit tests for `ConfigurationManager`": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235239132
+        "timestamp": 1785251145226
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241630738
+        "timestamp": 1785251150041
       }
     ],
     "29.1 Create `tests/integration/test_integration_capture.py` — end-to-end packet capture on loopback interface; verify packets flow from sniffer → decoder → packet_queue": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235240242
+        "timestamp": 1785251146067
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241631120
+        "timestamp": 1785251155891
       }
     ],
     "29.2 Create `tests/integration/test_integration_block.py` — full flow: ThreatEvent → PreventionEngine → iptables rule applied → blocked_ips record created with all required fields": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235241383
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241631493
+        "timestamp": 1785251148533
       }
     ],
     "29.3 Create `tests/integration/test_integration_expiry.py` — block with short duration (e.g., 3 s), verify ExpiryThread removes iptables rule and sets active=False within 5 s of expiry": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235242537
+        "timestamp": 1785251152102
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241631896
+        "timestamp": 1785251159801
       }
     ],
     "29.4 Create `tests/integration/test_integration_demo.py` — verify each attack demo script triggers a corresponding detection ThreatEvent within the timeout window": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235243602
+        "timestamp": 1785251157730
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241632285
+        "timestamp": 1785251162155
       }
     ],
     "30.1 Create `demo/attack_syn.sh` — hping3 SYN flood targeting loopback or specified interface at rate exceeding syn_flood_threshold within syn_flood_window": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235244783
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241633191
-      }
-    ],
-    "30.2 Create `demo/attack_scan.sh` — nmap port scan targeting localhost covering at least 80 ports within port_scan_window": [
-      {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235245876
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241633992
+        "timestamp": 1785251158372
       }
     ],
     "30.3 Create `demo/attack_sql.sh` — curl HTTP requests with SQL injection payloads (`' OR`, `UNION SELECT`, `DROP TABLE`, `--`, `xp_cmdshell`) to localhost:80": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235246993
+        "timestamp": 1785251162579
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241635163
+        "timestamp": 1785251168229
       }
     ],
     "30.4 Create `demo/attack_bruteforce.sh` — hydra brute force against localhost SSH (port 22) exceeding brute_force_threshold within brute_force_window": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235248152
+        "timestamp": 1785251165354
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241635581
+        "timestamp": 1785251169777
+      }
+    ],
+    "30.2 Create `demo/attack_scan.sh` — nmap port scan targeting localhost covering at least 80 ports within port_scan_window": [
+      {
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
+        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
+        "timestamp": 1785251166539
       }
     ],
     "30.5 Create `demo/attack_arp.sh` — arpspoof command generating gratuitous ARP replies with conflicting MAC addresses for the gateway IP": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235249247
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241636112
+        "timestamp": 1785251166818
       }
     ],
     "31.1 Create `scripts/setup.sh` — install all requirements.txt dependencies (pip install -r requirements.txt), create all required directories, initialize database via `python database/init_db.py`, verify iptables available": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235250390
+        "timestamp": 1785251169078
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241636535
+        "timestamp": 1785251172869
       }
     ],
     "31.2 Create `scripts/start_demo.sh` — complete startup script: run setup.sh if needed, start NetGuard backend in background, open browser to http://localhost:5000, wait for all five attack scripts in sequence": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235252274
+        "timestamp": 1785251170579
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241637062
+        "timestamp": 1785251174899
       }
     ],
     "32.1 Create `README.md` with: project description, architecture diagram (Mermaid), prerequisites (Python 3.11+, iptables, Linux), installation steps, usage instructions, directory structure table": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235254087
+        "timestamp": 1785251171753
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241637442
+        "timestamp": 1785251177745
       }
     ],
     "32.2 Create `docs/API.md` — full REST API documentation: all 21 endpoints with method, path, request body schema, response envelope examples, all HTTP status codes and error codes": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235255509
+        "timestamp": 1785251173274
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241637878
+        "timestamp": 1785251178145
       }
     ],
     "33. Final checkpoint — all tests pass": [
       {
-        "executionId": "fc0b4dfb-4c12-40b5-b236-f8271ba1a112",
+        "executionId": "ff3fe172-9b0c-4b57-87c2-647005e0fcdb",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785235256627
+        "timestamp": 1785251176348
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241638318
+        "timestamp": 1785251178786
       }
     ],
-    "2.1 Create `config/config.yaml` with all settings and documented defaults (interface, syn_flood_threshold=100, syn_flood_window=3, port_scan_threshold=20, port_scan_window=10, brute_force_threshold=10, brute_force_window=60, block_duration=120, dashboard_refresh_interval=1, rules_enabled dict all true)": [
+    "9.12 Write unit tests for BruteForceRule": [
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241593791
+        "timestamp": 1785251194304
       },
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241662674
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241790151
+        "timestamp": 1785251987587
       }
     ],
-    "3.1 Create `database/schema.py` with six SQLAlchemy ORM models: `Event`, `BlockedIP`, `WhitelistEntry`, `DetectionRule`, `Setting`, `SystemLog` using all fields specified in design": [
+    "9.13 Write property tests for Brute Force (Properties 15–18)": [
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241596052
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241663487
-      },
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241791790
+        "timestamp": 1785251202124
       }
     ],
-    "2. Implement Configuration_Manager": [
+    "9.15 Write unit tests for ArpSpoofRule": [
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785241791081
+        "timestamp": 1785251213866
       }
     ],
-    "3. Create database schema and initialization": [
+    "9.16 Write property tests for ARP Spoofing (Properties 19–22)": [
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243279906
+        "timestamp": 1785251222717
       }
     ],
-    "7. Implement Packet_Decoder": [
+    "13.6 Write unit tests for database schema and repositories": [
       {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
+        "executionId": "15b7a663-ba30-4eb1-8d5b-b9d482ac6b07",
         "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243285958
-      }
-    ],
-    "8. Implement Capture_Engine": [
-      {
-        "executionId": "b15d3548-24de-48d7-8434-2fef15351729",
-        "chatSessionId": "sess_8ead7437-0f1e-4cc5-a517-98875be9c61f",
-        "timestamp": 1785243287269
+        "timestamp": 1785251231102
       }
     ]
   }

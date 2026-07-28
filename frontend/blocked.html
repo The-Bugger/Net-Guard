@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Blocked IPs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+</head>
+<body>
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item">Threats</a>
+    <a href="/blocked.html" class="nav-item active">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item">Logs</a>
+    <a href="/rules.html" class="nav-item">Rules</a>
+    <a href="/settings.html" class="nav-item">Settings</a>
+  </nav>
+  <main class="main-content">
+    <div class="page-title">Blocked IPs</div>
+    <div class="card">
+      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
+        <input id="block-ip" class="input" placeholder="IP to block manually…" style="width:200px">
+        <input id="block-reason" class="input" placeholder="Reason…" style="width:160px">
+        <input id="block-duration" class="input" type="number" placeholder="120s" style="width:100px" value="120">
+        <button class="btn btn-danger" onclick="manualBlock()">Block IP</button>
+        <button class="btn btn-ghost" onclick="loadBlocked()">🔄 Refresh</button>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>IP Address</th><th>Reason</th><th>Blocked At</th><th>Expires At</th><th>Time Remaining</th><th>Action</th></tr>
+        </thead>
+        <tbody id="blocked-tbody"><tr><td colspan="6" class="empty-state"><p>No active blocks.</p></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+<div id="notifications"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/socket.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  loadBlocked();
+  setInterval(loadBlocked, 5000);
+  setInterval(() => { document.getElementById('system-time').textContent = new Date().toLocaleTimeString(); }, 1000);
+  SocketManager.on('ip_blocked', loadBlocked);
+  SocketManager.on('ip_unblocked', loadBlocked);
+  SocketManager.connect();
+});
+
+async function loadBlocked() {
+  try {
+    const data = await NetGuardAPI.getBlocked();
+    renderBlocked(data.blocked || []);
+  } catch (err) { console.error(err); }
+}
+
+function renderBlocked(blocks) {
+  const tbody = document.getElementById('blocked-tbody');
+  if (!blocks.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>No active blocks.</p></td></tr>'; return; }
+  tbody.innerHTML = blocks.map(b => `
+    <tr>
+      <td><code>${b.ip_address}</code></td>
+      <td>${b.reason}</td>
+      <td>${new Date(b.blocked_at).toLocaleString()}</td>
+      <td>${new Date(b.expires_at).toLocaleString()}</td>
+      <td>${b.expires_in !== undefined ? b.expires_in + 's' : '—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="unblock('${b.ip_address}')">Unblock</button></td>
+    </tr>
+  `).join('');
+}
+
+async function manualBlock() {
+  const ip  = document.getElementById('block-ip').value.trim();
+  const rsn = document.getElementById('block-reason').value.trim() || 'Manual';
+  const dur = parseInt(document.getElementById('block-duration').value) || 120;
+  if (!ip) return;
+  try {
+    await NetGuardAPI.blockIP(ip, rsn, dur);
+    showN(`${ip} blocked.`, 'success');
+    loadBlocked();
+  } catch (e) { showN(e.message, 'error'); }
+}
+
+async function unblock(ip) {
+  if (!confirm(`Unblock ${ip}?`)) return;
+  try {
+    await NetGuardAPI.unblockIP(ip);
+    showN(`${ip} unblocked.`, 'success');
+    loadBlocked();
+  } catch (e) { showN(e.message, 'error'); }
+}
+
+function showN(msg, type) {
+  const c = document.getElementById('notifications');
+  if (!c) return;
+  const el = document.createElement('div');
+  el.className = `notification ${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+</script>
+</body>
+</html>

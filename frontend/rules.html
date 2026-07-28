@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Rules</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+</head>
+<body>
+<header class="header">
+  <div class="header-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>NetGuard</div>
+  <div class="header-spacer"></div>
+  <div class="header-time" id="system-time"></div>
+</header>
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item">Threats</a>
+    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item">Logs</a>
+    <a href="/rules.html" class="nav-item active">Rules</a>
+    <a href="/settings.html" class="nav-item">Settings</a>
+  </nav>
+  <main class="main-content">
+    <div class="page-title">Detection Rules</div>
+    <div class="card">
+      <table class="data-table">
+        <thead><tr><th>Rule</th><th>Attack Type</th><th>Threshold</th><th>Block Duration</th><th>Detections</th><th>Enabled</th></tr></thead>
+        <tbody id="rules-tbody"><tr><td colspan="6" class="empty-state"><p>Loading…</p></td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+<div id="notifications"></div>
+<script src="/js/api.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  setInterval(()=>{document.getElementById('system-time').textContent=new Date().toLocaleTimeString();},1000);
+  try {
+    const data = await NetGuardAPI.getRuleStats();
+    const rules = data.rules || [];
+    const tbody = document.getElementById('rules-tbody');
+    const RULES=[{rule:'SYN_FLOOD_001',attack:'SYN Flood',threshold:'100 pkts/3s',block:'120s'},{rule:'PORT_SCAN_001',attack:'Port Scan',threshold:'20 ports/10s',block:'120s'},{rule:'SQL_INJECTION_001',attack:'SQL Injection',threshold:'1 match',block:'120s'},{rule:'BRUTE_FORCE_001',attack:'Brute Force',threshold:'10 fails/60s',block:'120s'},{rule:'ARP_SPOOF_001',attack:'ARP Spoofing',threshold:'2 MACs',block:'120s'}];
+    const countMap={};rules.forEach(r=>{countMap[r.attack_type]=r.count;});
+    tbody.innerHTML=RULES.map(r=>`
+      <tr>
+        <td><code>${r.rule}</code></td>
+        <td>${r.attack}</td>
+        <td>${r.threshold}</td>
+        <td>${r.block}</td>
+        <td>${countMap[r.attack]||0}</td>
+        <td><span style="color:var(--success);font-weight:600">✓ Enabled</span></td>
+      </tr>
+    `).join('');
+  } catch(e){document.getElementById('rules-tbody').innerHTML=`<tr><td colspan="6" style="color:var(--danger);padding:16px">${e.message}</td></tr>`;}
+});
+</script>
+</body>
+</html>

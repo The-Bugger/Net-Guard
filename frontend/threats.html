@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Threats</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+</head>
+<body>
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div id="monitoring-badge" class="status-badge inactive"><span class="status-dot"></span> Stopped</div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item active">Threats</a>
+    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item">Logs</a>
+    <a href="/rules.html" class="nav-item">Rules</a>
+    <a href="/settings.html" class="nav-item">Settings</a>
+  </nav>
+  <main class="main-content">
+    <div class="page-title">All Threats</div>
+
+    <!-- Filters -->
+    <div class="card" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap">
+      <select id="f-severity" class="input" style="width:140px">
+        <option value="">All Severities</option>
+        <option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
+      </select>
+      <select id="f-attack" class="input" style="width:160px">
+        <option value="">All Attacks</option>
+        <option>SYN Flood</option><option>Port Scan</option>
+        <option>SQL Injection</option><option>Brute Force</option><option>ARP Spoofing</option>
+      </select>
+      <input id="f-ip" class="input" placeholder="Source IP…" style="width:160px">
+      <input id="f-date" class="input" type="date" style="width:160px">
+      <button class="btn btn-primary" onclick="applyFilters()">Filter</button>
+      <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
+    </div>
+
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr><th>Time</th><th>Attack</th><th>Source IP</th><th>Severity</th><th>Confidence</th><th>Blocked</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="threats-tbody"><tr><td colspan="7" class="empty-state"><p>Loading…</p></td></tr></tbody>
+      </table>
+      <div id="pagination" style="padding:12px;display:flex;gap:8px;justify-content:flex-end"></div>
+    </div>
+  </main>
+</div>
+<div id="notifications"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/socket.js"></script>
+
+<script>
+let currentOffset = 0;
+const PAGE_SIZE = 50;
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadThreats();
+  startClock();
+  SocketManager.on('new_threat', () => loadThreats());
+  SocketManager.connect();
+});
+
+async function loadThreats() {
+  const params = {};
+  const sev = document.getElementById('f-severity').value;
+  const atk = document.getElementById('f-attack').value;
+  const ip  = document.getElementById('f-ip').value.trim();
+  const dt  = document.getElementById('f-date').value;
+  if (sev) params.severity = sev;
+  if (atk) params.attack_type = atk;
+  if (ip)  params.source_ip = ip;
+  if (dt)  params.date = dt;
+  params.limit  = PAGE_SIZE;
+  params.offset = currentOffset;
+
+  try {
+    const data = await NetGuardAPI.getDetections(params);
+    renderTable(data.events || []);
+  } catch (err) {
+    document.getElementById('threats-tbody').innerHTML =
+      `<tr><td colspan="7" style="color:var(--danger);padding:16px">${err.message}</td></tr>`;
+  }
+}
+
+function renderTable(events) {
+  const tbody = document.getElementById('threats-tbody');
+  if (!events.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No threats found.</p></td></tr>'; return; }
+  tbody.innerHTML = events.map(e => `
+    <tr>
+      <td>${new Date(e.timestamp).toLocaleString()}</td>
+      <td>${e.attack_type}</td>
+      <td><code>${e.source_ip}</code></td>
+      <td><span class="severity-badge severity-${(e.severity||'').toLowerCase()}">${e.severity}</span></td>
+      <td>${e.confidence}%</td>
+      <td>${e.blocked ? '🔴 Yes' : '—'}</td>
+      <td><a href="#" onclick="viewEvidence('${e.event_id}'); return false">View</a></td>
+    </tr>
+    <tr id="ev-row-${e.event_id}" style="display:none">
+      <td colspan="7"><div class="evidence-panel" id="ev-${e.event_id}">Loading…</div></td>
+    </tr>
+  `).join('');
+}
+
+async function viewEvidence(id) {
+  const row = document.getElementById(`ev-row-${id}`);
+  if (!row) return;
+  row.style.display = row.style.display === 'none' ? '' : 'none';
+  const panel = document.getElementById(`ev-${id}`);
+  if (panel && panel.textContent === 'Loading…') {
+    try {
+      const ev = await NetGuardAPI.getEvidence(id);
+      panel.innerHTML = `
+        <div class="evidence-explanation">${ev.plain_english_text||''}</div>
+        <div class="evidence-recommendation"><strong>Recommendation:</strong> ${ev.recommendation||''}</div>
+      `;
+    } catch (e) { panel.textContent = 'Failed to load evidence.'; }
+  }
+}
+
+function applyFilters() { currentOffset = 0; loadThreats(); }
+function resetFilters() {
+  ['f-severity','f-attack','f-ip','f-date'].forEach(id => { document.getElementById(id).value = ''; });
+  currentOffset = 0; loadThreats();
+}
+function startClock() {
+  const el = document.getElementById('system-time');
+  if (el) setInterval(() => { el.textContent = new Date().toLocaleTimeString(); }, 1000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+2026-07-28T13:12:49  CRITICAL  netguard.config_service  config.yaml not found at 'C:\Users\susan\AppData\Local\Temp\nonexistent_ng.yaml'. Applying built-in defaults.
+2026-07-28T13:12:49  CRITICAL  netguard.config_service  config.yaml is not valid YAML at 'C:\Users\susan\AppData\Local\Temp\tmp93uu02jj.yaml': while parsing a block mapping
+expected <block end>, but found ':'
+  in "<unicode string>", line 1, column 1:
+    : invalid: yaml: [[[
+    ^. Applying built-in defaults.

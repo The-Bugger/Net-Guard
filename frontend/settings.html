@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+</head>
+<body>
+<header class="header">
+  <div class="header-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>NetGuard</div>
+  <div class="header-spacer"></div>
+  <div class="header-time" id="system-time"></div>
+</header>
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item">Threats</a>
+    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item">Logs</a>
+    <a href="/rules.html" class="nav-item">Rules</a>
+    <a href="/settings.html" class="nav-item active">Settings</a>
+  </nav>
+  <main class="main-content">
+    <div class="page-title">Settings</div>
+    <div class="card" style="max-width:600px">
+      <div id="settings-error" style="color:var(--danger);margin-bottom:12px;display:none"></div>
+      <div class="form-group">
+        <label>SYN Flood Threshold (packets/window)</label>
+        <input id="syn_flood_threshold" class="input" type="number" min="1">
+      </div>
+      <div class="form-group">
+        <label>SYN Flood Window (seconds, 1–60)</label>
+        <input id="syn_flood_window" class="input" type="number" min="1" max="60">
+      </div>
+      <div class="form-group">
+        <label>Port Scan Threshold (ports/window)</label>
+        <input id="port_scan_threshold" class="input" type="number" min="1">
+      </div>
+      <div class="form-group">
+        <label>Port Scan Window (seconds, 1–60)</label>
+        <input id="port_scan_window" class="input" type="number" min="1" max="60">
+      </div>
+      <div class="form-group">
+        <label>Brute Force Threshold (failures/window)</label>
+        <input id="brute_force_threshold" class="input" type="number" min="1">
+      </div>
+      <div class="form-group">
+        <label>Brute Force Window (seconds, 1–300)</label>
+        <input id="brute_force_window" class="input" type="number" min="1" max="300">
+      </div>
+      <div class="form-group">
+        <label>Block Duration (seconds, 1–3600)</label>
+        <input id="block_duration" class="input" type="number" min="1" max="3600">
+      </div>
+      <div class="form-group">
+        <label>Dashboard Refresh Interval (seconds, 1–60)</label>
+        <input id="dashboard_refresh_interval" class="input" type="number" min="1" max="60">
+      </div>
+      <div style="display:flex;gap:12px;margin-top:20px">
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn btn-ghost" onclick="loadSettings()">Reset</button>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="notifications"></div>
+<script src="/js/api.js"></script>
+<script>
+const FIELDS=['syn_flood_threshold','syn_flood_window','port_scan_threshold','port_scan_window','brute_force_threshold','brute_force_window','block_duration','dashboard_refresh_interval'];
+document.addEventListener('DOMContentLoaded',()=>{ loadSettings(); setInterval(()=>{document.getElementById('system-time').textContent=new Date().toLocaleTimeString();},1000); });
+async function loadSettings(){
+  try{
+    const data=await NetGuardAPI.getSettings();
+    FIELDS.forEach(f=>{const el=document.getElementById(f);if(el&&data[f]!==undefined)el.value=data[f];});
+  }catch(e){showErr(e.message);}
+}
+async function saveSettings(){
+  const body={};
+  FIELDS.forEach(f=>{const el=document.getElementById(f);if(el&&el.value!=='')body[f]=parseInt(el.value);});
+  try{
+    await NetGuardAPI.updateSettings(body);
+    showN('Settings saved successfully.','success');
+    document.getElementById('settings-error').style.display='none';
+  }catch(e){showErr(e.message);}
+}
+function showErr(m){const el=document.getElementById('settings-error');if(el){el.textContent=m;el.style.display='block';}}
+function showN(m,t){const c=document.getElementById('notifications');if(!c)return;const el=document.createElement('div');el.className=`notification ${t}`;el.textContent=m;c.appendChild(el);setTimeout(()=>el.remove(),5000);}
+</script>
+</body>
+</html>

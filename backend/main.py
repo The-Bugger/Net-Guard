@@ -1,0 +1,303 @@
+"""
+main.py — NetGuard IDPS application entry point.
+
+Startup sequence:
+1. Eventlet monkey-patch (MUST be first)
+2. Load configuration
+3. Set up logging
+4. Initialize database
+5. Verify iptables privileges
+6. Build all services
+7. Start background threads
+8. Start Flask + SocketIO
+
+Requirements: 1.7, 11.8
+"""
+
+from __future__ import annotations
+
+# ── Step 1: Eventlet monkey-patch MUST happen before any other imports ──
+import eventlet
+eventlet.monkey_patch()
+
+import logging
+import os
+import queue
+import sys
+from contextlib import contextmanager
+from pathlib import Path
+
+# ── Ensure project root is on sys.path ──────────────────────────────────────
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+# ── Step 2: Load configuration ──────────────────────────────────────────────
+from backend.services.config_service import ConfigurationManager
+from backend.services.log_service import setup_logging, LoggingEngine
+
+config_manager = ConfigurationManager()
+settings = config_manager.load()
+
+# ── Step 3: Set up logging ───────────────────────────────────────────────────
+log_level = os.environ.get("LOG_LEVEL", "INFO")
+setup_logging(log_level)
+logger = logging.getLogger("netguard.main")
+logger.info("NetGuard IDPS starting up...")
+
+# ── Step 4: Database ─────────────────────────────────────────────────────────
+from database.init_db import initialize_db, get_engine
+from sqlalchemy.orm import sessionmaker, Session
+
+db_url = os.environ.get("DATABASE_URL", f"sqlite:///{_PROJECT_ROOT}/database/netguard.db")
+# Normalise sqlite:/// to absolute path
+if db_url.startswith("sqlite:///") and not db_url.startswith("sqlite:////"):
+    db_path = _PROJECT_ROOT / "database" / "netguard.db"
+    db_url = f"sqlite:///{db_path}"
+
+initialize_db(db_url)
+engine = get_engine(db_url)
+
+@contextmanager
+def session_factory():
+    """Provide a transactional SQLAlchemy session."""
+    SessionLocal = sessionmaker(bind=engine)
+    session = SessionLocal()
+    try:
+        yield session
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+logger.info("Database initialised at: %s", db_url)
+
+# ── Step 5: Build repositories ───────────────────────────────────────────────
+from backend.repositories.event_repository import EventRepository
+from backend.repositories.block_repository import BlockRepository
+from backend.repositories.whitelist_repository import WhitelistRepository
+from backend.repositories.log_repository import LogRepository
+from backend.repositories.settings_repository import SettingsRepository
+
+event_repo = EventRepository(session_factory)
+block_repo = BlockRepository(session_factory)
+whitelist_repo = WhitelistRepository(session_factory)
+log_repo = LogRepository(session_factory)
+settings_repo = SettingsRepository(session_factory)
+
+# ── Step 6: Build services ───────────────────────────────────────────────────
+from backend.services.log_service import LoggingEngine
+from backend.services.whitelist_service import WhitelistManager
+from backend.services.monitor_service import MonitorService, MonitoringState
+from backend.services.stats_service import StatsService
+from backend.services.prevention_service import PreventionEngine
+from backend.services.expiry_service import ExpiryThread
+from backend.services.detection_service import DetectionEngine
+from backend.services.explain_service import ExplainabilityEngine
+
+# Shared state
+monitoring_state = MonitoringState()
+
+# Logging engine
+log_engine = LoggingEngine(session_factory)
+
+# Whitelist manager
+whitelist_manager = WhitelistManager(whitelist_repo)
+whitelist_manager.sync_from_db()
+
+# Stats service
+stats_service = StatsService(event_repo, block_repo, monitoring_state)
+
+# Queues for inter-thread communication
+packet_queue: queue.Queue = queue.Queue(maxsize=10000)
+event_queue: queue.Queue = queue.Queue(maxsize=1000)
+
+# Explainability engine
+explain_engine = ExplainabilityEngine(whitelist_manager)
+
+
+def _on_threat_event(threat_event):
+    """
+    Callback invoked by DetectionEngine for every confirmed ThreatEvent.
+    - Generates explanation
+    - Persists to DB
+    - Triggers prevention
+    - Emits SocketIO event
+    """
+    try:
+        explanation = explain_engine.explain(threat_event)
+        threat_event.blocked = False
+
+        # Persist event + explanation to DB
+        event_data = {
+            "event_id": threat_event.event_id,
+            "timestamp": threat_event.timestamp,
+            "attack_type": threat_event.attack_type,
+            "source_ip": threat_event.source_ip,
+            "destination_ip": threat_event.destination_ip or "",
+            "source_port": threat_event.source_port,
+            "destination_port": threat_event.destination_port,
+            "protocol": threat_event.protocol,
+            "rule_name": threat_event.rule_name,
+            "severity": threat_event.severity,
+            "confidence": threat_event.confidence,
+            "packet_count": threat_event.packet_count,
+            "evidence": threat_event.evidence,
+            "explanation": explanation.plain_english_text,
+            "recommendation": explanation.recommendation,
+            "blocked": False,
+        }
+        event_repo.insert(event_data)
+        log_engine.log_event(event_data, {"plain_english_text": explanation.plain_english_text})
+
+        # Prevention
+        prevention_engine.handle_event(threat_event, explanation)
+
+        # SocketIO emit
+        _emit_socketio("new_threat", {
+            "event_id": threat_event.event_id,
+            "attack_type": threat_event.attack_type,
+            "source_ip": threat_event.source_ip,
+            "severity": threat_event.severity,
+            "confidence": threat_event.confidence,
+            "timestamp": threat_event.timestamp,
+            "explanation": explanation.plain_english_text,
+            "recommendation": explanation.recommendation,
+            "rule_name": threat_event.rule_name,
+            "evidence": threat_event.evidence,
+        })
+
+    except Exception as exc:
+        logger.error("on_threat_event error: %s", exc, exc_info=True)
+
+
+def _emit_socketio(event_name: str, data: dict) -> None:
+    """Safely emit a SocketIO event."""
+    try:
+        from backend.api import socketio
+        socketio.emit(event_name, data)
+    except Exception as exc:
+        logger.debug("SocketIO emit failed: %s", exc)
+
+
+# Prevention engine (socketio emit wired after app creation)
+prevention_engine = PreventionEngine(
+    block_repo=block_repo,
+    whitelist_manager=whitelist_manager,
+    log_engine=log_engine,
+    block_duration=settings.block_duration,
+    socketio_emit=_emit_socketio,
+)
+
+# ── Step 7: Verify iptables privileges ───────────────────────────────────────
+try:
+    prevention_engine.verify_privileges()
+except RuntimeError as exc:
+    logger.critical("iptables privilege check failed: %s", exc)
+    logger.warning("Continuing without firewall blocking capability.")
+    # Don't abort — allow monitoring/detection without blocking for dev/test
+
+# Detection engine
+detection_engine = DetectionEngine(
+    packet_queue=packet_queue,
+    on_event=_on_threat_event,
+    config_manager=config_manager,
+)
+
+# Capture engine
+from detection.capture.sniffer import CaptureEngine
+capture_engine = CaptureEngine(packet_queue)
+
+# Monitor service
+monitor_service = MonitorService(
+    capture_engine=capture_engine,
+    detection_engine=detection_engine,
+    state=monitoring_state,
+    log_engine=log_engine,
+    socketio_emit=_emit_socketio,
+)
+
+# Expiry thread
+expiry_thread = ExpiryThread(
+    block_repo=block_repo,
+    log_engine=log_engine,
+    socketio_emit=_emit_socketio,
+)
+
+# ── Step 8: Register services in dependency container ────────────────────────
+from backend.api import dependencies
+dependencies.register("config", config_manager)
+dependencies.register("monitoring_state", monitoring_state)
+dependencies.register("monitor_service", monitor_service)
+dependencies.register("detection_engine", detection_engine)
+dependencies.register("prevention_engine", prevention_engine)
+dependencies.register("whitelist_manager", whitelist_manager)
+dependencies.register("log_engine", log_engine)
+dependencies.register("stats_service", stats_service)
+dependencies.register("event_repo", event_repo)
+dependencies.register("block_repo", block_repo)
+dependencies.register("log_repo", log_repo)
+
+# ── Step 9: Create Flask app and start background threads ────────────────────
+from backend.api import create_app, socketio as _socketio
+
+app = create_app()
+
+# ── SocketIO live-stats background task ──────────────────────────────────────
+@_socketio.on("connect")
+def on_client_connect():
+    logger.debug("Dashboard client connected.")
+
+@_socketio.on("disconnect")
+def on_client_disconnect():
+    logger.debug("Dashboard client disconnected.")
+
+@_socketio.on("request_live_stats")
+def on_request_live_stats():
+    data = stats_service.get_live_stats()
+    _socketio.emit("live_stats", data)
+
+
+def _background_live_stats():
+    """Emit live_stats to all clients every second while monitoring."""
+    refresh = settings.dashboard_refresh_interval or 1
+    while True:
+        eventlet.sleep(refresh)
+        try:
+            data = stats_service.get_live_stats()
+            _socketio.emit("live_stats", data)
+        except Exception as exc:
+            logger.debug("live_stats emit error: %s", exc)
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    logger.info("Starting background services...")
+    log_engine.start()
+    expiry_thread.start()
+    detection_engine.start()
+
+    # Start live-stats background task
+    _socketio.start_background_task(_background_live_stats)
+
+    log_engine.log_system(
+        "INFO", "main", "STARTUP",
+        "NetGuard IDPS started successfully.",
+        metadata={"db_url": db_url, "log_level": log_level},
+    )
+
+    host = os.environ.get("FLASK_HOST", "0.0.0.0")
+    port = int(os.environ.get("FLASK_PORT", 5000))
+    debug = settings.debug
+
+    logger.info("Dashboard available at http://localhost:%d", port)
+    logger.info("API base URL: http://localhost:%d/api/v1", port)
+
+    _socketio.run(
+        app,
+        host=host,
+        port=port,
+        debug=debug,
+        use_reloader=False,
+    )

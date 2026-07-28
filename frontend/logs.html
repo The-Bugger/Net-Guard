@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Logs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+</head>
+<body>
+<header class="header">
+  <div class="header-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>NetGuard</div>
+  <div class="header-spacer"></div>
+  <div class="header-time" id="system-time"></div>
+</header>
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item">Threats</a>
+    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item active">Logs</a>
+    <a href="/rules.html" class="nav-item">Rules</a>
+    <a href="/settings.html" class="nav-item">Settings</a>
+  </nav>
+  <main class="main-content">
+    <div class="page-title">System Logs</div>
+    <div class="card" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap">
+      <select id="l-level" class="input" style="width:140px">
+        <option value="">All Levels</option>
+        <option>INFO</option><option>WARNING</option><option>ERROR</option><option>CRITICAL</option>
+      </select>
+      <input id="l-date" class="input" type="date" style="width:160px">
+      <input id="l-module" class="input" placeholder="Module…" style="width:160px">
+      <button class="btn btn-primary" onclick="applyFilters()">Filter</button>
+      <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
+    </div>
+    <div class="card">
+      <table class="data-table">
+        <thead><tr><th>Time</th><th>Level</th><th>Module</th><th>Event</th><th>Message</th></tr></thead>
+        <tbody id="logs-tbody"><tr><td colspan="5" class="empty-state"><p>Loading…</p></td></tr></tbody>
+      </table>
+      <div style="padding:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
+        <span id="log-count" style="color:var(--text-muted);font-size:13px"></span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="prevPage()">← Prev</button>
+          <button class="btn btn-ghost btn-sm" onclick="nextPage()">Next →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="notifications"></div>
+<script src="/js/api.js"></script>
+<script>
+let offset=0;const PAGE=50;let totalLogs=0;
+document.addEventListener('DOMContentLoaded', ()=>{ loadLogs(); setInterval(()=>{document.getElementById('system-time').textContent=new Date().toLocaleTimeString();},1000); });
+async function loadLogs() {
+  const params={limit:PAGE,offset};
+  const lv=document.getElementById('l-level').value;
+  const dt=document.getElementById('l-date').value;
+  const md=document.getElementById('l-module').value.trim();
+  if(lv) params.severity=lv;
+  if(dt) params.date=dt;
+  if(md) params.module=md;
+  try {
+    const data=await NetGuardAPI.getLogs(params);
+    totalLogs=data.total||0;
+    renderLogs(data.logs||[]);
+    document.getElementById('log-count').textContent=`Showing ${offset+1}–${Math.min(offset+PAGE,totalLogs)} of ${totalLogs}`;
+  } catch(e){document.getElementById('logs-tbody').innerHTML=`<tr><td colspan="5" style="color:var(--danger);padding:16px">${e.message}</td></tr>`;}
+}
+function renderLogs(logs) {
+  const tbody=document.getElementById('logs-tbody');
+  if(!logs.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state"><p>No logs found.</p></td></tr>';return;}
+  const colorMap={INFO:'var(--info)',WARNING:'var(--warning)',ERROR:'var(--danger)',CRITICAL:'var(--critical)'};
+  tbody.innerHTML=logs.map(l=>`
+    <tr>
+      <td style="font-size:12px;font-variant-numeric:tabular-nums">${new Date(l.timestamp).toLocaleString()}</td>
+      <td><span style="color:${colorMap[l.level]||'var(--text-muted)'};font-weight:600;font-size:12px">${l.level}</span></td>
+      <td style="font-size:12px;color:var(--text-muted)">${l.module}</td>
+      <td style="font-size:12px">${l.event}</td>
+      <td style="font-size:13px">${l.message}</td>
+    </tr>
+  `).join('');
+}
+function applyFilters(){offset=0;loadLogs();}
+function resetFilters(){['l-level','l-date','l-module'].forEach(id=>{document.getElementById(id).value='';});offset=0;loadLogs();}
+function prevPage(){if(offset>0){offset=Math.max(0,offset-PAGE);loadLogs();}}
+function nextPage(){if(offset+PAGE<totalLogs){offset+=PAGE;loadLogs();}}
+</script>
+</body>
+</html>

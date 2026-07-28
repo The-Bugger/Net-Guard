@@ -1,0 +1,13 @@
+<string>:14: NonInteractiveExampleWarning: The `.example()` method is good for exploring strategies, but should only be used interactively.  We recommend using `@given` for tests - it performs better, saves and replays failures to avoid flakiness, and reports minimal examples. (strategy: from_regex('(?:(?:1\\d\\d|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.){3}(?:1\\d\\d|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)', fullmatch=True))
+  examples = [_ipv4_st.example() for _ in range(5)]
+<string>:14: NonInteractiveExampleWarning: The `.example()` method is good for exploring strategies, but should only be used interactively.  We recommend using `@given` for tests - it performs better, saves and replays failures to avoid flakiness, and reports minimal examples. (strategy: from_regex('(?:(?:1\\d\\d|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)\\.){3}(?:1\\d\\d|2[0-4]\\d|25[0-5]|[1-9]\\d|\\d)', fullmatch=True))
+  examples = [_ipv4_st.example() for _ in range(5)]
+Traceback (most recent call last):
+  File "<string>", line 15, in <module>
+    print('Generated IPs:', examples)
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python313\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u0967' in position 3: character maps to <undefined>
+Generated IPs: 

@@ -10,6 +10,7 @@ Design guarantees:
 - Sets src_port / dst_port to None for non-TCP/UDP protocols
 - Sets flags to None for non-TCP protocols
 - Sets protocol to "UNKNOWN" for unrecognised L4 protocols
+- Logs decode failures (exception class + message) to logs/errors.log
 
 Requirements: 3.1, 3.2, 3.3, 3.4
 """
@@ -21,7 +22,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
+# Module-level logger — inherits from netguard root, used for debug/info
 logger = logging.getLogger("netguard.packet_decoder")
+
+# Dedicated error logger — wired to logs/errors.log by setup_logging() in log_service
+_error_logger = logging.getLogger("netguard.errors")
 
 
 # ---------------------------------------------------------------------------
@@ -64,6 +69,9 @@ class Packet:
     payload: Optional[bytes] = field(default=None, repr=False)
     """Raw payload bytes for deep inspection (e.g. SQL injection)."""
 
+    hw_src: Optional[str] = field(default=None)
+    """ARP sender hardware (MAC) address, e.g. 'aa:bb:cc:dd:ee:ff'. None for non-ARP packets."""
+
 
 # ---------------------------------------------------------------------------
 # Decoder
@@ -90,12 +98,13 @@ class PacketDecoder:
 
         Returns:
             A normalised Packet, or None if the packet could not be decoded.
-            Never raises an exception to the caller.
+            Never raises an exception to the caller (Requirement 3.4).
         """
         try:
             return self._decode(raw_pkt)
         except Exception as exc:  # noqa: BLE001
-            logger.warning(
+            # Requirement 3.4: log exception class and message to logs/errors.log
+            _error_logger.warning(
                 "PacketDecoder: failed to decode packet — %s: %s",
                 type(exc).__name__,
                 exc,
@@ -117,7 +126,8 @@ class PacketDecoder:
             logger.error("Scapy is not installed — packet decoding unavailable.")
             return None
 
-        timestamp = _utc_now()
+        # Use packet capture time if available; fall back to utcnow
+        timestamp = _packet_timestamp(raw_pkt)
 
         # ── IP layer ──────────────────────────────────────────────────────
         src_ip: str = ""
@@ -134,9 +144,11 @@ class PacketDecoder:
             dst_ip = ip6_layer.dst
         elif raw_pkt.haslayer(ARP):
             arp_layer = raw_pkt[ARP]
-            # For ARP, use psrc/pdst as "IPs", hwsrc/hwdst as MAC context
+            # For ARP, use psrc/pdst as "IPs"
             src_ip = arp_layer.psrc or ""
             dst_ip = arp_layer.pdst or ""
+            # Extract sender hardware (MAC) address for ARP spoof detection
+            hw_src = str(arp_layer.hwsrc).lower() if arp_layer.hwsrc else None
             return Packet(
                 src_ip=src_ip,
                 dst_ip=dst_ip,
@@ -146,10 +158,11 @@ class PacketDecoder:
                 flags=None,
                 timestamp=timestamp,
                 length=length,
-                payload=self._extract_payload(raw_pkt),
+                payload=_extract_payload(raw_pkt),
+                hw_src=hw_src,
             )
         else:
-            # No recognisable IP layer — skip
+            # No recognisable IP layer — cannot build a meaningful Packet
             return None
 
         if not src_ip or not dst_ip:
@@ -164,10 +177,10 @@ class PacketDecoder:
                 src_port=tcp.sport,
                 dst_port=tcp.dport,
                 protocol="TCP",
-                flags=self._tcp_flags_string(tcp.flags),
+                flags=_tcp_flags_string(tcp.flags),
                 timestamp=timestamp,
                 length=length,
-                payload=self._extract_payload(tcp),
+                payload=_extract_payload(tcp),
             )
 
         if raw_pkt.haslayer(UDP):
@@ -181,7 +194,7 @@ class PacketDecoder:
                 flags=None,
                 timestamp=timestamp,
                 length=length,
-                payload=self._extract_payload(udp),
+                payload=_extract_payload(udp),
             )
 
         if raw_pkt.haslayer(ICMP):
@@ -197,7 +210,8 @@ class PacketDecoder:
                 payload=None,
             )
 
-        # Unknown transport protocol — still pass through with UNKNOWN label
+        # Requirement 3.2: Unknown transport — still pass through with UNKNOWN label
+        # and populate all available fields
         return Packet(
             src_ip=src_ip,
             dst_ip=dst_ip,
@@ -210,32 +224,60 @@ class PacketDecoder:
             payload=None,
         )
 
-    @staticmethod
-    def _tcp_flags_string(flags) -> str:
-        """Convert Scapy TCP flags object to a human-readable string like 'S', 'SA', 'FA'."""
-        try:
-            return str(flags)
-        except Exception:  # noqa: BLE001
-            return ""
-
-    @staticmethod
-    def _extract_payload(layer) -> Optional[bytes]:
-        """Safely extract raw payload bytes from a Scapy layer."""
-        try:
-            from scapy.packet import Raw
-            if layer.haslayer(Raw):
-                return bytes(layer[Raw].load)
-            # Try load attribute directly
-            if hasattr(layer, "load"):
-                return bytes(layer.load)
-            return bytes(layer.payload) if layer.payload else None
-        except Exception:  # noqa: BLE001
-            return None
-
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Module-level helpers
 # ---------------------------------------------------------------------------
+
+def _tcp_flags_string(flags) -> str:
+    """
+    Convert a Scapy TCP flags object to a human-readable string.
+
+    Examples: 'S' (SYN), 'SA' (SYN-ACK), 'FA' (FIN-ACK), 'R' (RST).
+    Returns an empty string on unexpected error rather than raising.
+    """
+    try:
+        return str(flags)
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _extract_payload(layer) -> Optional[bytes]:
+    """
+    Safely extract raw payload bytes from a Scapy layer.
+
+    Tries the Raw sub-layer first (most reliable), then falls back to
+    checking for a .load attribute or the layer's own .payload bytes.
+    Returns None if nothing is extractable.
+    """
+    try:
+        from scapy.packet import Raw
+        if layer.haslayer(Raw):
+            return bytes(layer[Raw].load)
+        if hasattr(layer, "load"):
+            return bytes(layer.load)
+        return bytes(layer.payload) if layer.payload else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _packet_timestamp(raw_pkt) -> str:
+    """
+    Return the packet's capture timestamp as a UTC ISO-8601 string.
+
+    Uses pkt.time (a UNIX float set by Scapy's libpcap integration) when
+    available and non-zero; otherwise falls back to the current UTC time.
+    """
+    try:
+        t = getattr(raw_pkt, "time", None)
+        if t and t > 0:
+            return datetime.fromtimestamp(float(t), tz=timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
+    except Exception:  # noqa: BLE001
+        pass
+    return _utc_now()
+
 
 def _utc_now() -> str:
     """Return current UTC time as ISO-8601 string."""

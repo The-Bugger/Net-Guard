@@ -23,7 +23,11 @@ from typing import Optional
 
 from detection.parsers.packet_decoder import Packet, PacketDecoder
 
+# General operational logger for this module
 logger = logging.getLogger("netguard.capture_engine")
+
+# System logger — routes to logs/system.log (Requirement 2.4: log decode warnings here)
+_system_logger = logging.getLogger("netguard.system")
 
 
 class CaptureEngine:
@@ -155,14 +159,20 @@ class CaptureEngine:
         """
         try:
             decoded = self._decoder.decode(raw_pkt)
-            if decoded is not None:
+            if decoded is None:
+                # Requirement 2.4: log WARNING to system.log on decode failure
+                _system_logger.warning(
+                    "CaptureEngine: packet could not be decoded — discarding malformed packet."
+                )
+            else:
                 self._packet_queue.put_nowait(decoded)
         except queue.Full:
-            logger.warning(
+            _system_logger.warning(
                 "CaptureEngine: packet_queue is full — dropping packet."
             )
         except Exception as exc:  # noqa: BLE001
-            logger.warning(
+            # Requirement 2.4: log WARNING to system.log; discard; continue
+            _system_logger.warning(
                 "CaptureEngine: error processing packet — %s: %s",
                 type(exc).__name__,
                 exc,

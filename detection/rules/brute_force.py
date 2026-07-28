@@ -6,11 +6,12 @@ repeated authentication failure indicators per source IP within a
 configurable sliding time window.
 
 Detection logic:
-- Track auth-failure indicators per source IP: SSH (port 22), HTTP 401 (port 80/443), FTP (port 21)
+- Track TCP packets to SSH (port 22), HTTP (port 80/443), and FTP (port 21) per source IP
 - Emit ThreatEvent when failure count >= configured threshold within the window
 - Severity: 10-19 → Medium, 20-39 → High, ≥40 → Critical
 - Confidence: round(min(failure_count/threshold, 2.0) / 2.0 * 100) capped at 100
-- Service identified from destination port; "Unknown" when not determinable
+- Service identified from destination port: "SSH" (22), "HTTP" (80/443), "FTP" (21); "Unknown" otherwise
+- 10-second cooldown per source IP; new event only if severity escalates within cooldown window
 
 Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6
 """
@@ -32,38 +33,38 @@ logger = logging.getLogger("netguard.rule.brute_force")
 _SEVERITY_ORDER = {"Low": 0, "Medium": 1, "High": 2, "Critical": 3}
 _RECOMMENDATION = "Enable account lockout policies and review authentication logs."
 
-# Port → service name mapping
-_SERVICE_MAP: dict[int, str] = {
-    21: "FTP",
+# Port → service name mapping — only the three services specified in Requirement 7.5
+# "HTTP" covers both port 80 and 443 (design doc + task 9.11 spec)
+SERVICE_PORTS: dict[int, str] = {
     22: "SSH",
-    23: "Telnet",
-    25: "SMTP",
+    21: "FTP",
     80: "HTTP",
-    110: "POP3",
-    143: "IMAP",
-    443: "HTTPS",
-    3306: "MySQL",
-    3389: "RDP",
-    5432: "PostgreSQL",
-    5900: "VNC",
-    8080: "HTTP",
-    8443: "HTTPS",
+    443: "HTTP",
 }
 
-# Ports where we look for auth-failure indicators
-_AUTH_PORTS = set(_SERVICE_MAP.keys())
+# Ports where we look for auth-failure indicators (TCP only)
+_AUTH_PORTS = set(SERVICE_PORTS.keys())
 
 
 class BruteForceRule(BaseRule):
     """
-    Detects brute-force login attempts against any service.
+    Detects brute-force login attempts against SSH, HTTP, and FTP services.
 
-    Monitors authentication failure indicators: repeated connection attempts
-    to known authentication ports (SSH/FTP/HTTP/etc.) from the same source IP.
+    Monitors connection attempts to authentication ports (SSH port 22,
+    HTTP ports 80/443, FTP port 21) from the same source IP within a
+    configurable sliding window.  When the attempt count reaches the
+    configured threshold a ThreatEvent is emitted.
+
+    Service names in evidence follow the spec:
+        "SSH" for port 22, "HTTP" for ports 80 and 443, "FTP" for port 21.
     """
 
     rule_name: str = "BRUTE_FORCE_001"
     attack_type: str = "Brute Force"
+
+    # Class-level alias so callers can inspect the supported ports without
+    # needing to reach into the module-level constant.
+    SERVICE_PORTS: dict[int, str] = SERVICE_PORTS
 
     def __init__(
         self,
@@ -97,16 +98,20 @@ class BruteForceRule(BaseRule):
 
     def process_packet(self, packet: Packet) -> None:
         """
-        Record an authentication attempt from the source IP.
+        Record a connection attempt from the source IP to an auth port.
 
-        Tracks all connection attempts to known authentication ports.
-        In a real environment, HTTP 401 responses would be the ideal signal;
-        for live capture we use connection attempts as a proxy.
+        Only processes TCP packets destined for one of the tracked service
+        ports: SSH (22), HTTP (80, 443), FTP (21).
+
+        In live capture these connection attempts serve as authentication
+        failure proxies; higher-fidelity detection would inspect response
+        codes (e.g. HTTP 401, SSH "Permission denied") from reassembled
+        streams.
 
         Args:
             packet: Normalised packet from PacketDecoder.
         """
-        if packet.protocol not in ("TCP", "UDP"):
+        if packet.protocol != "TCP":
             return
         if packet.dst_port is None:
             return
@@ -153,7 +158,7 @@ class BruteForceRule(BaseRule):
                 # Most common destination port in the window
                 ports = [p for _, p in dq]
                 primary_port = max(set(ports), key=ports.count)
-                target_service = _SERVICE_MAP.get(primary_port, "Unknown")
+                target_service = SERVICE_PORTS.get(primary_port, "Unknown")
                 dst_port = primary_port
             else:
                 target_service = "Unknown"

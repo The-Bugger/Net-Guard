@@ -213,7 +213,7 @@ class SystemLog(Base):
     module: Mapped[str] = mapped_column(String(50), nullable=False)
     event: Mapped[str] = mapped_column(String(100), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    metadata: Mapped[str | None] = mapped_column(Text, nullable=True)
+    meta: Mapped[str | None] = mapped_column("metadata", Text, nullable=True)
 
     __table_args__ = (
         Index("idx_logs_level", "level"),

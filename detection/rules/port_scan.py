@@ -180,13 +180,14 @@ class PortScanRule(BaseRule):
         confidence: int,
         timestamp: str,
     ) -> ThreatEvent:
-        scanned_ports = sorted(flow.unique_ports())
+        # Cap scanned_ports at 20 entries per Requirement 5.5
+        scanned_ports = sorted(flow.unique_ports())[:20]
 
         evidence = {
-            "unique_port_count": unique_count,
+            "source_ip": src_ip,
             "scanned_ports": scanned_ports,
+            "unique_port_count": unique_count,
             "time_window_seconds": self.window_seconds,
-            "threshold": self.threshold,
             "confidence_score": confidence,
         }
 

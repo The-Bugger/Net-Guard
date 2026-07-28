@@ -31,7 +31,7 @@ class LogRepository:
                     module=module,
                     event=event,
                     message=message,
-                    metadata=json.dumps(metadata) if metadata else None,
+                    meta=json.dumps(metadata) if metadata else None,
                 )
                 session.add(record)
                 session.commit()
@@ -79,11 +79,11 @@ class LogRepository:
 
 def _log_to_dict(record: SystemLog) -> dict:
     metadata = None
-    if record.metadata:
+    if record.meta:
         try:
-            metadata = json.loads(record.metadata)
+            metadata = json.loads(record.meta)
         except Exception:
-            metadata = {"raw": record.metadata}
+            metadata = {"raw": record.meta}
     return {
         "id": record.id,
         "timestamp": record.timestamp,

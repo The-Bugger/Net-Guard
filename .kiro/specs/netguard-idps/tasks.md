@@ -18,37 +18,37 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
   - Create `requirements.txt` pinning exact versions for: flask, flask-socketio, flask-cors, eventlet, scapy, sqlalchemy, pyyaml, hypothesis, pytest, pytest-cov, ipaddress (stdlib note)
   - _Requirements: 1.1, 1.7_
 
-- [ ] 2. Implement Configuration_Manager
-  - [-] 2.1 Create `config/config.yaml` with all settings and documented defaults (interface, syn_flood_threshold=100, syn_flood_window=3, port_scan_threshold=20, port_scan_window=10, brute_force_threshold=10, brute_force_window=60, block_duration=120, dashboard_refresh_interval=1, rules_enabled dict all true)
+- [x] 2. Implement Configuration_Manager
+  - [x] 2.1 Create `config/config.yaml` with all settings and documented defaults (interface, syn_flood_threshold=100, syn_flood_window=3, port_scan_threshold=20, port_scan_window=10, brute_force_threshold=10, brute_force_window=60, block_duration=120, dashboard_refresh_interval=1, rules_enabled dict all true)
   - Create `backend/services/config_service.py` with `Settings` dataclass and `ConfigurationManager` class implementing `load()`, `get()`, `update()`, `validate_settings()` methods
   - Implement fallback-to-defaults when `config/config.yaml` is missing or malformed with CRITICAL log to `logs/errors.log`
   - Implement in-memory apply plus YAML file persist on `update()` without restart
   - _Requirements: 1.2, 1.3, 1.4, 1.5, 1.6_
 
-  - [ ] 2.2 Write property test for ConfigurationManager (Property 1)
+  - [x] 2.2 Write property test for ConfigurationManager (Property 1)
     - **Property 1: Settings Validation and Persistence** — for any numeric setting within range, accepted and persisted; outside range, rejected with 422; absent config.yaml, defaults applied
     - **Validates: Requirements 1.3, 1.4, 1.5, 1.6**
     - Annotate with `# Feature: netguard-idps, Property 1`
     - File: `tests/test_properties_config.py`
 
 
-- [ ] 3. Create database schema and initialization
-  - [-] 3.1 Create `database/schema.py` with six SQLAlchemy ORM models: `Event`, `BlockedIP`, `WhitelistEntry`, `DetectionRule`, `Setting`, `SystemLog` using all fields specified in design
+- [x] 3. Create database schema and initialization
+  - [x] 3.1 Create `database/schema.py` with six SQLAlchemy ORM models: `Event`, `BlockedIP`, `WhitelistEntry`, `DetectionRule`, `Setting`, `SystemLog` using all fields specified in design
     - Include CHECK constraint on `Event.confidence BETWEEN 0 AND 100`
     - Include UNIQUE constraint on `Event.event_id`
     - _Requirements: 14.1, 14.3, 14.4_
 
-  - [ ] 3.2 Create `database/init_db.py` with `initialize_db()` function that creates all tables on first startup if `database/netguard.db` does not exist
+  - [x] 3.2 Create `database/init_db.py` with `initialize_db()` function that creates all tables on first startup if `database/netguard.db` does not exist
     - _Requirements: 14.1_
 
-  - [ ] 3.3 Write property tests for database constraints (Properties 39–40)
+  - [x] 3.3 Write property tests for database constraints (Properties 39–40)
     - **Property 39: Database Confidence Constraint** — INSERT with confidence outside [0,100] rejected
     - **Property 40: Database Event ID Uniqueness Constraint** — duplicate event_id rejected
     - **Validates: Requirements 14.3, 14.4**
     - Annotate with `# Feature: netguard-idps, Property 39` and `# Feature: netguard-idps, Property 40`
     - File: `tests/test_properties_db.py`
 
-- [ ] 4. Implement logging system
+- [x] 4. Implement logging system
   - Create `backend/services/log_service.py` with `LoggingEngine` class implementing `start()`, `stop()`, `_logging_loop()`, `log_event()`, `log_system()` methods
   - Configure Python logging with three file handlers: `logs/system.log` (INFO), `logs/detections.log` (INFO + detection events), `logs/errors.log` (WARNING+)
   - Use rotating log files with max size 10 MB and 5 backups
@@ -56,7 +56,7 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
   - Never log passwords, secrets, or tokens
   - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
 
-- [ ] 5. Create utility modules
+- [x] 5. Create utility modules
   - Create `backend/utils/validators.py` with IP validation using `ipaddress.ip_address()`, numeric range checks, raises ValueError on invalid
   - Create `backend/utils/response.py` with `success_response(data, message)` and `error_response(error, code)` helpers returning standard JSON envelope
   - _Requirements: 13.3, 13.6_
@@ -69,26 +69,26 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
 
 ### Phase 2: Packet Capture, Parsing, Detection Engine, Evidence Generation
 
-- [ ] 7. Implement Packet_Decoder
-  - [ ] 7.1 Create `detection/parsers/packet_decoder.py` with `Packet` dataclass (src_ip, dst_ip, src_port, dst_port, protocol, flags, timestamp, length, payload) and `PacketDecoder` class with `decode()` method
+- [x] 7. Implement Packet_Decoder
+  - [x] 7.1 Create `detection/parsers/packet_decoder.py` with `Packet` dataclass (src_ip, dst_ip, src_port, dst_port, protocol, flags, timestamp, length, payload) and `PacketDecoder` class with `decode()` method
     - Extract all required fields; set src_port/dst_port to None for non-TCP/UDP; set protocol to "UNKNOWN" for unrecognized protocols; set flags to None for non-TCP
     - Return None and log WARNING on failure; never raise to caller; complete within 10 ms
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ] 7.2 Write unit tests for PacketDecoder
+  - [x] 7.2 Write unit tests for PacketDecoder
     - Test each protocol (TCP, UDP, ICMP, ARP, UNKNOWN), null fields for non-TCP/UDP, edge cases, decode failure returns None
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
     - File: `tests/test_packet_decoder.py`
 
-  - [ ] 7.3 Write property tests for Packet_Decoder (Properties 2–3)
+  - [x] 7.3 Write property tests for Packet_Decoder (Properties 2–3)
     - **Property 2: Malformed Input Resilience** — any undecodeable raw input returns None without exception
     - **Property 3: Packet Decoding Correctness** — all required fields present on valid packet
     - **Validates: Requirements 2.4, 3.1, 3.2, 3.4, 9.7**
     - Annotate with `# Feature: netguard-idps, Property 2` and `# Feature: netguard-idps, Property 3`
     - File: `tests/test_properties_capture.py`
 
-- [ ] 8. Implement Capture_Engine
-  - [ ] 8.1 Create `detection/capture/sniffer.py` with `CaptureEngine` class implementing `start(interface)`, `stop()`, `_capture_loop()`, `_on_packet(raw_pkt)` methods
+- [x] 8. Implement Capture_Engine
+  - [x] 8.1 Create `detection/capture/sniffer.py` with `CaptureEngine` class implementing `start(interface)`, `stop()`, `_capture_loop()`, `_on_packet(raw_pkt)` methods
     - Use Scapy `sniff()` in daemon thread with `threading.Event` for clean stop
     - On each packet call `PacketDecoder.decode()` and put result on `packet_queue`
     - Log WARNING to `logs/system.log` on decode failure; discard malformed packet; continue
@@ -97,10 +97,10 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
 
 
 - [ ] 9. Implement detection rule base and all five rules
-  - [ ] 9.1 Create `detection/rules/base_rule.py` with abstract `BaseRule` class defining `initialize()`, `process_packet()`, `evaluate()`, `generate_event()`, `explain()`, `cleanup()` abstract methods; define `FlowData` dataclass with timestamps deque, ports set, macs dict
+  - [x] 9.1 Create `detection/rules/base_rule.py` with abstract `BaseRule` class defining `initialize()`, `process_packet()`, `evaluate()`, `generate_event()`, `explain()`, `cleanup()` abstract methods; define `FlowData` dataclass with timestamps deque, ports set, macs dict
     - _Requirements: 9.3, 9.4, 9.7_
 
-  - [ ] 9.2 Create `detection/rules/syn_flood.py` — `SynFloodRule`
+  - [x] 9.2 Create `detection/rules/syn_flood.py` — `SynFloodRule`
     - Track TCP SYN packets per source IP using deque of timestamps; evict entries older than `syn_flood_window` seconds
     - Emit ThreatEvent when count ≥ configured threshold; assign severity Medium/High/Critical per tiers (100–199/200–399/≥400)
     - Confidence formula: `round(min(count/threshold, 2.0)/2.0*100)` capped at 100
@@ -121,7 +121,7 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
     - Annotate `# Feature: netguard-idps, Property 4` through `# Feature: netguard-idps, Property 7`
     - File: `tests/test_properties_detection.py`
 
-  - [ ] 9.5 Create `detection/rules/port_scan.py` — `PortScanRule`
+  - [x] 9.5 Create `detection/rules/port_scan.py` — `PortScanRule`
     - Track unique destination ports per source IP using set of (dst_ip, dst_port) tuples within sliding window
     - Emit ThreatEvent when unique port count ≥ configured threshold; assign severity Medium/High/Critical per tiers (20–39/40–79/≥80)
     - Confidence formula: `round(min(unique_count/threshold, 2.0)/2.0*100)` capped at 100
@@ -143,7 +143,7 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
     - File: `tests/test_properties_detection.py`
 
 
-  - [ ] 9.8 Create `detection/rules/sql_injection.py` — `SqlInjectionRule`
+  - [x] 9.8 Create `detection/rules/sql_injection.py` — `SqlInjectionRule`
     - Inspect TCP payload of HTTP packets (dst_port 80 or 443) with case-insensitive regex for patterns: `' OR`, `UNION SELECT`, `DROP TABLE`, `--`, `xp_cmdshell`
     - First detection from IP → severity High; repeated detection → severity Critical; confidence always 100
     - Include evidence: source_ip, destination_ip, http_method, request_url, matched_pattern
@@ -162,7 +162,7 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
     - Annotate `# Feature: netguard-idps, Property 12` through `# Feature: netguard-idps, Property 14`
     - File: `tests/test_properties_detection_sqli.py`
 
-  - [ ] 9.11 Create `detection/rules/brute_force.py` — `BruteForceRule`
+  - [x] 9.11 Create `detection/rules/brute_force.py` — `BruteForceRule`
     - Track auth-failure indicators per source IP: SSH (port 22), HTTP 401 responses (port 80/443), FTP (port 21)
     - Emit ThreatEvent when failure count ≥ configured threshold within sliding window; assign severity Medium/High/Critical per tiers (10–19/20–39/≥40)
     - Confidence formula: `round(min(failure_count/threshold, 2.0)/2.0*100)` capped at 100
@@ -183,7 +183,7 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
     - Annotate `# Feature: netguard-idps, Property 15` through `# Feature: netguard-idps, Property 18`
     - File: `tests/test_properties_detection_bruteforce.py`
 
-  - [ ] 9.14 Create `detection/rules/arp_spoof.py` — `ArpSpoofRule`
+  - [x] 9.14 Create `detection/rules/arp_spoof.py` — `ArpSpoofRule`
     - Maintain `ip_to_macs: dict[str, set[str]]` mapping each IP to observed MAC addresses from ARP replies
     - Emit ThreatEvent when `len(macs_for_ip) >= 2`; severity always High
     - Confidence: 97 for exactly 2 MACs, 100 for ≥3 MACs
@@ -260,20 +260,20 @@ Each phase builds on the previous; no orphaned code is left unintegrated. All co
 ### Phase 3: Firewall Integration, Blocking, Auto-Unblock, Whitelist
 
 - [ ] 13. Implement database repositories
-  - [ ] 13.1 Create `backend/repositories/event_repository.py` with CRUD methods for `events` table: `insert(event)`, `get_by_id(event_id)`, `get_all(filters)` using SQLAlchemy ORM; use parameterized queries only
+  - [x] 13.1 Create `backend/repositories/event_repository.py` with CRUD methods for `events` table: `insert(event)`, `get_by_id(event_id)`, `get_all(filters)` using SQLAlchemy ORM; use parameterized queries only
     - Implement in-memory queue (thread-safe deque) for retry on DB unavailability up to 60 s
     - _Requirements: 14.2, 14.5, 14.6, 14.7_
 
-  - [ ] 13.2 Create `backend/repositories/block_repository.py` with CRUD for `blocked_ips` table: `insert(record)`, `get_active(ip)`, `get_all_active()`, `set_inactive(ip)`, `extend_expiry(ip, new_expires_at)`, `get_expired()`
+  - [x] 13.2 Create `backend/repositories/block_repository.py` with CRUD for `blocked_ips` table: `insert(record)`, `get_active(ip)`, `get_all_active()`, `set_inactive(ip)`, `extend_expiry(ip, new_expires_at)`, `get_expired()`
     - _Requirements: 11.2, 11.3, 11.6_
 
-  - [ ] 13.3 Create `backend/repositories/whitelist_repository.py` with CRUD for `whitelist` table: `insert(entry)`, `delete(ip)`, `get_all()`, `exists(ip)` within single DB transactions
+  - [x] 13.3 Create `backend/repositories/whitelist_repository.py` with CRUD for `whitelist` table: `insert(entry)`, `delete(ip)`, `get_all()`, `exists(ip)` within single DB transactions
     - _Requirements: 12.2, 12.3_
 
-  - [ ] 13.4 Create `backend/repositories/log_repository.py` with `insert(log_entry)` for `system_logs` table; complete each insert in under 20 ms
+  - [x] 13.4 Create `backend/repositories/log_repository.py` with `insert(log_entry)` for `system_logs` table; complete each insert in under 20 ms
     - _Requirements: 14.5_
 
-  - [ ] 13.5 Create `backend/repositories/settings_repository.py` with `get(key)`, `set(key, value)`, `get_all()` for `settings` table
+  - [x] 13.5 Create `backend/repositories/settings_repository.py` with `get(key)`, `set(key, value)`, `get_all()` for `settings` table
     - _Requirements: 1.4_
 
   - [ ] 13.6 Write unit tests for database schema and repositories

@@ -1,0 +1,6 @@
+WARNING: No libpcap provider available ! pcap won't be used
+scapy version: 2.5.0
+Test packet: <Ether  type=IPv4 |<IP  frag=0 proto=tcp src=1.2.3.4 dst=5.6.7.8 |<TCP  sport=1234 dport=http |>>>
+WARNING: No route found (no default route?)
+WARNING: No route found (no default route?)
+Result: Packet(src_ip='1.2.3.4', dst_ip='5.6.7.8', src_port=1234, dst_port=80, protocol='TCP', flags='S', timestamp='2026-07-28T12:49:01Z', length=54)

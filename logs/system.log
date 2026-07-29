@@ -1,0 +1,11 @@
+2026-07-28T17:16:16  INFO      netguard.system  Test startup message
+2026-07-28T17:16:16  INFO      netguard.system  LoggingEngine started.
+2026-07-28T17:16:16  INFO      netguard.system  LoggingEngine stopped.
+2026-07-28T17:16:16  INFO      netguard.system  LoggingEngine started.
+2026-07-28T17:16:16  INFO      netguard.system  TestModule | TEST_EVENT — This is a test lifecycle message
+2026-07-28T17:16:16  INFO      netguard.system  LoggingEngine stopped.
+2026-07-28T17:17:39  INFO      netguard.system  LoggingEngine started.
+2026-07-28T17:17:40  INFO      netguard.system  LoggingEngine stopped.
+2026-07-28T17:17:40  INFO      netguard.system  LoggingEngine started.
+2026-07-28T17:17:40  WARNING   netguard.system  TestMod | TEST_WARN — This is a warning message
+2026-07-28T17:17:40  INFO      netguard.system  LoggingEngine stopped.

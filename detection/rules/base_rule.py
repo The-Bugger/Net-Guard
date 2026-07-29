@@ -167,8 +167,24 @@ class BaseRule(ABC):
     #: Human-readable attack category — override in subclass
     attack_type: str = ""
 
-    #: Whether this rule is currently enabled
+    #: Whether this rule is currently enabled (class-level default)
     enabled: bool = True
+
+    def __init__(self) -> None:
+        """
+        Initialise base instance attributes from class-level declarations.
+
+        Copies ``rule_name``, ``attack_type``, and ``enabled`` from the class
+        onto the instance so that each rule object has independent state.
+
+        Subclasses that override ``__init__`` should call ``super().__init__()``
+        or set these attributes themselves (Requirement 9.4).
+        """
+        # Promote class-level defaults to instance attributes so that per-instance
+        # mutation (e.g. disabling a single rule object) does not affect the class.
+        self.rule_name: str = self.__class__.rule_name
+        self.attack_type: str = self.__class__.attack_type
+        self.enabled: bool = True
 
     @abstractmethod
     def initialize(self) -> None:

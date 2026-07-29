@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — About</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+  <style>
+    .about-section { margin-bottom: 28px; }
+    .about-section h2 { font-size: 18px; font-weight: 600; margin: 0 0 12px; color: var(--text); }
+    .about-section p  { font-size: 14px; line-height: 1.7; color: var(--text-muted); margin: 0 0 8px; }
+    .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .arch-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px;
+    }
+    .arch-card h3 { font-size: 14px; font-weight: 600; margin: 0 0 6px; color: var(--text); }
+    .arch-card p  { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item">Threats</a>
+    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item">Logs</a>
+    <a href="/rules.html" class="nav-item">Rules</a>
+    <a href="/settings.html" class="nav-item">Settings</a>
+    <a href="/about.html" class="nav-item active">About</a>
+  </nav>
+  <main class="main-content">
+    <div class="page-title">About NetGuard</div>
+
+    <div class="card">
+      <div class="about-section">
+        <h2>Overview</h2>
+        <p>NetGuard is an <strong>Explainable Intrusion Detection and Prevention System (IDPS)</strong> built for network security monitoring. It captures live packets, detects five common attack types using configurable rules, generates plain-English explanations for every alert, and optionally blocks malicious IPs via iptables.</p>
+      </div>
+
+      <div class="about-section">
+        <h2>Architecture</h2>
+        <div class="arch-grid">
+          <div class="arch-card">
+            <h3>🦅 Capture Engine</h3>
+            <p>Lives on the wire via Scapy. Decodes TCP, UDP, ICMP, and ARP packets into a normalised internal format. Runs in a daemon thread with clean start/stop semantics.</p>
+          </div>
+          <div class="arch-card">
+            <h3>🧠 Detection Engine</h3>
+            <p>Feeds decoded packets through five parallel detection rules — SYN Flood, Port Scan, SQL Injection, Brute Force, ARP Spoofing. Enforces per-IP cooldowns and sliding time windows.</p>
+          </div>
+          <div class="arch-card">
+            <h3>💬 Explainability Engine</h3>
+            <p>Converts every ThreatEvent into non-expert-friendly text: what happened, why it matters, and what to do. Includes severity, confidence score (0–100), and a concrete recommendation.</p>
+          </div>
+          <div class="arch-card">
+            <h3>🛡 Prevention Engine</h3>
+            <p>Applies iptables DROP rules for blocking IPs. Checks the whitelist first, skips known-good devices. Auto-expires blocks after a configurable duration via a background expiry thread.</p>
+          </div>
+          <div class="arch-card">
+            <h3>🌐 REST API</h3>
+            <p>Flask-based API with 20+ endpoints for monitoring, detections, blocks, whitelist, statistics, logs, settings, and live dashboard data. Uses Flask-SocketIO for real-time push.</p>
+          </div>
+          <div class="arch-card">
+            <h3>📊 Frontend Dashboard</h3>
+            <p>Vanilla JS + Chart.js dashboard with real-time KPI cards, traffic rate chart, severity doughnut, threat timeline with expandable evidence, and management pages for blocks, whitelist, logs, rules, and settings.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-section">
+        <h2>Attack Types Detected</h2>
+        <table class="data-table">
+          <thead><tr><th>Attack</th><th>Rule ID</th><th>Detection Method</th></tr></thead>
+          <tbody>
+            <tr><td>SYN Flood</td><td><code>SYN_FLOOD_001</code></td><td>TCP SYN rate per source IP within sliding window</td></tr>
+            <tr><td>Port Scan</td><td><code>PORT_SCAN_001</code></td><td>Unique (dst_ip, dst_port) pairs per source IP</td></tr>
+            <tr><td>SQL Injection</td><td><code>SQL_INJECTION_001</code></td><td>Regex match on HTTP payload — patterns: <code>' OR</code>, <code>UNION SELECT</code>, <code>DROP TABLE</code>, <code>--</code>, <code>xp_cmdshell</code></td></tr>
+            <tr><td>Brute Force</td><td><code>BRUTE_FORCE_001</code></td><td>Auth-failure indicators on ports 22 (SSH), 21 (FTP), 80/443 (HTTP)</td></tr>
+            <tr><td>ARP Spoofing</td><td><code>ARP_SPOOF_001</code></td><td>Two or more unique MAC addresses claiming the same IP via ARP replies</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="about-section">
+        <h2>Technology Stack</h2>
+        <table class="data-table">
+          <thead><tr><th>Layer</th><th>Technology</th></tr></thead>
+          <tbody>
+            <tr><td>Runtime</td><td>Python 3.11+</td></tr>
+            <tr><td>Packet Capture</td><td>Scapy</td></tr>
+            <tr><td>Web Framework</td><td>Flask + Flask-SocketIO (eventlet)</td></tr>
+            <tr><td>Database</td><td>SQLite via SQLAlchemy ORM</td></tr>
+            <tr><td>Firewall</td><td>iptables (subprocess)</td></tr>
+            <tr><td>Frontend</td><td>Vanilla JS ES6 + Chart.js</td></tr>
+            <tr><td>Testing</td><td>pytest 7+ + Hypothesis (property-based)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="about-section">
+        <h2>Documentation</h2>
+        <p>Full REST API documentation available at <a href="/docs/API.md" style="color:var(--info)">docs/API.md</a>.</p>
+        <p>Source code and installation instructions in the <a href="https://github.com/your-org/netguard" style="color:var(--info)">GitHub repository</a>.</p>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="notifications"></div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  setInterval(() => { const el = document.getElementById('system-time'); if (el) el.textContent = new Date().toLocaleTimeString(); }, 1000);
+});
+</script>
+</body>
+</html>

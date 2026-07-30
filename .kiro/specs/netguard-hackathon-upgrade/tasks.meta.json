@@ -1,0 +1,169 @@
+{
+  "pbtResults": {
+    "2.1 Write property test for rate limiter (Property 9)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785425304266
+    },
+    "1.1 Write property test for security headers (Property 10)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785425705324
+    },
+    "3.1 Write property test for health score bounds (Property 5)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785425815066
+    }
+  },
+  "executionHistory": {
+    "1.1 Write property test for security headers (Property 10)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424863709
+      },
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424878224
+      },
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785425722903
+      }
+    ],
+    "2.1 Write property test for rate limiter (Property 9)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424864512
+      },
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424883995
+      },
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785425318133
+      }
+    ],
+    "3.1 Write property test for health score bounds (Property 5)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424864594
+      },
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424888691
+      }
+    ],
+    "4.1 Write property tests for search and AND filter correctness (Properties 11, 12)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424864681
+      },
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785425732064
+      }
+    ],
+    "4.2 Write property test for pagination non-overlap (Property 8)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424864742
+      },
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785425736216
+      }
+    ],
+    "7.1 Write property test for demo source IP in TEST-NET (Property 1)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424864838
+      },
+      {
+        "executionId": "c9e6c93d-01ba-481a-a441-a565397c41f9",
+        "chatSessionId": "sess_7f8c84e8-bff6-4468-a091-375d8da67ee8",
+        "timestamp": 1785426057657
+      }
+    ],
+    "7.2 Write property test for demo event schema invariant (Property 2)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424864930
+      },
+      {
+        "executionId": "c9e6c93d-01ba-481a-a441-a565397c41f9",
+        "chatSessionId": "sess_7f8c84e8-bff6-4468-a091-375d8da67ee8",
+        "timestamp": 1785426062075
+      }
+    ],
+    "8.1 Write property test for AI explanation fields invariant (Property 3)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424864981
+      },
+      {
+        "executionId": "c9e6c93d-01ba-481a-a441-a565397c41f9",
+        "chatSessionId": "sess_7f8c84e8-bff6-4468-a091-375d8da67ee8",
+        "timestamp": 1785426066954
+      }
+    ],
+    "8.2 Write property test for AI ValueError on None inputs (Property 4)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424865041
+      },
+      {
+        "executionId": "c9e6c93d-01ba-481a-a441-a565397c41f9",
+        "chatSessionId": "sess_7f8c84e8-bff6-4468-a091-375d8da67ee8",
+        "timestamp": 1785426074404
+      }
+    ],
+    "9.1 Write property test for export count parity (Property 7)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424865099
+      },
+      {
+        "executionId": "c9e6c93d-01ba-481a-a441-a565397c41f9",
+        "chatSessionId": "sess_7f8c84e8-bff6-4468-a091-375d8da67ee8",
+        "timestamp": 1785426079985
+      }
+    ],
+    "13.1 Write property test for timeline chronological order (Property 13)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424865157
+      }
+    ],
+    "14.1 Write property test for analytics bucket sum (Property 6)": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785424865211
+      }
+    ],
+    "2. Add rate limiter middleware": [
+      {
+        "executionId": "3995c4da-40ee-4830-a6db-567da6e335a9",
+        "chatSessionId": "sess_12d93c47-d0e4-40cc-8222-8850f67e0441",
+        "timestamp": 1785425318311
+      }
+    ]
+  }
+}

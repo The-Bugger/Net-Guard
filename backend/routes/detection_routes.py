@@ -23,11 +23,28 @@ _VALID_SEVERITIES = {"Low", "Medium", "High", "Critical"}
 
 @detection_bp.get("/detections")
 def list_detections():
+    # --- Strict pagination validation (Req 8.7) ---
+    raw_limit = request.args.get("limit", "50")
+    raw_offset = request.args.get("offset", "0")
+    try:
+        limit = int(raw_limit)
+        offset = int(raw_offset)
+    except (ValueError, TypeError):
+        return error_response(
+            "limit and offset must be integers.", 422, "INVALID_PAGINATION_PARAMS"
+        )
+    if limit < 1 or offset < 0:
+        return error_response(
+            "limit must be >= 1 and offset must be >= 0.", 422, "INVALID_PAGINATION_PARAMS"
+        )
+    limit = min(limit, 500)  # clamp silently (Req 8.6)
+
     filters = {}
     severity = request.args.get("severity")
     attack_type = request.args.get("attack_type")
     source_ip = request.args.get("source_ip")
     date = request.args.get("date")
+    search = request.args.get("search", "").strip()
 
     if severity:
         if not validate_severity(severity):
@@ -50,15 +67,16 @@ def list_detections():
     if date:
         filters["date"] = date
 
-    limit = min(int(request.args.get("limit", 100)), 500)
-    offset = int(request.args.get("offset", 0))
+    if search:
+        filters["search"] = search
 
     repo = get_event_repo()
     if repo is None:
         return error_response("Event repository unavailable", 500, "SERVICE_UNAVAILABLE")
 
     events = repo.get_all(filters=filters, limit=limit, offset=offset)
-    return success_response(data={"events": events, "count": len(events)})
+    total = repo.count_filtered(filters=filters)
+    return success_response(data={"events": events, "count": len(events), "total": total, "limit": limit, "offset": offset})
 
 
 @detection_bp.get("/detections/<string:event_id>")

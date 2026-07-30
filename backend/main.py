@@ -41,8 +41,9 @@ settings = config_manager.load()
 
 # ── Step 3: Set up logging ───────────────────────────────────────────────────
 log_level = os.environ.get("LOG_LEVEL", "INFO")
-setup_logging(log_level)
+setup_logging()
 logger = logging.getLogger("netguard.main")
+logger.setLevel(log_level)
 logger.info("NetGuard IDPS starting up...")
 
 # ── Step 4: Database ─────────────────────────────────────────────────────────
@@ -99,8 +100,12 @@ from backend.services.explain_service import ExplainabilityEngine
 # Shared state
 monitoring_state = MonitoringState()
 
+# Queues for inter-thread communication
+packet_queue: queue.Queue = queue.Queue(maxsize=10000)
+event_queue: queue.Queue = queue.Queue(maxsize=1000)
+
 # Logging engine
-log_engine = LoggingEngine(session_factory)
+log_engine = LoggingEngine(event_queue=event_queue, event_repo=event_repo, log_repo=log_repo)
 
 # Whitelist manager
 whitelist_manager = WhitelistManager(whitelist_repo)
@@ -108,10 +113,6 @@ whitelist_manager.sync_from_db()
 
 # Stats service
 stats_service = StatsService(event_repo, block_repo, monitoring_state)
-
-# Queues for inter-thread communication
-packet_queue: queue.Queue = queue.Queue(maxsize=10000)
-event_queue: queue.Queue = queue.Queue(maxsize=1000)
 
 # Explainability engine
 explain_engine = ExplainabilityEngine(whitelist_manager)

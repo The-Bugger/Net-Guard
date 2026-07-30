@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 from flask import Blueprint
 
-from backend.api.dependencies import get_monitoring_state, get_detection_engine
+from backend.api.dependencies import get_monitoring_state, get_detection_engine, get_stats_service
 from backend.utils.response import success_response
 
 health_bp = Blueprint("health", __name__)
@@ -37,11 +37,13 @@ def status():
     """Monitoring status overview."""
     state = get_monitoring_state()
     engine = get_detection_engine()
+    svc = get_stats_service()
 
     monitoring = state.active if state else False
     interface = state.interface if state else ""
     packets = state.packets_processed if state else 0
     active_blocks = state.active_blocks if state else 0
+    health_score = svc.get_health_score() if svc else -1
 
     return success_response(data={
         "monitoring": monitoring,
@@ -49,4 +51,5 @@ def status():
         "packets_processed": packets,
         "active_blocks": active_blocks,
         "detection_engine_running": engine.is_running if engine else False,
+        "health_score": health_score,
     })

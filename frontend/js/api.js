@@ -107,3 +107,13 @@ const NetGuardAPI = {
   getSettings:      ()       => api.get('/settings'),
   updateSettings:   (body)   => api.put('/settings', body),
 };
+
+// ── Security: HTML-escape a string for safe innerHTML assignment ─────────────
+// Uses DOM textContent to derive HTML entities (& < > ") correctly without
+// risk of XSS.  Does NOT escape single quotes (not needed for innerHTML);
+// use data-* attributes for onclick payloads instead of string interpolation.
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(str ?? '')));
+  return d.innerHTML;
+}

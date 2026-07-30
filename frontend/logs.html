@@ -76,10 +76,10 @@ function renderLogs(logs) {
   tbody.innerHTML=logs.map(l=>`
     <tr>
       <td style="font-size:12px;font-variant-numeric:tabular-nums">${new Date(l.timestamp).toLocaleString()}</td>
-      <td><span style="color:${colorMap[l.level]||'var(--text-muted)'};font-weight:600;font-size:12px">${l.level}</span></td>
-      <td style="font-size:12px;color:var(--text-muted)">${l.module}</td>
-      <td style="font-size:12px">${l.event}</td>
-      <td style="font-size:13px">${l.message}</td>
+      <td><span style="color:${colorMap[l.level]||'var(--text-muted)'};font-weight:600;font-size:12px">${escHtml(l.level)}</span></td>
+      <td style="font-size:12px;color:var(--text-muted)">${escHtml(l.module)}</td>
+      <td style="font-size:12px">${escHtml(l.event)}</td>
+      <td style="font-size:13px">${escHtml(l.message)}</td>
     </tr>
   `).join('');
 }

@@ -49,7 +49,7 @@ async function loadWL() {
   const entries = data.whitelist || [];
   const tbody = document.getElementById('wl-tbody');
   if (!entries.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><p>Whitelist is empty.</p></td></tr>'; return; }
-  tbody.innerHTML = entries.map(e => `<tr><td><code>${e.ip_address}</code></td><td>${e.description||'—'}</td><td>${new Date(e.created_at).toLocaleString()}</td><td>${e.created_by||'admin'}</td><td><button class="btn btn-danger btn-sm" onclick="removeEntry('${e.ip_address}')">Remove</button></td></tr>`).join('');
+  tbody.innerHTML = entries.map(e => `<tr><td><code>${escHtml(e.ip_address)}</code></td><td>${escHtml(e.description || '—')}</td><td>${new Date(e.created_at).toLocaleString()}</td><td>${escHtml(e.created_by || 'admin')}</td><td><button class="btn btn-danger btn-sm" data-ip="${escHtml(e.ip_address)}" onclick="removeEntry(this.dataset.ip)">Remove</button></td></tr>`).join('');
 }
 async function addEntry() {
   const ip = document.getElementById('wl-ip').value.trim();

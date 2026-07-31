@@ -41,7 +41,6 @@ const SocketManager = (() => {
     });
 
     socket.on('connect', () => {
-      console.log('SocketIO connected.');
       _hideBanner();
       if (reconnectTimer) {
         clearInterval(reconnectTimer);
@@ -69,7 +68,6 @@ const SocketManager = (() => {
   function _scheduleReconnect() {
     if (reconnectTimer) return;
     reconnectTimer = setInterval(() => {
-      console.log('SocketIO attempting reconnect...');
       if (socket) socket.connect();
     }, 5000);
   }

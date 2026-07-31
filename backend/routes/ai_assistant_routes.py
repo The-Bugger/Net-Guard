@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from flask import Blueprint, request
 
-from backend.api.dependencies import get, get_event_repo
+from backend.api.dependencies import get_event_repo
 from backend.utils.response import success_response, error_response
 
 ai_assistant_bp = Blueprint("ai_assistant", __name__)
@@ -31,8 +31,6 @@ def ask_ai_assistant():
     if not question:
         return error_response("Question is required.", 400, "VALIDATION_ERROR")
 
-    # ponytail: re-use AIExplainService stub; no new service for a simple Q&A template
-    ai_service = get("ai_explain_service")
     event_repo = get_event_repo()
 
     # Build a summary of current detections

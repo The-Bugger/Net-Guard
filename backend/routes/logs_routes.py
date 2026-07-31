@@ -42,8 +42,11 @@ def get_logs():
     if attack_type:
         filters["event"] = attack_type
 
-    limit = min(int(request.args.get("limit", 50)), 500)
-    offset = int(request.args.get("offset", 0))
+    try:
+        limit = min(int(request.args.get("limit", 50)), 500)
+        offset = int(request.args.get("offset", 0))
+    except (ValueError, TypeError):
+        return error_response("limit and offset must be integers.", 422, "INVALID_PAGINATION_PARAMS")
 
     repo = get_log_repo()
     if repo is None:

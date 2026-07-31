@@ -171,7 +171,6 @@ def initialize_db(db_url: str | None = None) -> None:
         logger.info("All database tables created or verified.")
 
         # Seed default data
-        _is_new = not _tables_were_populated(engine)
         with Session(engine) as session:
             _seed_detection_rules(session)
             _seed_settings(session)
@@ -218,7 +217,6 @@ def _tables_were_populated(engine) -> bool:
 
 def _seed_detection_rules(session: Session) -> None:
     """Insert default detection rules if they don't already exist."""
-    now = _utc_now()
     for rule_data in _DEFAULT_RULES:
         existing = (
             session.query(DetectionRule)

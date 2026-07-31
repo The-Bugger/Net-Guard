@@ -16,6 +16,7 @@ import threading
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from database.schema import Event
@@ -189,7 +190,6 @@ class EventRepository:
         """Return aggregate counts per attack_type."""
         try:
             with self._session_factory() as session:
-                from sqlalchemy import func
                 rows = (
                     session.query(Event.attack_type, func.count(Event.id))
                     .group_by(Event.attack_type)
@@ -236,7 +236,6 @@ def _apply_filters(q, filters: Optional[dict]):
         q = q.filter(Event.timestamp.like(f"{filters['date']}%"))
     if filters.get("search"):
         # Req 8.1: case-insensitive OR match across three fields
-        from sqlalchemy import or_, func
         term = f"%{filters['search']}%"
         q = q.filter(or_(
             func.lower(Event.source_ip).like(func.lower(term)),

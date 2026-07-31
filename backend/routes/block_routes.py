@@ -82,16 +82,14 @@ def list_blocked():
     if block_repo is None:
         return success_response(data={"blocked": []})
 
-    from datetime import datetime, timezone
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     active = block_repo.get_all_active()
 
     # Add expires_in countdown
+    now_dt = datetime.now(timezone.utc)
     for record in active:
         try:
             exp = datetime.strptime(record["expires_at"], "%Y-%m-%dT%H:%M:%SZ")
             exp = exp.replace(tzinfo=timezone.utc)
-            now_dt = datetime.now(timezone.utc)
             record["expires_in"] = max(0, int((exp - now_dt).total_seconds()))
         except Exception:
             record["expires_in"] = 0

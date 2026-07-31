@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables (secrets)
+.env
+!.env.example
+
+# Database (runtime data — not source)
+database/netguard.db
+database/netguard.db-shm
+database/netguard.db-wal
+
+# Logs (runtime output)
+logs/*.log
+!logs/.gitkeep
+
+# Test artifacts
+.pytest_cache/
+.hypothesis/tmp/
+.coverage
+htmlcov/
+coverage.xml
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives / build artifacts
+*.zip
+*.tar.gz
+docs.zip
+m.zip

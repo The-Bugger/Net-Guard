@@ -14,6 +14,7 @@ from dataclasses import asdict
 from flask import Blueprint, request
 
 from backend.api.dependencies import get_config
+from backend.services.config_service import Settings
 from backend.utils.response import success_response, error_response
 
 settings_bp = Blueprint("settings", __name__)
@@ -25,7 +26,6 @@ def get_settings():
     if cfg is None:
         return error_response("Config service unavailable", 500, "SERVICE_UNAVAILABLE")
     # Return current settings as a plain dict
-    from backend.services.config_service import Settings
     settings = Settings(
         network_interface=cfg.get("network_interface") or "",
         syn_flood_threshold=cfg.get("syn_flood_threshold") or 100,

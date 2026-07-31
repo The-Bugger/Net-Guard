@@ -68,7 +68,7 @@ class AIExplainService:
         self._cache: OrderedDict = OrderedDict()
         self._lock = threading.Lock()
 
-    def generate(self, threat_event, base_explanation) -> AIExplanation:
+    def generate(self, threat_event, base_explanation) -> "AIExplanation":
         """
         Entry point. Raises ValueError on None inputs. Returns cached if available.
 
@@ -107,6 +107,7 @@ class AIExplainService:
     # ------------------------------------------------------------------
 
     def _get_cached(self, event_id: str) -> Optional[AIExplanation]:
+        """Return cached AIExplanation for event_id, promoting it to MRU, or None if absent."""
         with self._lock:
             if event_id in self._cache:
                 self._cache.move_to_end(event_id)
@@ -127,6 +128,7 @@ class AIExplainService:
     # ------------------------------------------------------------------
 
     def _call_provider(self, threat_event, base_explanation) -> AIExplanation:
+        """Dispatch to the configured provider (_call_gemini, _call_openai, or _call_stub)."""
         if self._provider == "gemini":
             return self._call_gemini(threat_event, base_explanation)
         if self._provider == "openai":

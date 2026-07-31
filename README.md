@@ -19,19 +19,25 @@ machine. No cloud, no proprietary hardware, no agents.
 ## Table of Contents
 
 1. [Features](#features)
-2. [Architecture](#architecture)
-3. [Directory Structure](#directory-structure)
-4. [Prerequisites](#prerequisites)
-5. [Installation](#installation)
-6. [Configuration](#configuration)
-7. [Running NetGuard](#running-netguard)
-8. [API Reference](#api-reference)
-9. [Detection Rules](#detection-rules)
-10. [Service Layer](#service-layer)
-11. [Database Schema](#database-schema)
-12. [Testing](#testing)
-13. [Demo Attack Scripts](#demo-attack-scripts)
-14. [Technology Stack](#technology-stack)
+2. [Quick Start](#quick-start)
+3. [New Features (Hackathon Upgrade)](#new-features-hackathon-upgrade)
+4. [Architecture](#architecture)
+5. [Directory Structure](#directory-structure)
+6. [Prerequisites](#prerequisites)
+7. [Installation](#installation)
+8. [Configuration](#configuration)
+9. [Environment Variables](#environment-variables)
+10. [Running NetGuard](#running-netguard)
+11. [API Reference](#api-reference)
+12. [API Reference — New Endpoints](#api-reference--new-endpoints)
+13. [Detection Rules](#detection-rules)
+14. [Service Layer](#service-layer)
+15. [Database Schema](#database-schema)
+16. [Testing](#testing)
+17. [Demo Attack Scripts](#demo-attack-scripts)
+18. [Screenshots](#screenshots)
+19. [Technology Stack](#technology-stack)
+20. [Judges Mode](#judges-mode)
 
 ---
 
@@ -688,3 +694,85 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, 
 ## Security
 
 See [SECURITY.md](SECURITY.md) for the threat model and vulnerability reporting policy.
+
+---
+
+## Quick Start
+
+```bash
+pip install -r requirements.txt
+python -m backend.main
+```
+
+Open your browser at **http://localhost:5000**.  
+Click **"Start Demo"** to begin continuous synthetic attack generation, or visit **`/?judges=1`** for presentation mode.
+
+---
+
+## New Features (Hackathon Upgrade)
+
+- **Demo Mode** — continuous synthetic attack generation with 9 attack types using RFC 5737 TEST-NET IPs
+- **AI Threat Explanation** — per-event Markdown report with MITRE ATT&CK, CVE refs, and remediation (stub/Gemini/OpenAI)
+- **Analytics Dashboard** — hourly/daily/weekly charts, severity doughnut, attack radar, world attack map
+- **Export (JSON/CSV/Markdown)** — `GET /api/v1/export?format=json|csv|markdown`
+- **Incident Timeline** — per-event step-by-step timeline at `/timeline?event_id=<uuid>`
+- **Rate Limiting** — 120 req/60s per IP with `Retry-After` header
+- **Security Headers** — X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
+- **Incident Replay** — re-emit any past event through the full detection pipeline
+- **AI Security Assistant** — chat panel powered by AIExplainService stub
+- **Onboarding Tour** — first-time 5-step guided tour (localStorage-gated)
+- **Judges/Presentation Mode** — `?judges=1` URL param activates demo banner and "Next Feature" cycling
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `AI_PROVIDER` | `stub` | AI provider: `stub`, `gemini`, or `openai` |
+| `GEMINI_API_KEY` | — | Required when `AI_PROVIDER=gemini` |
+| `OPENAI_API_KEY` | — | Required when `AI_PROVIDER=openai` |
+| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins (restrict in production) |
+| `SECRET_KEY` | dev default | Flask secret key |
+
+---
+
+## API Reference — New Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/demo/start` | Start continuous synthetic attack generation |
+| `POST` | `/api/v1/demo/stop` | Stop the demo emit loop |
+| `POST` | `/api/v1/demo/trigger` | Emit one synthetic event immediately: `{"attack_type":"SQL Injection"}` |
+| `GET` | `/api/v1/demo/status` | Return current demo session state |
+| `GET` | `/api/v1/ai-explanation/<event_id>` | Fetch AI-enriched Markdown report for a detection event |
+| `POST` | `/api/v1/ai-assistant` | Chat with the AI security assistant: `{"message":"..."}` |
+| `GET` | `/api/v1/analytics` | Hourly/daily/weekly chart data, severity and attack distribution |
+| `GET` | `/api/v1/export` | Export events: `?format=json\|csv\|markdown` |
+| `GET` | `/api/v1/timeline/<event_id>` | Step-by-step incident timeline for an event |
+| `GET` | `/api/v1/events/<event_id>/replay` | Re-emit a past event through the full detection pipeline |
+
+---
+
+## Screenshots
+
+> _Screenshots coming soon. Run `python -m backend.main` and open `http://localhost:5000` to see the live dashboard._
+
+| Page | Description |
+|------|-------------|
+| SOC Dashboard | KPI cards, live traffic graph, activity feed, attack simulator |
+| Analytics | Hourly/daily/weekly charts, threat radar, severity doughnut, world attack map |
+| Incident Timeline | Step-by-step timeline for a detection event |
+| AI Explanation | Per-event Markdown report with MITRE ATT&CK context |
+| Judges Mode | Full-screen demo banner with guided feature tour |
+
+---
+
+## Judges Mode
+
+Add **`?judges=1`** to any URL to activate presentation mode:
+
+- A purple/cyan banner appears at the top of the dashboard.
+- Demo mode auto-starts, generating live synthetic attack traffic.
+- The sidebar collapses to a focused demo flow.
+- A **"Next Feature →"** button cycles through the demo script in order: Demo Mode → AI Explanation → Analytics → Export → Timeline.

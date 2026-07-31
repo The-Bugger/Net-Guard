@@ -1,13 +1,37 @@
 /**
  * dashboard.js — Main dashboard KPIs, live updates, and SocketIO event handlers.
  *
- * Requirements: 16.1, 16.8, 16.10, 16.11
+ * Requirements: 3.2, 3.6, 3.9, 13.3, 16.1, 16.8, 16.10, 16.11
  */
 
 // ── State ─────────────────────────────────────────────────────────────────
 let recentEvents = [];
 let selectedEventId = null;
 let pollingInterval = null;
+let socketConnected = false;       // tracks SocketIO connection for countUp gating (Req 3.2)
+let activityFeed = [];             // max 10 entries (Req 3.3)
+
+// ── countUp animation (Req 3.2) ───────────────────────────────────────────
+/**
+ * Animate a numeric KPI element from `from` to `to` over `durationMs`.
+ * Only animates when SocketIO is connected; skips straight to final when polling.
+ * @param {HTMLElement} el
+ * @param {number} from
+ * @param {number} to
+ * @param {number} [durationMs=600]
+ */
+function countUp(el, from, to, durationMs = 600) {
+  if (!el) return;
+  if (!socketConnected || durationMs <= 0) { el.textContent = to.toLocaleString(); return; }
+  const start = performance.now();
+  const delta = to - from;
+  function step(now) {
+    const t = Math.min((now - start) / durationMs, 1);
+    el.textContent = Math.round(from + delta * t).toLocaleString();
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
 
 // ── Initialisation ────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -16,6 +40,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadDashboard();
   startClock();
+  startHealthPolling();
+  startRecentIncidentsRefresh();  // Task 40
+
+  // Track SocketIO connection state for countUp gating (Req 3.2)
+  SocketManager.on('connect',    () => { socketConnected = true;  _hideReconnectingBanner(); stopFallbackPolling(); });
+  SocketManager.on('disconnect', () => { socketConnected = false; _showReconnectingBanner(); startFallbackPolling(); });
 
   // SocketIO events
   SocketManager.on('new_threat',        onNewThreat);
@@ -26,8 +56,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   SocketManager.connect();
 
-  // Fallback polling if SocketIO unavailable
+  // Fallback polling if SocketIO unavailable (Req 3.6)
   startFallbackPolling();
+
+  // Keyboard shortcuts (Req 13.3, Task 29)
+  document.addEventListener('keydown', e => {
+    // Ctrl+Shift+P / Cmd+Shift+P — fullscreen toggle
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+      e.preventDefault();
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        document.documentElement.requestFullscreen().catch(err => {
+          showToast(`Fullscreen denied: ${err.message}`, 'warning', 4000);
+        });
+      }
+      return;
+    }
+
+    // Ctrl+/ — toggle keyboard shortcuts help modal
+    if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+      e.preventDefault();
+      const modal = document.getElementById('shortcuts-modal');
+      if (modal) modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+      return;
+    }
+
+    // Esc — close any open modal
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('shortcuts-modal');
+      if (modal) modal.style.display = 'none';
+      return;
+    }
+
+    // D — focus detections search (not when typing in an input)
+    if (e.key === 'd' || e.key === 'D') {
+      const tag = document.activeElement?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      e.preventDefault();
+      document.getElementById('search-input')?.focus();
+    }
+  });
 });
 
 // ── Load initial dashboard data ────────────────────────────────────────────
@@ -60,6 +129,75 @@ function updateKPIs(data) {
   setKPI('kpi-alerts',    fmtNumber(data.alerts_today || data.alerts || 0));
   setKPI('kpi-blocked',   fmtNumber(data.blocked_ips || 0));
   setKPI('kpi-pps',       (data.traffic_rate || 0).toFixed(1));
+
+  // New KPI cards (Req 3.1)
+  if (data.blocked_ips_total !== undefined) setKPI('kpi-blocked-total', fmtNumber(data.blocked_ips_total));
+  if (data.detection_accuracy !== undefined) {
+    setKPI('kpi-accuracy', Math.round(data.detection_accuracy) + '%');
+    updateAccuracyRing(data.detection_accuracy);
+  } else if (data.total_events && data.blocked_count !== undefined) {
+    const acc = data.total_events > 0 ? Math.round((data.blocked_count / data.total_events) * 100) : 0;
+    setKPI('kpi-accuracy', acc + '%');
+    updateAccuracyRing(acc);
+  }
+  updateHealthScore(data.health_score);
+}
+
+// ── Health Score (Req 3.6) ─────────────────────────────────────────────────
+function updateHealthScore(score) {
+  const el = document.getElementById('kpi-health');
+  if (!el) return;
+  if (score === undefined || score === null || score === -1) { el.textContent = '—'; el.style.color = ''; return; }
+  el.textContent = score;
+  el.style.color = score < 50 ? 'var(--danger)' : score < 80 ? 'var(--warning)' : 'var(--success)';
+  drawHealthGauge(score);
+  // gauge label
+  const gl = document.getElementById('gauge-label');
+  if (gl) { gl.textContent = score; gl.style.color = el.style.color; }
+}
+
+// ── Severity Gauge — canvas arc (Req 3.6 / Task 31) ───────────────────────
+function drawHealthGauge(score) {
+  const canvas = document.getElementById('severity-gauge');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H - 10, r = Math.min(W, H * 2) * 0.42;
+  const startAngle = Math.PI, endAngle = 2 * Math.PI;
+
+  // Track
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startAngle, endAngle);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Fill — colour by threshold
+  const pct = Math.max(0, Math.min(100, score)) / 100;
+  const fillEnd = startAngle + pct * Math.PI;
+  const color = score < 50 ? '#F87171' : score < 80 ? '#FACC15' : '#4ADE80';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, startAngle, fillEnd);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+// ── Detection Accuracy Ring (Req 3.1 / Task 31) ────────────────────────────
+function updateAccuracyRing(pct) {
+  const ring = document.getElementById('accuracy-ring');
+  const label = document.getElementById('ring-value');
+  if (!ring) return;
+  const r = 50;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  ring.style.strokeDasharray = `${circ}`;
+  ring.style.strokeDashoffset = offset;
+  if (label) label.textContent = Math.round(pct) + '%';
 }
 
 function setKPI(id, value) {
@@ -111,9 +249,12 @@ function renderThreatTimeline(events) {
         </div>
       </td>
       <td><span class="badge ${e.blocked ? 'blocked' : ''}">${e.blocked ? '🔴 Blocked' : '👁 Detected'}</span></td>
+      <td onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="replayEvent('${escHtml(e.event_id)}')">↺ Replay</button>
+      </td>
     </tr>
     <tr id="evidence-row-${e.event_id}" style="display:none">
-      <td colspan="6">
+      <td colspan="7">
         <div class="evidence-panel" id="evidence-${e.event_id}">Loading…</div>
       </td>
     </tr>
@@ -241,12 +382,105 @@ async function removeWhitelist(ip) {
   }
 }
 
+// ── Activity Feed (Req 3.3) ────────────────────────────────────────────────
+function severityColor(sev) {
+  const s = (sev || '').toLowerCase();
+  if (s === 'critical' || s === 'high') return '#F87171';
+  if (s === 'medium') return '#FACC15';
+  return '#4ADE80';
+}
+
+function prependActivityFeed(type, event) {
+  const ts = fmtTime(event.timestamp || event.blocked_at || new Date().toISOString());
+  const label = type === 'new_threat'   ? (event.attack_type || 'Threat')
+              : type === 'ip_blocked'   ? `Blocked: ${event.ip || ''}`
+              :                           `Unblocked: ${event.ip || ''}`;
+  const sev = event.severity || (type === 'ip_blocked' ? 'High' : 'Low');
+  const color = severityColor(sev);
+
+  activityFeed.unshift({ ts, label, sev, color, type });
+  if (activityFeed.length > 10) activityFeed.pop();
+  renderActivityFeed();
+}
+
+function renderActivityFeed() {
+  const feed = document.getElementById('activity-feed');
+  if (!feed) return;
+  if (!activityFeed.length) {
+    feed.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0">Waiting for events\u2026</p>';
+    return;
+  }
+  feed.innerHTML = activityFeed.map(e => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.4)">
+      <span style="font-size:11px;color:var(--text-muted);flex-shrink:0">${escHtml(e.ts)}</span>
+      <span style="flex:1;font-size:13px">${escHtml(e.label)}</span>
+      <span style="background:${e.color};color:#000;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;flex-shrink:0">${escHtml(e.sev)}</span>
+    </div>
+  `).join('');
+}
+
+// ── Status Badges (Req 3.8) ────────────────────────────────────────────────
+function updateStatusBadges(monitoringActive, demoActive, aiAvailable) {
+  _setBadge('badge-monitoring', monitoringActive, 'Monitoring Active', 'Monitoring Stopped');
+  _setBadge('badge-demo',       demoActive,       'Demo Active',       'Demo Stopped');
+  _setBadge('badge-ai',         aiAvailable,      'AI Available',      'AI Unavailable');
+}
+
+function _setBadge(id, active, labelOn, labelOff) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = `status-badge ${active ? 'active' : 'inactive'}`;
+  el.innerHTML = `<span class="status-dot"></span> ${active ? labelOn : labelOff}`;
+}
+
+// ── System Health polling (Req 3.4) ────────────────────────────────────────
+let _healthPollTimer = null;
+
+function startHealthPolling() {
+  if (_healthPollTimer) return;   // already running
+  pollSystemHealth();             // immediate first call
+  _healthPollTimer = setInterval(pollSystemHealth, 10000);  // every 10 s
+}
+
+async function pollSystemHealth() {
+  try {
+    const resp = await fetch('/api/v1/status');
+    if (!resp.ok) return;
+    const json = await resp.json();
+    const d = json.data || json;
+
+    setKPI('sys-cpu',        d.cpu_percent !== undefined ? Math.round(d.cpu_percent) + '%' : '—');
+    setKPI('sys-mem',        d.memory_percent !== undefined ? Math.round(d.memory_percent) + '%' : '—');
+    setKPI('sys-uptime',     d.uptime || '—');
+    setKPI('sys-monitoring', d.monitoring ? '✅ Active' : '⏹ Stopped');
+
+    const ts = document.getElementById('health-refresh-ts');
+    if (ts) ts.textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    if (d.health_score !== undefined) updateHealthScore(d.health_score);
+
+    // Update status badges from status endpoint
+    const monActive = !!(d.monitoring);
+    // Demo / AI status may not be in /status — preserve previous badge state if absent
+    if (d.demo_active !== undefined || d.ai_available !== undefined) {
+      updateStatusBadges(monActive, d.demo_active || false, d.ai_available !== false);
+    } else {
+      updateStatusBadges(monActive,
+        document.getElementById('badge-demo')?.classList.contains('active') || false,
+        document.getElementById('badge-ai')?.classList.contains('active') || false);
+    }
+  } catch (_) {}
+}
+
 // ── SocketIO Event Handlers ────────────────────────────────────────────────
 function onNewThreat(event) {
   // Prepend to recent events list
   recentEvents.unshift(event);
   if (recentEvents.length > 20) recentEvents.pop();
   renderThreatTimeline(recentEvents);
+
+  // Activity feed (Req 3.3)
+  prependActivityFeed('new_threat', event);
 
   // Update severity chart
   updateSeverityChart(event.severity);
@@ -260,11 +494,13 @@ function onNewThreat(event) {
 }
 
 function onIpBlocked(data) {
+  prependActivityFeed('ip_blocked', data);
   loadDashboard();
   showNotification(`🔴 ${data.ip} blocked — ${data.reason}`, 'warning');
 }
 
 function onIpUnblocked(data) {
+  prependActivityFeed('ip_unblocked', data);
   loadDashboard();
   showNotification(`✅ ${data.ip} unblocked`, 'success');
 }
@@ -274,20 +510,27 @@ function onLiveStats(data) {
   setKPI('kpi-pps', (data.packets_per_second || 0).toFixed(1));
   setKPI('kpi-alerts', fmtNumber(data.alerts_today || 0));
   setKPI('kpi-blocked', fmtNumber(data.active_threats || 0));
+  if (data.health_score !== undefined) updateHealthScore(data.health_score);
 }
 
 function onMonitoringStatus(data) {
   updateMonitoringStatus(data.active, data.interface || '');
+  _setBadge('badge-monitoring', data.active, 'Monitoring Active', 'Monitoring Stopped');
+}
+
+// ── Reconnecting banner helpers ────────────────────────────────────────────
+function _showReconnectingBanner() {
+  const b = document.getElementById('reconnecting-banner');
+  if (b) b.classList.add('visible');
+}
+function _hideReconnectingBanner() {
+  const b = document.getElementById('reconnecting-banner');
+  if (b) b.classList.remove('visible');
 }
 
 // ── Fallback polling ───────────────────────────────────────────────────────
 function startFallbackPolling() {
-  // If SocketIO connects, stop polling
-  SocketManager.on('connect', () => {
-    if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
-  });
-
-  // Start polling after 3s in case SocketIO doesn't connect
+  // Start polling after 3s in case SocketIO doesn't connect (Req 3.9 — 2-second interval)
   setTimeout(() => {
     if (!pollingInterval) {
       pollingInterval = setInterval(async () => {
@@ -295,9 +538,13 @@ function startFallbackPolling() {
           const data = await NetGuardAPI.getLiveStats();
           onLiveStats(data);
         } catch (_) {}
-      }, 1000);
+      }, 2000);
     }
   }, 3000);
+}
+
+function stopFallbackPolling() {
+  if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 }
 
 // ── Monitor start/stop buttons ─────────────────────────────────────────────
@@ -334,6 +581,16 @@ async function loadInterfaces() {
   } catch (_) {}
 }
 
+// ── Attack Simulator (Req 7.3, 7.4) ───────────────────────────────────────
+async function triggerAttack(attackType) {
+  try {
+    const data = await NetGuardAPI.post('/demo/trigger', { attack_type: attackType });
+    showToast(`✅ ${attackType} triggered — event ${data.event_id}`, 'success', 3000);
+  } catch (err) {
+    showToast(`❌ Trigger failed: ${err.message}`, 'error', 5000);
+  }
+}
+
 // ── Utilities ──────────────────────────────────────────────────────────────
 function fmtTime(ts) {
   if (!ts) return '—';
@@ -368,4 +625,143 @@ function showNotification(message, type = 'success') {
 
   const timeout = type === 'critical' ? 0 : 5000;
   if (timeout) setTimeout(() => el.remove(), timeout);
+}
+
+// ── Quick Actions (Task 40) ────────────────────────────────────────────────
+async function startDemo() {
+  try {
+    await api.post('/demo/start', {});
+    showToast('Demo started.', 'success', 3000);
+    _setBadge('badge-demo', true, 'Demo Active', 'Demo Stopped');
+  } catch (err) {
+    const msg = err.message || '';
+    if (msg.includes('DEMO_ALREADY_RUNNING') || err.code === 409) {
+      showToast('Demo is already running.', 'warning', 3000);
+    } else {
+      showToast(`Failed to start demo: ${msg}`, 'error', 5000);
+    }
+  }
+}
+
+async function stopDemo() {
+  try {
+    await api.post('/demo/stop', {});
+    showToast('Demo stopped.', 'info', 3000);
+    _setBadge('badge-demo', false, 'Demo Active', 'Demo Stopped');
+  } catch (err) {
+    const msg = err.message || '';
+    if (msg.includes('DEMO_NOT_RUNNING') || err.code === 409) {
+      showToast('Demo is not running.', 'warning', 3000);
+    } else {
+      showToast(`Failed to stop demo: ${msg}`, 'error', 5000);
+    }
+  }
+}
+
+function exportJSON() {
+  window.location.href = '/api/v1/export?format=json';
+}
+
+function viewAnalytics() {
+  window.location.href = '/analytics';
+}
+
+// ── AI Assistant Panel (Task 37) ───────────────────────────────────────────
+function toggleAIAssistant() {
+  const panel = document.getElementById('ai-assistant-panel');
+  if (!panel) return;
+  const isOpen = panel.style.transform === 'translateY(0)' || panel.style.transform === 'translateY(0px)';
+  // ponytail: CSS transform toggle — no class juggling needed
+  panel.style.transform = isOpen ? 'translateY(100%)' : 'translateY(0)';
+  if (!isOpen) {
+    setTimeout(() => document.getElementById('ai-question-input')?.focus(), 320);
+  }
+}
+
+async function submitAIQuestion() {
+  const input = document.getElementById('ai-question-input');
+  if (!input) return;
+  const question = input.value.trim();
+  if (!question) return;
+
+  const messages = document.getElementById('ai-chat-messages');
+  if (!messages) return;
+
+  // Show user message
+  const userDiv = document.createElement('div');
+  userDiv.style.cssText = 'align-self:flex-end;background:var(--accent);color:#000;padding:8px 12px;border-radius:12px 12px 2px 12px;font-size:13px;max-width:80%';
+  userDiv.textContent = question;
+  messages.appendChild(userDiv);
+  input.value = '';
+  messages.scrollTop = messages.scrollHeight;
+
+  // Typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.style.cssText = 'color:var(--text-muted);font-size:12px;font-style:italic;padding:4px 0';
+  typingDiv.textContent = 'AI is thinking…';
+  messages.appendChild(typingDiv);
+  messages.scrollTop = messages.scrollHeight;
+
+  try {
+    const data = await api.post('/ai-assistant', { question });
+    typingDiv.remove();
+    const answerDiv = document.createElement('div');
+    answerDiv.style.cssText = 'align-self:flex-start;background:rgba(255,255,255,0.05);border:1px solid var(--border);padding:8px 12px;border-radius:2px 12px 12px 12px;font-size:13px;max-width:90%;white-space:pre-wrap';
+    answerDiv.textContent = data.answer || 'No response.';
+    messages.appendChild(answerDiv);
+  } catch (err) {
+    typingDiv.remove();
+    const errDiv = document.createElement('div');
+    errDiv.style.cssText = 'color:var(--danger);font-size:12px;padding:4px 0';
+    errDiv.textContent = `Error: ${err.message}`;
+    messages.appendChild(errDiv);
+  }
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// ── Replay attack (Task 38) ────────────────────────────────────────────────
+async function replayEvent(eventId) {
+  try {
+    const data = await api.get(`/events/${eventId}/replay`);
+    showToast(`✅ Replayed — new event ${data.event_id}`, 'success', 3000);
+  } catch (err) {
+    showToast(`❌ Replay failed: ${err.message}`, 'error', 5000);
+  }
+}
+
+// ── Recent Incidents Widget (Task 40) ──────────────────────────────────────
+let _recentIncidentsTimer = null;
+
+function startRecentIncidentsRefresh() {
+  loadRecentIncidents();  // immediate
+  // ponytail: setInterval at 30s; single timer, guard against double-start
+  if (!_recentIncidentsTimer) {
+    _recentIncidentsTimer = setInterval(loadRecentIncidents, 30000);
+  }
+}
+
+async function loadRecentIncidents() {
+  const list = document.getElementById('recent-incidents-list');
+  if (!list) return;
+  try {
+    const data = await api.get('/detections?limit=5');
+    const events = (data && data.events) || [];
+    if (!events.length) {
+      list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">No recent incidents.</p>';
+      return;
+    }
+    list.innerHTML = `<table class="data-table" style="margin:0">
+      <thead><tr><th>Time</th><th>Attack</th><th>Source IP</th><th>Severity</th><th></th></tr></thead>
+      <tbody>${events.map(e => `
+        <tr>
+          <td>${fmtTime(e.timestamp)}</td>
+          <td>${escHtml(e.attack_type)}</td>
+          <td><code>${escHtml(e.source_ip)}</code></td>
+          <td><span class="severity-badge severity-${(e.severity||'').toLowerCase()}">${e.severity||''}</span></td>
+          <td><button class="btn btn-ghost btn-sm" onclick="replayEvent('${escHtml(e.event_id)}')">↺ Replay</button></td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  } catch (_) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">Unable to load recent incidents.</p>';
+  }
 }

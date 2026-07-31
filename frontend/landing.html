@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Enterprise IDPS</title>
+  <link rel="stylesheet" href="/css/dark-theme.css">
+  <style>
+    body { display: flex; flex-direction: column; min-height: 100vh; margin: 0; }
+
+    /* Hero header */
+    .landing-hero {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 64px 24px 48px; text-align: center;
+    }
+    .landing-logo {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 32px; font-weight: 700; color: var(--text); margin-bottom: 16px;
+    }
+    .landing-logo svg { width: 40px; height: 40px; color: var(--accent); }
+    .landing-tagline {
+      font-size: 18px; color: var(--text-muted); max-width: 560px; line-height: 1.6; margin: 0;
+    }
+
+    /* Feature cards */
+    .features-section { padding: 0 24px 48px; max-width: 1100px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
+    }
+    .feature-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 24px 20px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--accent); }
+    .feature-icon {
+      width: 40px; height: 40px; color: var(--accent); flex-shrink: 0;
+    }
+    .feature-card h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0; }
+    .feature-card p  { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.6; }
+
+    /* CTA */
+    .cta-section {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      padding: 0 24px 64px;
+    }
+    .cta-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+    /* Error message */
+    #error-msg {
+      margin-top: 12px; padding: 10px 16px; background: rgba(248,113,113,0.15);
+      border: 1px solid var(--danger); border-radius: var(--radius);
+      color: var(--danger); font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <nav style="display:flex;gap:8px;align-items:center">
+    <a href="/" class="btn btn-ghost btn-sm">Dashboard</a>
+    <a href="/about" class="btn btn-ghost btn-sm">About</a>
+  </nav>
+</header>
+
+<!-- Hero -->
+<section class="landing-hero">
+  <div class="landing-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+    NetGuard IDPS
+  </div>
+  <p class="landing-tagline">
+    Enterprise-grade Intrusion Detection &amp; Prevention — real-time packet analysis,
+    AI-powered threat explanation, and instant blocking, all in one platform.
+  </p>
+</section>
+
+<!-- 5 Feature Cards -->
+<section class="features-section">
+  <div class="features-grid">
+
+    <!-- 1. Real-time Detection -->
+    <div class="feature-card">
+      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <h3>Real-time Detection</h3>
+      <p>Live packet inspection for SQL Injection, Brute Force, Port Scan, DDoS/SYN Flood, XSS, and more — with sub-second alerting via WebSocket push.</p>
+    </div>
+
+    <!-- 2. AI Threat Explanation -->
+    <div class="feature-card">
+      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+      </svg>
+      <h3>AI Threat Explanation</h3>
+      <p>Every alert comes with a plain-English breakdown: attacker methodology, business impact, MITRE ATT&amp;CK mapping, CVE references, and immediate remediation steps.</p>
+    </div>
+
+    <!-- 3. Demo Mode -->
+    <div class="feature-card">
+      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      <h3>Demo Mode</h3>
+      <p>Instant synthetic attack generation using RFC 5737 TEST-NET IPs — nine attack templates cycling automatically, or trigger individual attacks on demand.</p>
+    </div>
+
+    <!-- 4. Analytics Dashboard -->
+    <div class="feature-card">
+      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      <h3>Analytics Dashboard</h3>
+      <p>Hourly, daily, and weekly attack trend charts, top attacker IPs, severity distribution, security health score, and detection accuracy — all live-updated.</p>
+    </div>
+
+    <!-- 5. Export Reports -->
+    <div class="feature-card">
+      <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      <h3>Export Reports</h3>
+      <p>Download threat data as JSON, CSV, or Markdown with one click. Filterable by severity, attack type, source IP, and date range for targeted incident reports.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 style="font-size:20px;font-weight:600;color:var(--text);margin:0">Ready to secure your network?</h2>
+  <div class="cta-buttons">
+    <a href="/" class="btn btn-primary">Launch Dashboard</a>
+    <button class="btn btn-ghost" onclick="startDemo()">Start Demo</button>
+  </div>
+  <div id="error-msg" hidden></div>
+</section>
+
+<script src="/js/landing.js"></script>
+</body>
+</html>

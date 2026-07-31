@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Incident Timeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+  <style>
+    /* ── Timeline ::before vertical line trick ─────────────────────────── */
+    .tl-list {
+      list-style: none;
+      position: relative;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* The continuous vertical line running down the left side */
+    .tl-list::before {
+      content: '';
+      position: absolute;
+      top: 24px;
+      left: 19px;           /* centre of the 40px icon column */
+      bottom: 24px;
+      width: 2px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .tl-item {
+      display: flex;
+      gap: 16px;
+      padding: 0 0 28px 0;
+      position: relative;
+    }
+
+    /* Circle icon */
+    .tl-icon {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Status-specific icon ring colours */
+    .tl-status-completed .tl-icon { border-color: #4ADE80; }
+    .tl-status-pending   .tl-icon { border-color: #FACC15; }
+    .tl-status-skipped   .tl-icon { border-color: var(--border); opacity: 0.5; }
+
+    .tl-body {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+    }
+
+    .tl-status-skipped .tl-body { opacity: 0.55; }
+
+    .tl-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .tl-step-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Status badge */
+    .tl-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .tl-badge-completed { background: rgba(74,222,128,0.15); color: #4ADE80; border: 1px solid rgba(74,222,128,0.3); }
+    .tl-badge-pending   { background: rgba(250,204,21,0.15); color: #FACC15; border: 1px solid rgba(250,204,21,0.3); }
+    .tl-badge-skipped   { background: rgba(148,163,184,0.1); color: var(--text-muted); border: 1px solid var(--border); }
+
+    .tl-ts {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tl-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── Meta bar above the timeline ─────────────────────────────────── */
+    .tl-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .tl-meta code {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 12px;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    /* ── Error block ─────────────────────────────────────────────────── */
+    #tl-error {
+      background: rgba(248,113,113,0.1);
+      border: 1px solid rgba(248,113,113,0.35);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      color: #F87171;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .tl-error-back {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--info);
+    }
+
+    /* ── Loading shimmer rows ────────────────────────────────────────── */
+    #tl-loading .skeleton-row { height: 72px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item">Threats</a>
+    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item">Logs</a>
+    <a href="/rules.html" class="nav-item">Rules</a>
+    <a href="/analytics" class="nav-item">Analytics</a>
+    <a href="/settings.html" class="nav-item">Settings</a>
+    <a href="/about.html" class="nav-item">About</a>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-title">Incident Timeline</div>
+
+    <!-- Event ID meta -->
+    <p class="tl-meta">Event ID: <code id="tl-event-id">—</code></p>
+
+    <!-- Loading skeletons -->
+    <div id="tl-loading">
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+      <div class="skeleton-row"></div>
+    </div>
+
+    <!-- Error state (404 or server error) -->
+    <div id="tl-error" hidden role="alert">
+      <!-- filled by timeline.js — includes "← Back to Dashboard" link -->
+    </div>
+
+    <!-- Timeline -->
+    <div id="tl-container" hidden>
+      <ol id="tl-list" class="tl-list" aria-label="Incident timeline steps"></ol>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+
+<script>
+  // Clock update — same one-liner used across pages
+  setInterval(function () {
+    var el = document.getElementById('system-time');
+    if (el) el.textContent = new Date().toLocaleTimeString();
+  }, 1000);
+</script>
+<script src="/js/timeline.js"></script>
+</body>
+</html>

@@ -241,6 +241,15 @@ dependencies.register("event_repo", event_repo)
 dependencies.register("block_repo", block_repo)
 dependencies.register("log_repo", log_repo)
 
+from backend.services.demo_service import DemoService
+demo_service = DemoService(on_threat_event=_on_threat_event, block_repo=block_repo)
+demo_service.whitelist_manager = whitelist_manager
+dependencies.register("demo_service", demo_service)
+
+from backend.services.ai_explain_service import AIExplainService
+ai_explain_service = AIExplainService()
+dependencies.register("ai_explain_service", ai_explain_service)
+
 # ── Step 9: Create Flask app and start background threads ────────────────────
 from backend.api import create_app, socketio as _socketio
 

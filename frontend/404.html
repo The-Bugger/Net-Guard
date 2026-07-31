@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Page Not Found</title>
+  <link rel="stylesheet" href="/css/dark-theme.css">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; }
+    .error-page { text-align:center; padding:40px 20px; max-width:480px; }
+    .error-code { font-size:120px; font-weight:700; line-height:1; color:var(--accent); letter-spacing:-4px; }
+    .error-title { font-size:24px; font-weight:600; margin:8px 0 16px; }
+    .error-msg { color:var(--text-muted); font-size:15px; margin-bottom:32px; }
+    .logo { display:flex; align-items:center; justify-content:center; gap:10px; font-size:20px; font-weight:700; color:var(--accent); margin-bottom:40px; }
+    .logo svg { width:32px; height:32px; }
+  </style>
+</head>
+<body>
+  <div class="error-page">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+      NetGuard
+    </div>
+    <div class="error-code">404</div>
+    <div class="error-title">Page Not Found</div>
+    <p class="error-msg">The page you're looking for doesn't exist or has been moved.</p>
+    <a href="/" class="btn btn-primary">← Return to Dashboard</a>
+  </div>
+</body>
+</html>

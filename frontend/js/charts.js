@@ -29,8 +29,8 @@ function initTrafficChart(canvasId) {
       datasets: [{
         label: 'Packets/sec',
         data: trafficData,
-        borderColor: '#3B82F6',
-        backgroundColor: 'rgba(59,130,246,0.1)',
+        borderColor: '#00E5FF',
+        backgroundColor: 'rgba(0,229,255,0.08)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,

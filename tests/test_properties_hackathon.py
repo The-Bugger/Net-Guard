@@ -653,9 +653,11 @@ def test_property_2_demo_event_schema_invariant(template: dict) -> None:
     svc = DemoService(on_threat_event=lambda e: None, block_repo=None)
     event = svc._build_event(template)
 
+    # Fields that exist directly on ThreatEvent (explanation/recommendation live on
+    # the Explanation dataclass produced by ExplainabilityEngine, not on ThreatEvent itself)
     required_fields = [
         "event_id", "timestamp", "attack_type", "source_ip",
-        "rule_name", "severity", "confidence", "explanation", "recommendation",
+        "rule_name", "severity", "confidence",
     ]
     for field in required_fields:
         value = getattr(event, field, None)
@@ -668,6 +670,21 @@ def test_property_2_demo_event_schema_invariant(template: dict) -> None:
                 f"template={template['attack_type']!r}: field '{field}' is empty string"
             )
 
+    # explanation and recommendation text must be available via _EXPLANATIONS
+    # (the ExplainabilityEngine will use these when persisting to DB — Req 1.8, 14.1)
+    from backend.services.demo_service import _EXPLANATIONS
+    attack_type = template["attack_type"]
+    assert attack_type in _EXPLANATIONS, (
+        f"template={attack_type!r}: no entry in _EXPLANATIONS dict"
+    )
+    explanation_text, recommendation = _EXPLANATIONS[attack_type]
+    assert explanation_text and explanation_text.strip(), (
+        f"template={attack_type!r}: explanation text is empty"
+    )
+    assert recommendation and recommendation.strip(), (
+        f"template={attack_type!r}: recommendation text is empty"
+    )
+
     # evidence must contain demo: True (Req 1.8)
     evidence = getattr(event, "evidence", None)
     assert isinstance(evidence, dict), (
@@ -675,4 +692,191 @@ def test_property_2_demo_event_schema_invariant(template: dict) -> None:
     )
     assert evidence.get("demo") is True, (
         f"template={template['attack_type']!r}: evidence['demo'] != True, got {evidence.get('demo')!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Property 4: AI Explanation Rejects Null Inputs
+# Feature: netguard-hackathon-upgrade, Property 4
+# Validates: Requirements 2.1, 2.10
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("threat_event,base_explanation", [
+    (None, object()),
+    (object(), None),
+])
+def test_property_4_ai_explanation_rejects_none_inputs(threat_event, base_explanation) -> None:
+    """
+    Property 4: AI Explanation Rejects Null Inputs
+
+    generate(None, x) and generate(x, None) both raise ValueError
+    before any provider call.
+
+    Validates: Requirements 2.1, 2.10
+    """
+    from backend.services.ai_explain_service import AIExplainService
+
+    with pytest.raises(ValueError):
+        AIExplainService().generate(threat_event, base_explanation)
+
+
+# ---------------------------------------------------------------------------
+# Property 7: Export Count Parity
+# Feature: netguard-hackathon-upgrade, Property 7
+# Validates: Requirements 6.5, 14.5
+# ---------------------------------------------------------------------------
+
+
+# Feature: netguard-hackathon-upgrade, Property 7
+@hsettings(max_examples=50, deadline=None)
+@given(
+    filters=st.fixed_dictionaries(
+        {},
+        optional={
+            "severity":    st.sampled_from(["Low", "Medium", "High", "Critical"]),
+            "attack_type": st.sampled_from(["SQL Injection", "Brute Force", "Port Scan",
+                                            "XSS", "SSH Login"]),
+            "source_ip":   st.sampled_from(["10.0.0.55", "192.168.1.1", "203.0.113.7"]),
+        },
+    )
+)
+def test_property_7_export_count_parity(filters: dict) -> None:
+    """
+    Property 7: Export Count Parity
+
+    For any valid filter combination, the number of records in the JSON export
+    must equal count_filtered() for the same filters.
+
+    ExportService._fetch_events uses limit=10000, offset=0 — same ceiling
+    used by count_filtered so counts stay in sync within that cap.
+
+    Validates: Requirements 6.5, 14.5
+    """
+    import json as _json
+    from backend.repositories.event_repository import EventRepository
+    from backend.services.export_service import ExportService
+
+    repo = EventRepository(_make_in_memory_session_factory())
+    _seed_events(repo, _SEED)
+
+    json_bytes, _ = ExportService(repo).export_json(filters)
+    json_records = _json.loads(json_bytes)
+
+    expected = repo.count_filtered(filters)
+
+    assert len(json_records) == expected, (
+        f"filters={filters!r}: JSON export has {len(json_records)} records "
+        f"but count_filtered returned {expected}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Property 13: Timeline Chronological Order
+# Feature: netguard-hackathon-upgrade, Property 13
+# Validates: Requirements 4.1, 4.2
+# ---------------------------------------------------------------------------
+
+# Feature: netguard-hackathon-upgrade, Property 13
+@hsettings(max_examples=50, deadline=None)
+@given(template=st.sampled_from(_ATTACK_TEMPLATES))
+def test_property_13_timeline_chronological_order(template: dict) -> None:
+    """
+    Property 13: Timeline Chronological Order
+
+    For any attack template, the timeline built by _build_timeline must:
+    - Have "Detected" as the first entry with status "completed"
+    - Have non-decreasing timestamps for consecutive entries that both have
+      non-None timestamps
+
+    Validates: Requirements 4.1, 4.2
+    """
+    import uuid
+    from dateutil.parser import parse
+    from backend.routes.timeline_routes import _build_timeline
+    from backend.repositories.event_repository import EventRepository
+
+    session_factory = _make_in_memory_session_factory()
+    repo = EventRepository(session_factory)
+
+    event_id = str(uuid.uuid4())
+    event_dict = {
+        "event_id": event_id,
+        "timestamp": "2025-06-01T10:00:00Z",
+        "attack_type": template["attack_type"],
+        "source_ip": "192.0.2.1",
+        "destination_ip": template["destination_ip"],
+        "rule_name": template["rule_name"],
+        "severity": template["severity"],
+        "confidence": template["confidence"],
+        "protocol": template["protocol"],
+        "packet_count": template["packet_count"],
+        "explanation": "test explanation",
+        "recommendation": "test recommendation",
+    }
+    repo.insert(event_dict)
+
+    entries = _build_timeline(event_dict, None)
+
+    # First entry must be "Detected" with status "completed"
+    assert entries[0]["step_name"] == "Detected", (
+        f"First entry step_name={entries[0]['step_name']!r}, expected 'Detected'"
+    )
+    assert entries[0]["status"] == "completed", (
+        f"First entry status={entries[0]['status']!r}, expected 'completed'"
+    )
+
+    # Timestamps must be non-decreasing for consecutive non-None entries
+    timed = [(i, e) for i, e in enumerate(entries) if e["timestamp"] is not None]
+    for (i, a), (j, b) in zip(timed, timed[1:]):
+        assert parse(a["timestamp"]) <= parse(b["timestamp"]), (
+            f"Entry {i} ({a['step_name']}) timestamp {a['timestamp']!r} > "
+            f"entry {j} ({b['step_name']}) timestamp {b['timestamp']!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Property 6: Analytics Bucket Sum Equals Total Events
+# Feature: netguard-hackathon-upgrade, Property 6
+# Validates: Requirements 5.4, 14.4
+# ---------------------------------------------------------------------------
+
+def _make_now_event(event_id: str) -> dict:
+    """Seed event with a current timestamp so it falls inside any window."""
+    from datetime import datetime, timezone
+    return _make_event(
+        event_id,
+        source_ip="10.1.2.3",
+        destination_ip="10.0.0.9",
+        attack_type="Port Scan",
+        severity="Low",
+        timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    )
+
+
+# Feature: netguard-hackathon-upgrade, Property 6
+@pytest.mark.parametrize("period", ["hourly", "daily", "weekly"])
+def test_property_6_analytics_bucket_sum(period: str) -> None:
+    """
+    Property 6: Analytics Bucket Sum Equals Total Events
+
+    For any DB state and any period in {"hourly", "daily", "weekly"},
+    sum(b["count"] for b in result["buckets"]) == result["total_events"].
+
+    Seeds _SEED events (fixed past timestamps) plus 3 current-timestamp events
+    so at least the "weekly" period has non-zero buckets.
+
+    Validates: Requirements 5.4, 14.4
+    """
+    from backend.repositories.event_repository import EventRepository
+    from backend.routes.analytics_routes import _compute_analytics
+
+    repo = EventRepository(_make_in_memory_session_factory())
+    _seed_events(repo, _SEED)
+    _seed_events(repo, [_make_now_event(f"now_{i}") for i in range(3)])
+
+    result = _compute_analytics(repo, period)
+
+    bucket_sum = sum(b["count"] for b in result["buckets"])
+    assert bucket_sum == result["total_events"], (
+        f"period={period!r}: bucket sum {bucket_sum} != total_events {result['total_events']}"
     )

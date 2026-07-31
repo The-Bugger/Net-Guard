@@ -310,7 +310,13 @@ class LoggingEngine:
         )
 
         # Enqueue for async DB persistence (Req 15.5 — must not block packet capture)
-        self._event_queue.put((event, explanation))
+        try:
+            self._event_queue.put_nowait((event, explanation))
+        except queue.Full:
+            self._err_log.error(
+                "LoggingEngine: event_queue full — dropping event %s",
+                getattr(event, "event_id", "?"),
+            )
 
     def log_block(self, ip: str, reason: str, duration: int) -> None:
         """

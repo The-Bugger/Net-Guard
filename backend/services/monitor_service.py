@@ -3,8 +3,9 @@ monitor_service.py — MonitorService for NetGuard IDPS.
 
 Coordinates starting and stopping packet capture. Validates interface names.
 Manages shared MonitoringState. Emits monitoring_status SocketIO events.
+On unexpected capture failure, sets active=False and emits monitoring_error.
 
-Requirements: 2.1, 2.2, 2.6, 2.7, 2.8, 2.9
+Requirements: 2.1, 2.2, 2.4, 2.6, 2.7, 2.8, 2.9, 15.1, 15.2, 15.4
 """
 
 from __future__ import annotations
@@ -67,19 +68,28 @@ class MonitorService:
         self._log_engine = log_engine
         self._socketio_emit = socketio_emit
 
-    def start_monitoring(self, interface: str) -> None:
+    def start_monitoring(self, interface: str | None) -> None:
         """
         Start packet capture on the given interface.
 
+        If *interface* is None or empty, auto-selects the first active
+        non-loopback interface via ``_pick_default_interface()``.
+
         Args:
-            interface: Network interface name.
+            interface: Network interface name, or None/empty for auto-select.
 
         Raises:
             RuntimeError: If already monitoring (ALREADY_MONITORING).
-            ValueError: If interface is not in the available list (INVALID_INTERFACE).
+            ValueError: If no suitable interface found (NO_INTERFACE) or the
+                named interface is not available (INVALID_INTERFACE).
         """
         if self._state.active:
             raise RuntimeError("ALREADY_MONITORING")
+
+        if not interface:
+            interface = _pick_default_interface()
+            if not interface:
+                raise ValueError("NO_INTERFACE:no active non-loopback interface found")
 
         available = self.get_interfaces()
         if interface not in available:
@@ -92,6 +102,15 @@ class MonitorService:
         self._state.active = True
         self._state.interface = interface
         self._state.started_at = _utc_now()
+
+        # Watchdog: detect unexpected capture thread death and update state
+        # Requirements: 15.2, 15.4
+        watchdog = threading.Thread(
+            target=self._capture_watchdog,
+            name="Capture_Watchdog_Thread",
+            daemon=True,
+        )
+        watchdog.start()
 
         if self._log_engine:
             self._log_engine.log_system(
@@ -126,6 +145,49 @@ class MonitorService:
 
         logger.info("MonitorService: stopped monitoring.")
 
+    def _capture_watchdog(self) -> None:
+        """
+        Polls the capture thread; on unexpected death marks state inactive and
+        emits ``monitoring_error`` to connected clients.
+
+        "Unexpected" means the capture stopped while ``_state.active`` is still
+        True (i.e. nobody called ``stop_monitoring()``).
+
+        ponytail: 0.5 s poll is coarse but sufficient — finer resolution adds
+        thread churn for no measurable user benefit.
+
+        Requirements: 15.2, 15.4
+        """
+        import time
+
+        capture = self._capture
+        # Wait for the capture thread to actually start before watching it
+        time.sleep(0.5)
+
+        while self._state.active and capture.is_running:
+            time.sleep(0.5)
+
+        # If we exit because active was set False externally (stop_monitoring),
+        # nothing to do.  If we exit because the thread died unexpectedly, act.
+        if self._state.active and not capture.is_running:
+            interface = self._state.interface
+            logger.error(
+                "MonitorService: capture thread died unexpectedly on '%s'.", interface
+            )
+            self._state.active = False
+            if self._socketio_emit:
+                try:
+                    self._socketio_emit(
+                        "monitoring_error",
+                        {
+                            "interface": interface,
+                            "reason": "Capture thread stopped unexpectedly",
+                        },
+                    )
+                    self._socketio_emit("monitoring_status", {"active": False})
+                except Exception:  # noqa: BLE001
+                    pass
+
     def get_interfaces(self) -> list[str]:
         """
         Return all available network interfaces from the OS.
@@ -139,6 +201,28 @@ class MonitorService:
         except Exception as exc:
             logger.warning("MonitorService.get_interfaces failed: %s", exc)
             return []
+
+
+def _pick_default_interface() -> str:
+    """
+    Return the first non-loopback is_up interface from psutil.
+
+    Excludes any interface whose lowercased name starts with 'lo' (covers
+    lo, loopback, localhost on Linux and Windows).  Returns empty string
+    if none found so callers can handle the missing-interface case explicitly.
+
+    ponytail: linear scan is fine — typical host has < 10 interfaces.
+
+    Requirements: 2.3
+    """
+    try:
+        import psutil
+        for name, info in psutil.net_if_stats().items():
+            if info.isup and not name.lower().startswith("lo"):
+                return name
+    except Exception as exc:
+        logger.warning("_pick_default_interface failed: %s", exc)
+    return ""
 
 
 def _utc_now() -> str:

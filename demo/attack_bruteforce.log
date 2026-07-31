@@ -1,0 +1,23 @@
+[*] Brute Force Attack against 127.0.0.1
+[*] No brute-force tools found — using /dev/tcp fallback
+  → Connection attempt 1/20 to 127.0.0.1:22
+  → Connection attempt 2/20 to 127.0.0.1:22
+  → Connection attempt 3/20 to 127.0.0.1:22
+  → Connection attempt 4/20 to 127.0.0.1:22
+  → Connection attempt 5/20 to 127.0.0.1:22
+  → Connection attempt 6/20 to 127.0.0.1:22
+  → Connection attempt 7/20 to 127.0.0.1:22
+  → Connection attempt 8/20 to 127.0.0.1:22
+  → Connection attempt 9/20 to 127.0.0.1:22
+  → Connection attempt 10/20 to 127.0.0.1:22
+  → Connection attempt 11/20 to 127.0.0.1:22
+  → Connection attempt 12/20 to 127.0.0.1:22
+  → Connection attempt 13/20 to 127.0.0.1:22
+  → Connection attempt 14/20 to 127.0.0.1:22
+  → Connection attempt 15/20 to 127.0.0.1:22
+  → Connection attempt 16/20 to 127.0.0.1:22
+  → Connection attempt 17/20 to 127.0.0.1:22
+  → Connection attempt 18/20 to 127.0.0.1:22
+  → Connection attempt 19/20 to 127.0.0.1:22
+  → Connection attempt 20/20 to 127.0.0.1:22
+[*] Brute force simulation complete.

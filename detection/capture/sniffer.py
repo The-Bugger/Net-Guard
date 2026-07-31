@@ -47,16 +47,20 @@ class CaptureEngine:
         engine.stop()
     """
 
-    def __init__(self, packet_queue: queue.Queue) -> None:
+    def __init__(self, packet_queue: queue.Queue, socketio_emit=None) -> None:
         """
         Args:
             packet_queue: Thread-safe queue where decoded Packet objects are placed.
+            socketio_emit: Optional callable(event, payload) — called on capture errors
+                to emit ``monitoring_error`` to connected SocketIO clients.
+                Requirements: 2.4, 15.1
         """
         self._packet_queue = packet_queue
         self._decoder = PacketDecoder()
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._interface: str = ""
+        self._socketio_emit = socketio_emit
 
     # ------------------------------------------------------------------
     # Public API
@@ -140,12 +144,22 @@ class CaptureEngine:
                 )
 
         except Exception as exc:  # noqa: BLE001
-            logger.error(
-                "Packet_Capture_Thread: unexpected error — %s: %s",
+            _system_logger.error(
+                "CaptureEngine: capture loop failed on '%s' — %s: %s",
+                self._interface,
                 type(exc).__name__,
                 exc,
                 exc_info=True,
             )
+            # Requirements: 2.4, 15.1 — notify connected clients without crashing
+            if self._socketio_emit:
+                try:
+                    self._socketio_emit(
+                        "monitoring_error",
+                        {"interface": self._interface, "reason": str(exc)},
+                    )
+                except Exception:  # noqa: BLE001
+                    pass  # ponytail: fire-and-forget; emit failure must not re-raise
 
     def _on_packet(self, raw_pkt) -> None:
         """

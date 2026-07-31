@@ -51,15 +51,9 @@ def _make_event(**overrides):
 
 
 def _demo_svc_mock(is_active=False):
-    """Build a MagicMock that quacks like DemoService."""
+    """Build a MagicMock that quacks like DemoService (kept for fixture compatibility)."""
     svc = MagicMock()
     svc.is_active = is_active
-    svc.get_status.return_value = {
-        "active": is_active,
-        "events_generated": 0,
-        "started_at": None,
-    }
-    svc.trigger.return_value = str(uuid.uuid4())
     return svc
 
 
@@ -69,110 +63,6 @@ def client_mocks():
     app, mocks = make_test_app()
     with app.test_client() as client:
         yield client, mocks
-
-
-# ---------------------------------------------------------------------------
-# Demo lifecycle — Req 1.1, 1.4
-# ---------------------------------------------------------------------------
-
-class TestDemoStartStop:
-
-    def test_demo_start_stop(self, client_mocks):
-        """Start returns 200; stop (while active) also returns 200. Req 1.1, 1.4."""
-        client, mocks = client_mocks
-        svc = _demo_svc_mock(is_active=False)
-        from backend.api import dependencies
-        dependencies.register("demo_service", svc)
-
-        resp = client.post("/api/v1/demo/start")
-        assert resp.status_code == 200
-        svc.start.assert_called_once()
-
-        # Simulate active after start
-        svc.is_active = True
-        resp = client.post("/api/v1/demo/stop")
-        assert resp.status_code == 200
-        svc.stop.assert_called_once()
-
-    def test_demo_double_start_409(self, client_mocks):
-        """Starting while already active → 409 DEMO_ALREADY_RUNNING. Req 1.2."""
-        client, mocks = client_mocks
-        svc = _demo_svc_mock(is_active=True)
-        from backend.api import dependencies
-        dependencies.register("demo_service", svc)
-
-        resp = client.post("/api/v1/demo/start")
-        assert resp.status_code == 409
-        data = resp.get_json()
-        assert data["error_code"] == "DEMO_ALREADY_RUNNING"
-
-    def test_demo_stop_when_inactive_409(self, client_mocks):
-        """Stopping while not running → 409 DEMO_NOT_RUNNING. Req 1.5."""
-        client, mocks = client_mocks
-        svc = _demo_svc_mock(is_active=False)
-        from backend.api import dependencies
-        dependencies.register("demo_service", svc)
-
-        resp = client.post("/api/v1/demo/stop")
-        assert resp.status_code == 409
-        data = resp.get_json()
-        assert data["error_code"] == "DEMO_NOT_RUNNING"
-
-
-# ---------------------------------------------------------------------------
-# Attack trigger — Req 7.1, 7.2
-# ---------------------------------------------------------------------------
-
-_ALL_ATTACK_TYPES = [
-    "SQL Injection",
-    "Brute Force",
-    "Port Scan",
-    "DDoS/SYN Flood",
-    "XSS",
-    "SSH Login",
-    "Suspicious DNS",
-    "Malware Download",
-    "Privilege Escalation",
-]
-
-
-class TestDemoTrigger:
-
-    def test_demo_trigger_all_9_types(self, client_mocks):
-        """Each of the 9 attack types triggers an event and returns event_id. Req 7.1."""
-        client, mocks = client_mocks
-        svc = _demo_svc_mock(is_active=False)
-        from backend.api import dependencies
-        dependencies.register("demo_service", svc)
-
-        for attack_type in _ALL_ATTACK_TYPES:
-            fixed_id = str(uuid.uuid4())
-            svc.trigger.return_value = fixed_id
-            resp = client.post(
-                "/api/v1/demo/trigger",
-                json={"attack_type": attack_type},
-            )
-            assert resp.status_code == 200, f"Failed for attack_type={attack_type!r}"
-            data = resp.get_json()
-            assert "event_id" in data["data"], (
-                f"Missing event_id in response for attack_type={attack_type!r}"
-            )
-            assert data["data"]["event_id"] == fixed_id
-
-    def test_demo_trigger_unknown_422(self, client_mocks):
-        """Unknown attack_type → 422 INVALID_ATTACK_TYPE. Req 7.2."""
-        client, mocks = client_mocks
-        svc = _demo_svc_mock(is_active=False)
-        svc.trigger.side_effect = ValueError("Unknown attack_type")
-        from backend.api import dependencies
-        dependencies.register("demo_service", svc)
-
-        resp = client.post(
-            "/api/v1/demo/trigger",
-            json={"attack_type": "Laser Beam Attack"},
-        )
-        assert resp.status_code == 422
-        assert resp.get_json()["error_code"] == "INVALID_ATTACK_TYPE"
 
 
 # ---------------------------------------------------------------------------

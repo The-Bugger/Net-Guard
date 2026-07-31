@@ -200,6 +200,22 @@ class EventRepository:
             logger.error("EventRepository.get_attack_type_counts failed: %s", exc)
             return []
 
+    def get_distinct_attack_types_today(self) -> set[str]:
+        """Return set of distinct attack_type values for the current UTC calendar day."""
+        try:
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            with self._session_factory() as session:
+                rows = (
+                    session.query(Event.attack_type)
+                    .filter(Event.timestamp.like(f"{today}%"))
+                    .distinct()
+                    .all()
+                )
+                return {r[0] for r in rows if r[0]}
+        except Exception as exc:
+            logger.error("EventRepository.get_distinct_attack_types_today failed: %s", exc)
+            raise
+
     def flush_retry_queue(self) -> int:
         """
         Attempt to insert all queued retry events.

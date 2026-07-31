@@ -66,17 +66,36 @@ class StatsService:
 
     def get_health_score(self) -> int:
         """
-        Compute security health score.
+        Compute security health score using deterministic weighted deductions.
 
-        score = max(0, min(100, 100 - alerts_today*5 - active_blocks*2))
+        Formula (Req 9.1):
+          - Start at 100
+          - Deduct per attack type detected today:
+            SYN Flood: -15, Port Scan: -8, SQL Injection: -12,
+            Brute Force: -10, ARP Spoofing: -20
+          - Deduct additional -15 if ≥3 distinct attack types present
+          - Floor at 0, cap at 100
+
         Returns -1 on DB error (sentinel for "unavailable").
 
-        Req 9.1, 9.5, 9.6
+        Req 9.1, 9.2, 9.3
         """
+        DEDUCTIONS = {
+            "SYN Flood": 15,
+            "Port Scan": 8,
+            "SQL Injection": 12,
+            "Brute Force": 10,
+            "ARP Spoofing": 20,
+        }
         try:
-            alerts_today = self._event_repo.count_today()
-            active_blocks = len(self._block_repo.get_all_active())
-            return max(0, min(100, 100 - alerts_today * 5 - active_blocks * 2))
+            types_today = self._event_repo.get_distinct_attack_types_today()
+            score = 100
+            for attack, penalty in DEDUCTIONS.items():
+                if attack in types_today:
+                    score -= penalty
+            if len(types_today & DEDUCTIONS.keys()) >= 3:
+                score -= 15
+            return max(0, min(100, score))
         except Exception as exc:
             logger.error("get_health_score failed: %s", exc, exc_info=True)
             return -1
@@ -147,3 +166,33 @@ class StatsService:
     def get_rule_statistics(self) -> list[dict]:
         """Return per-rule detection counts."""
         return self._event_repo.get_attack_type_counts()
+
+
+# ---------------------------------------------------------------------------
+# Self-check: verify the formula on a known input at import time.
+# ponytail: inline assert, no framework needed — fails loudly on import if
+#           the formula regresses.
+# ---------------------------------------------------------------------------
+
+def _get_health_score_from(types_today: set) -> int:
+    """Compute the weighted health score from a set of attack type strings."""
+    DEDUCTIONS = {
+        "SYN Flood": 15,
+        "Port Scan": 8,
+        "SQL Injection": 12,
+        "Brute Force": 10,
+        "ARP Spoofing": 20,
+    }
+    score = 100
+    for attack, penalty in DEDUCTIONS.items():
+        if attack in types_today:
+            score -= penalty
+    if len(types_today & DEDUCTIONS.keys()) >= 3:
+        score -= 15
+    return max(0, min(100, score))
+
+
+assert _get_health_score_from(set()) == 100, "_get_health_score_from(set()) must equal 100"
+assert _get_health_score_from({"SYN Flood", "Port Scan", "SQL Injection", "Brute Force", "ARP Spoofing"}) == 20, (
+    "All five attack types must yield score 20"
+)

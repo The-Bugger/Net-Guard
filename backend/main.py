@@ -129,7 +129,7 @@ def _on_threat_event(threat_event):
     """
     Callback invoked by DetectionEngine for every confirmed ThreatEvent.
     - Generates explanation
-    - Persists to DB
+    - Enqueues to LoggingEngine for async DB persistence
     - Triggers prevention
     - Emits SocketIO event
     """
@@ -137,27 +137,10 @@ def _on_threat_event(threat_event):
         explanation = explain_engine.explain(threat_event)
         threat_event.blocked = False
 
-        # Persist event + explanation to DB
-        event_data = {
-            "event_id": threat_event.event_id,
-            "timestamp": threat_event.timestamp,
-            "attack_type": threat_event.attack_type,
-            "source_ip": threat_event.source_ip,
-            "destination_ip": threat_event.destination_ip or "",
-            "source_port": threat_event.source_port,
-            "destination_port": threat_event.destination_port,
-            "protocol": threat_event.protocol,
-            "rule_name": threat_event.rule_name,
-            "severity": threat_event.severity,
-            "confidence": threat_event.confidence,
-            "packet_count": threat_event.packet_count,
-            "evidence": threat_event.evidence,
-            "explanation": explanation.plain_english_text,
-            "recommendation": explanation.recommendation,
-            "blocked": False,
-        }
-        event_repo.insert(event_data)
-        log_engine.log_event(event_data, {"plain_english_text": explanation.plain_english_text})
+        # Hand off to LoggingEngine for async DB persistence (Logging_Thread).
+        # Do NOT also call event_repo.insert() directly here — that would double-write
+        # the same event_id and cause a UNIQUE constraint failure on the second insert.
+        log_engine.log_event(threat_event, explanation)
         stats_service.invalidate_cache()
 
         # Prevention
@@ -216,7 +199,7 @@ detection_engine = DetectionEngine(
 
 # Capture engine
 from detection.capture.sniffer import CaptureEngine
-capture_engine = CaptureEngine(packet_queue)
+capture_engine = CaptureEngine(packet_queue, socketio_emit=_emit_socketio)
 
 # Monitor service
 monitor_service = MonitorService(
@@ -248,14 +231,13 @@ dependencies.register("event_repo", event_repo)
 dependencies.register("block_repo", block_repo)
 dependencies.register("log_repo", log_repo)
 
-from backend.services.demo_service import DemoService
-demo_service = DemoService(on_threat_event=_on_threat_event, block_repo=block_repo)
-demo_service.whitelist_manager = whitelist_manager
-dependencies.register("demo_service", demo_service)
-
 from backend.services.ai_explain_service import AIExplainService
 ai_explain_service = AIExplainService()
 dependencies.register("ai_explain_service", ai_explain_service)
+
+from backend.services.lan_scan_service import LanScanService
+lan_scan_service = LanScanService()
+dependencies.register("lan_scan_service", lan_scan_service)
 
 # ── Step 9: Create Flask app and start background threads ────────────────────
 from backend.api import create_app, socketio as _socketio

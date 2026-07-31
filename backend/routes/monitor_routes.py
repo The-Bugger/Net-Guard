@@ -4,8 +4,9 @@ monitor_routes.py — Monitoring control endpoints.
 POST /monitor/start
 POST /monitor/stop
 GET  /monitor/interfaces
+GET  /interfaces             — flat interface list with is_up (Req 2.2, 15.3)
 
-Requirements: 2.1, 2.2, 2.5, 2.6, 2.7, 2.8, 2.9, 13.3, 13.4
+Requirements: 2.1, 2.2, 2.5, 2.6, 2.7, 2.8, 2.9, 13.3, 13.4, 15.3
 """
 
 from __future__ import annotations
@@ -67,3 +68,22 @@ def list_interfaces():
     svc = get_monitor_service()
     interfaces = svc.get_interfaces() if svc else []
     return success_response(data={"interfaces": interfaces})
+
+
+@monitor_bp.get("/interfaces")
+def list_interfaces_v2():
+    """
+    GET /api/v1/interfaces
+
+    Returns all OS network interfaces including down ones, with is_up status.
+    Used by frontend interface-picker and auto-select logic.
+
+    Requirements: 2.2, 15.3
+    """
+    try:
+        import psutil
+        stats = psutil.net_if_stats()
+        data = [{"name": name, "is_up": info.isup} for name, info in stats.items()]
+    except Exception:
+        data = []
+    return success_response(data={"interfaces": data})

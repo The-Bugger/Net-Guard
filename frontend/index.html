@@ -7,6 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/dark-theme.css">
+
+
+
+  
   <style>
     /* Task 39 — onboarding tour */
     .tour-highlight {
@@ -103,16 +107,8 @@
       <button class="btn btn-ghost" onclick="loadInterfaces()">🔄 Refresh Interfaces</button>
     </div>
 
-    <!-- Quick Actions Bar (Task 40) -->
+    <!-- Quick Actions Bar -->
     <div class="quick-actions" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)">
-      <button class="btn btn-primary btn-sm" onclick="startDemo()" title="Start Demo Mode">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-        Start Demo
-      </button>
-      <button class="btn btn-danger btn-sm" onclick="stopDemo()" title="Stop Demo Mode">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-        Stop Demo
-      </button>
       <button class="btn btn-ghost btn-sm" onclick="exportJSON()" title="Export to JSON">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export JSON
@@ -125,16 +121,17 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         AI Assistant
       </button>
+      <button class="btn btn-ghost btn-sm" onclick="refreshLanDevices()" title="Refresh LAN device list">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Scan LAN
+      </button>
     </div>
 
-    <!-- Live Status Badges (Req 3.8) -->
+    <!-- Live Status Badges -->
     <div id="status-badges-bar" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:center">
       <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">System Status</span>
       <div id="badge-monitoring" class="status-badge inactive">
         <span class="status-dot"></span> Monitoring Stopped
-      </div>
-      <div id="badge-demo" class="status-badge inactive">
-        <span class="status-dot"></span> Demo Stopped
       </div>
       <div id="badge-ai" class="status-badge inactive">
         <span class="status-dot"></span> AI Unavailable
@@ -308,26 +305,18 @@
 
     </div>
 
-    <!-- Attack Simulator (Req 7.3, 7.4) -->
+    <!-- Connected Devices on LAN -->
     <div class="card card-glass" style="margin-bottom:20px">
       <div class="card-header">
-        <span class="card-title">Attack Simulator</span>
-        <span style="font-size:12px;color:var(--text-muted)">Trigger individual synthetic attacks on demand</span>
+        <span class="card-title">Connected Devices</span>
+        <button class="btn btn-ghost btn-sm" onclick="refreshLanDevices()" style="margin-left:auto">🔄 Refresh</button>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px">
-        <button class="btn btn-ghost" onclick="triggerAttack('SQL Injection')">💉 SQL Injection</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('Brute Force')">🔑 Brute Force</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('Port Scan')">🔍 Port Scan</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('DDoS/SYN Flood')">🌊 DDoS/SYN Flood</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('XSS')">📜 XSS</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('SSH Login')">🔓 SSH Login</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('Suspicious DNS')">🌐 Suspicious DNS</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('Malware Download')">🦠 Malware Download</button>
-        <button class="btn btn-ghost" onclick="triggerAttack('Privilege Escalation')">⬆ Privilege Escalation</button>
+      <div id="lan-devices-list" style="overflow-x:auto">
+        <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">Scanning LAN…</p>
       </div>
     </div>
 
-    <!-- Recent Incidents Widget (Task 40) -->
+    <!-- Recent Incidents Widget -->
     <div class="card card-glass" id="recent-incidents-widget" style="margin-bottom:20px">
       <div class="card-header">
         <span class="card-title">Recent Incidents</span>
@@ -453,73 +442,53 @@
 <script src="/js/dashboard.js"></script>
 <script>loadInterfaces();</script>
 
-<!-- Judges / Presentation Mode — Req 13 -->
+<!-- Judges / Presentation Mode -->
 <script>
 (function () {
   const p = new URLSearchParams(location.search);
   if (!p.has('judges') && !p.has('presentation')) return;
 
-  // Show banner (push body down so header isn't obscured)
+  // Show banner
   const banner = document.getElementById('judges-banner');
   banner.style.display = 'block';
   document.body.style.paddingTop = '36px';
 
-  // Hide nav links not relevant to demo flow
-  const keepHrefs = new Set(['/', '/analytics', '/timeline']);
-  document.querySelectorAll('.sidebar .nav-item').forEach(a => {
-    if (!keepHrefs.has(new URL(a.href, location.origin).pathname)) {
-      a.style.display = 'none';
-    }
-  });
-
-  // Auto-start demo (ignore 409 — already running is fine)
-  fetch('/api/v1/demo/start', { method: 'POST' }).catch(() => {});
-
   // "Next Feature →" cycling button
-  // ponytail: simple index counter; no state persistence needed for a demo session
-  const DEMO_SCRIPT = [
-    { label: 'Demo Mode',      url: '/?judges=1' },
-    { label: 'AI Explanation', url: '/threats.html?judges=1' },
-    { label: 'Analytics',      url: '/analytics?judges=1' },
-    { label: 'Export',         url: '/analytics?judges=1&export=1' },
-    { label: 'Timeline',       url: '/timeline?judges=1' },
+  const FEATURE_SCRIPT = [
+    { label: 'Dashboard',   url: '/?judges=1' },
+    { label: 'Threats',     url: '/threats.html?judges=1' },
+    { label: 'Analytics',   url: '/analytics?judges=1' },
+    { label: 'Timeline',    url: '/timeline?judges=1' },
+    { label: 'Export',      url: '/analytics?judges=1&export=1' },
   ];
-  let demoIdx = 0;
+  let featureIdx = 0;
   const btn = document.getElementById('next-feature-btn');
   btn.style.display = 'block';
 
   window.judgesNextFeature = function () {
-    demoIdx = (demoIdx + 1) % DEMO_SCRIPT.length;
-    const next = DEMO_SCRIPT[demoIdx];
+    featureIdx = (featureIdx + 1) % FEATURE_SCRIPT.length;
+    const next = FEATURE_SCRIPT[featureIdx];
     btn.textContent = next.label + ' →';
     location.href = next.url;
   };
-  btn.textContent = (DEMO_SCRIPT[1].label) + ' →';  // prime label for first click
+  btn.textContent = (FEATURE_SCRIPT[1].label) + ' →';
 }());
 </script>
 
-<!-- Task 39 — First-time onboarding tour (vanilla JS, ~80 lines, no Shepherd/Intro.js) -->
+<!-- First-time onboarding tour -->
 <script>
 (function () {
   if (localStorage.getItem('ng_toured')) return;
 
   const STEPS = [
-    { sel: '.kpi-grid',         title: 'Live Metrics',       text: 'These KPI cards update in real time with packet counts, alerts, blocked IPs, and your overall security health score.' },
-    { sel: '#activity-feed',    title: 'Activity Feed',      text: 'Every new threat, block, and unblock event appears here instantly via SocketIO — keep an eye on the last 10 events.' },
-    { sel: '.card-glass:has(button[onclick*="triggerAttack"])', title: 'Attack Simulator', text: 'Trigger any of 9 synthetic attack types on demand to test your detection rules without real risk.' },
-    { sel: '.quick-actions',    title: 'Demo Mode',          text: 'Use the Quick Actions bar to Start or Stop the continuous demo, export data, and open the AI assistant in one click.' },
-    { sel: 'a[href="/analytics"]', title: 'Analytics',       text: 'Head to the Analytics page for historical charts, severity breakdowns, top attackers, and a threat radar — all in one view.' },
+    { sel: '.kpi-grid',            title: 'Live Metrics',      text: 'These KPI cards update in real time with packet counts, alerts, blocked IPs, and your overall security health score.' },
+    { sel: '#activity-feed',       title: 'Activity Feed',     text: 'Every new threat, block, and unblock event appears here instantly via WebSocket — keep an eye on the last 10 events.' },
+    { sel: '#lan-devices-list',    title: 'Connected Devices', text: 'Active devices on your LAN discovered via ARP scan — use this to identify the attacker machine by IP and MAC.' },
+    { sel: 'a[href="/analytics"]', title: 'Analytics',         text: 'Head to the Analytics page for historical charts, severity breakdowns, top attackers, and a threat radar.' },
   ];
 
-  // Fallback selector for step 2 (has() not supported in all browsers)
   function resolveEl(sel) {
-    try {
-      const el = document.querySelector(sel);
-      if (el) return el;
-    } catch (_) {}
-    // fallback for Attack Simulator step
-    if (sel.includes('triggerAttack')) return document.querySelector('.card-glass canvas') || document.querySelector('.card-glass');
-    return null;
+    try { return document.querySelector(sel); } catch (_) { return null; }
   }
 
   let current = 0;
@@ -554,26 +523,23 @@
     };
     document.getElementById('tour-skip').onclick = finish;
 
-    // Position tooltip near target, fallback to centre
     if (target) {
       target.classList.add('tour-highlight');
       highlightEl = target;
       const r = target.getBoundingClientRect();
-      const tH = 180; // approx tooltip height
-      // Try to place below; if not enough room, place above
+      const tH = 180;
       const top = (r.bottom + 12 + tH < window.innerHeight) ? r.bottom + 12 : Math.max(8, r.top - tH - 12);
       const left = Math.min(Math.max(8, r.left), window.innerWidth - 316);
       tooltip.style.top = top + 'px';
       tooltip.style.left = left + 'px';
+      tooltip.style.transform = '';
     } else {
-      // Centre fallback
       tooltip.style.top = '50%';
       tooltip.style.left = '50%';
       tooltip.style.transform = 'translate(-50%, -50%)';
     }
   }
 
-  // Start after a short delay so the page finishes rendering
   setTimeout(() => show(0), 800);
 }());
 </script>

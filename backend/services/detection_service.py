@@ -19,6 +19,7 @@ Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7
 
 from __future__ import annotations
 
+import concurrent.futures
 import logging
 import queue
 import threading
@@ -97,6 +98,13 @@ class DetectionEngine:
         # Disabled rules (rule_name set) — disabled on exception
         self._disabled_rules: set[str] = set()
 
+        # Enterprise extensions (Tasks 13.1, 13.7)
+        self._sigma_rules: list = []
+        self._yara_rules = None
+        self._rule_workers: int = 4
+        self._executor: Optional[concurrent.futures.ThreadPoolExecutor] = None
+        self._socketio_emit = None  # wired by main.py
+
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
@@ -120,6 +128,23 @@ class DetectionEngine:
                 )
                 self._disabled_rules.add(rule.rule_name)
 
+        # Configure thread pool (Task 13.7, Req 11.1)
+        if self._config_manager:
+            try:
+                workers = int(self._config_manager.get("performance.rule_workers") or 4)
+                self._rule_workers = max(1, min(workers, 32))
+            except Exception:
+                self._rule_workers = 4
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=self._rule_workers, thread_name_prefix="RuleWorker"
+        )
+
+        # Load Sigma rules (Task 13.1, Req 9.3)
+        self._load_sigma_rules()
+
+        # Load YARA rules (Task 13.2, Req 9.4)
+        self._load_yara_rules()
+
         self._stop_event.clear()
         self._thread = threading.Thread(
             target=self._detection_loop,
@@ -136,6 +161,9 @@ class DetectionEngine:
             self._stop_event.set()
             self._thread.join(timeout=5.0)
             self._thread = None
+
+        if self._executor:
+            self._executor.shutdown(wait=False)
 
         for rule in self._rules:
             try:
@@ -190,6 +218,16 @@ class DetectionEngine:
             if not isinstance(item, Packet):
                 continue
 
+            # Queue pressure warning (Task 16.4, Req 11.6)
+            q_size = self._packet_queue.qsize()
+            if q_size >= 8000:
+                logger.warning("DetectionEngine: queue_pressure (%d/10000 slots)", q_size)
+                if self._socketio_emit:
+                    try:
+                        self._socketio_emit("queue_pressure", {"queue_size": q_size})
+                    except Exception:
+                        pass
+
             self._dispatch(item)
 
         logger.debug("Detection_Thread: stopped.")
@@ -236,6 +274,9 @@ class DetectionEngine:
             key = (event.source_ip, event.rule_name)
             self._cooldown[key] = (event.severity, time.monotonic())
 
+            # MITRE annotation (Task 13.3)
+            event = self._annotate_mitre(event)
+
             # Dispatch to callback
             if self._on_event:
                 try:
@@ -245,6 +286,9 @@ class DetectionEngine:
                         "DetectionEngine: on_event callback raised %s: %s",
                         type(exc).__name__, exc,
                     )
+
+            # Redis Streams publish (Task 16.3, Req 11.3)
+            self._publish_to_redis(event)
 
     def _should_emit(self, event: ThreatEvent) -> bool:
         """
@@ -371,3 +415,112 @@ class DetectionEngine:
     def disabled_rule_names(self) -> list[str]:
         """Names of rules disabled due to exceptions this session."""
         return list(self._disabled_rules)
+
+    # ------------------------------------------------------------------
+    # Enterprise extensions (Tasks 13.1-13.3, 13.7)
+    # ------------------------------------------------------------------
+
+    def _load_sigma_rules(self) -> None:
+        """Load Sigma YAML rules from configured directory (Req 9.3)."""
+        sigma_dir = None
+        if self._config_manager:
+            try:
+                sigma_dir = self._config_manager.get("ai.sigma_rules_dir")
+            except Exception:
+                pass
+        if not sigma_dir:
+            return
+        try:
+            from pathlib import Path
+            rules_path = Path(sigma_dir)
+            if not rules_path.exists():
+                return
+            for f in rules_path.glob("*.yml"):
+                try:
+                    import yaml
+                    with open(f) as fh:
+                        rule = yaml.safe_load(fh)
+                    self._sigma_rules.append(rule)
+                except Exception as exc:
+                    logger.error("DetectionEngine: Sigma parse error %s: %s", f.name, exc)
+            logger.info("DetectionEngine: loaded %d Sigma rules", len(self._sigma_rules))
+        except Exception as exc:
+            logger.error("DetectionEngine: Sigma load failed: %s", exc)
+
+    def _load_yara_rules(self) -> None:
+        """Load YARA rules from configured directory (Req 9.4)."""
+        yara_dir = None
+        if self._config_manager:
+            try:
+                yara_dir = self._config_manager.get("ai.yara_rules_dir")
+            except Exception:
+                pass
+        if not yara_dir:
+            return
+        try:
+            import yara
+            from pathlib import Path
+            rules_path = Path(yara_dir)
+            if not rules_path.exists():
+                return
+            rule_files = {}
+            for f in rules_path.glob("*.yar"):
+                try:
+                    compiled = yara.compile(str(f))
+                    rule_files[f.stem] = compiled
+                except Exception as exc:
+                    logger.error("DetectionEngine: YARA compile error %s: %s", f.name, exc)
+            if rule_files:
+                self._yara_rules = rule_files
+                logger.info("DetectionEngine: loaded %d YARA rule files", len(rule_files))
+        except ImportError:
+            logger.debug("DetectionEngine: yara-python not installed — YARA disabled")
+        except Exception as exc:
+            logger.error("DetectionEngine: YARA load failed: %s", exc)
+
+    @staticmethod
+    def _publish_to_redis(event: ThreatEvent) -> None:
+        """
+        Publish ThreatEvent to Redis Stream 'netguard:events' (Req 11.3).
+        Falls back silently — never raises.
+        """
+        try:
+            from backend.services.redis_client import get_redis
+            r = get_redis()
+            if r is None:
+                return
+            r.xadd("netguard:events", {
+                "event_id":   event.event_id,
+                "attack_type": event.attack_type,
+                "source_ip":  event.source_ip,
+                "severity":   event.severity,
+                "confidence": str(event.confidence),
+                "timestamp":  event.timestamp,
+                "rule_name":  event.rule_name,
+            })
+        except Exception as exc:
+            logger.warning("DetectionEngine: redis publish failed — %s", exc)
+
+    @staticmethod
+    def _annotate_mitre(event: ThreatEvent) -> ThreatEvent:
+        """Annotate ThreatEvent with MITRE tactic/technique (Task 13.3, Req 9.8)."""
+        _MITRE = {
+            "SYN Flood":          ("Impact", "T1499"),
+            "Port Scan":          ("Reconnaissance", "T1595"),
+            "SQL Injection":      ("Initial Access", "T1190"),
+            "Brute Force":        ("Credential Access", "T1110"),
+            "ARP Spoofing":       ("Credential Access", "T1557"),
+            "ICMP Flood":         ("Impact", "T1498"),
+            "Slow HTTP":          ("Impact", "T1499"),
+            "DNS Tunneling":      ("Command and Control", "T1071.004"),
+        }
+        tactic, technique = _MITRE.get(event.attack_type, ("", ""))
+        if hasattr(event, "mitre_tactic"):
+            event.mitre_tactic = tactic
+        if hasattr(event, "mitre_technique"):
+            event.mitre_technique = technique
+        # Also store in evidence dict
+        if isinstance(event.evidence, dict):
+            event.evidence["mitre_tactic"] = tactic
+            event.evidence["mitre_technique"] = technique
+        return event

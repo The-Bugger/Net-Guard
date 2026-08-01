@@ -170,6 +170,10 @@ def initialize_db(db_url: str | None = None) -> None:
         Base.metadata.create_all(engine)
         logger.info("All database tables created or verified.")
 
+        # Run enterprise migrations (idempotent ALTER TABLE / CREATE TABLE IF NOT EXISTS)
+        from database.migrate import migrate
+        migrate(engine)
+
         # Seed default data
         with Session(engine) as session:
             _seed_detection_rules(session)

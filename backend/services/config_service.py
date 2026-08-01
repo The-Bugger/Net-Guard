@@ -254,7 +254,13 @@ class ConfigurationManager:
                 exc,
             )
 
-        settings = self._build_settings(raw)
+        try:
+            settings = self._build_settings(raw)
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — Task 14.1: never propagate non-ValueError
+            logger.error("ConfigurationManager.load: unexpected error building settings: %s", exc)
+            settings = Settings()
 
         with self._lock:
             self._settings = settings
@@ -285,15 +291,29 @@ class ConfigurationManager:
             ValueError: If one or more values are outside their defined ranges.
                         The message lists all invalid field names.
         """
-        invalid = self.validate_settings(updates)
-        if invalid:
-            raise ValueError(
-                f"Invalid configuration values for field(s): {', '.join(invalid)}"
-            )
+        # Task 14.1: wrap all dict access in try/except; only ValueError propagates
+        try:
+            if not isinstance(updates, dict):
+                raise ValueError("updates must be a dict")
+            invalid = self.validate_settings(updates)
+            if invalid:
+                raise ValueError(
+                    f"Invalid configuration values for field(s): {', '.join(invalid)}"
+                )
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            _get_logger().error("ConfigurationManager.update: unexpected error in validation: %s", exc)
+            return
 
-        with self._lock:
-            self._apply_updates(self._settings, updates)
-            self._persist(self._settings)
+        try:
+            with self._lock:
+                self._apply_updates(self._settings, updates)
+                self._persist(self._settings)
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            _get_logger().error("ConfigurationManager.update: unexpected error applying updates: %s", exc)
 
     def validate_settings(self, updates: dict[str, Any]) -> list[str]:
         """

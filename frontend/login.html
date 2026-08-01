@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — NetGuard Enterprise IDPS</title>
+    <link rel="stylesheet" href="/frontend/css/tokens.css">
+    <link rel="stylesheet" href="/frontend/css/dark-theme.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        .login-container {
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-xl);
+            padding: var(--space-10);
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--shadow-lg);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: var(--space-8);
+        }
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--space-4);
+            border-radius: var(--radius-md);
+        }
+        .login-title {
+            font-size: var(--text-2xl);
+            font-weight: var(--fw-bold);
+            color: var(--color-text);
+            margin: 0 0 var(--space-2) 0;
+        }
+        .login-subtitle {
+            font-size: var(--text-sm);
+            color: var(--color-text-muted);
+        }
+        .form-group {
+            margin-bottom: var(--space-5);
+        }
+        .form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: var(--fw-medium);
+            color: var(--color-text);
+            margin-bottom: var(--space-2);
+        }
+        .form-input {
+            width: 100%;
+            padding: var(--space-3) var(--space-4);
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-radius: var(--radius-md);
+            color: var(--color-text);
+            font-size: var(--text-base);
+            transition: border-color var(--motion-normal);
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .btn-login {
+            width: 100%;
+            padding: var(--space-3) var(--space-4);
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: var(--text-base);
+            font-weight: var(--fw-semi);
+            cursor: pointer;
+            transition: background var(--motion-normal);
+        }
+        .btn-login:hover {
+            background: #2563EB;
+        }
+        .btn-login:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .alert {
+            padding: var(--space-3) var(--space-4);
+            border-radius: var(--radius-md);
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-4);
+        }
+        .alert-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--color-danger);
+        }
+        .login-footer {
+            margin-top: var(--space-6);
+            text-align: center;
+            font-size: var(--text-xs);
+            color: var(--color-text-subtle);
+        }
+        .totp-group {
+            display: none;
+        }
+        .totp-group.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <img src="/frontend/images/logooo.jpeg" alt="NetGuard Logo" class="login-logo" onerror="this.style.display='none'">
+            <h1 class="login-title">NetGuard Enterprise</h1>
+            <p class="login-subtitle">Intrusion Detection & Prevention System</p>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label class="form-label" for="username">Username</label>
+                <input type="text" id="username" class="form-input" required autocomplete="username" autofocus>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input type="password" id="password" class="form-input" required autocomplete="current-password">
+            </div>
+
+            <div class="form-group totp-group" id="totp-group">
+                <label class="form-label" for="totp_code">MFA Code</label>
+                <input type="text" id="totp_code" class="form-input" placeholder="6-digit code" maxlength="6" pattern="[0-9]{6}">
+            </div>
+
+            <button type="submit" class="btn-login" id="btn-login">Sign In</button>
+        </form>
+
+        <div class="login-footer">
+            <p>&copy; 2024 NetGuard Enterprise. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script src="/frontend/js/auth.js"></script>
+</body>
+</html>

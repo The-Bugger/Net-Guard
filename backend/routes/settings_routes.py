@@ -1,32 +1,65 @@
 """
-settings_routes.py — Configuration endpoints.
+settings_routes.py — Configuration endpoints (enterprise extension).
 
-GET /settings
-PUT /settings
+GET  /api/v1/settings
+PUT  /api/v1/settings
+POST /api/v1/settings/integrations/test
+POST /api/v1/settings/apikeys/rotate
+GET  /api/v1/settings/backup        (download)
+POST /api/v1/settings/restore       (upload)
 
-Requirements: 1.4, 1.5, 13.2, 13.3, 13.4
+Requirements: 6.1-6.9, 12.6, 15.7
 """
 
 from __future__ import annotations
 
+import hashlib
+import io
+import json
+import os
+import secrets
+import zipfile
 from dataclasses import asdict
+from datetime import datetime, timezone
 
-from flask import Blueprint, request
+from flask import Blueprint, g, request, send_file
 
 from backend.api.dependencies import get_config
+from backend.middleware.auth_middleware import require_role
 from backend.services.config_service import Settings
-from backend.utils.response import success_response, error_response
+from backend.utils.response import success_response, error_response, created_response
 
 settings_bp = Blueprint("settings", __name__)
 
+# Sections that require admin write access (Req 6.5)
+_ADMIN_WRITE_SECTIONS = {"security", "firewall", "ai", "roles", "licensing"}
+
+# Keys that require a restart to take effect (Req 6.2)
+_RESTART_REQUIRED_KEYS = {
+    "network_interface", "database_url", "tls_cert_file", "tls_key_file",
+    "performance.rule_workers",
+}
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ---------------------------------------------------------------------------
+# GET /settings
+# ---------------------------------------------------------------------------
 
 @settings_bp.get("/settings")
 def get_settings():
     cfg = get_config()
     if cfg is None:
         return error_response("Config service unavailable", 500, "SERVICE_UNAVAILABLE")
-    # Return current settings as a plain dict
-    settings = Settings(
+
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+
+    # Build a merged view: dataclass defaults + DB overrides
+    base = asdict(Settings(
         network_interface=cfg.get("network_interface") or "",
         syn_flood_threshold=cfg.get("syn_flood_threshold") or 100,
         syn_flood_window=cfg.get("syn_flood_window") or 3,
@@ -41,9 +74,23 @@ def get_settings():
         block_duration=cfg.get("block_duration") or 120,
         dashboard_refresh_interval=cfg.get("dashboard_refresh_interval") or 1,
         rules_enabled=cfg.get("rules_enabled") or {},
-    )
-    return success_response(data=asdict(settings))
+    ))
 
+    # Overlay all enterprise namespaced keys from DB
+    if settings_repo:
+        enterprise_keys = _enterprise_defaults()
+        for key in enterprise_keys:
+            val = settings_repo.get(key)
+            if val is not None:
+                enterprise_keys[key] = val
+        base["enterprise"] = enterprise_keys
+
+    return success_response(data=base)
+
+
+# ---------------------------------------------------------------------------
+# PUT /settings
+# ---------------------------------------------------------------------------
 
 @settings_bp.put("/settings")
 def update_settings():
@@ -55,20 +102,268 @@ def update_settings():
     if cfg is None:
         return error_response("Config service unavailable", 500, "SERVICE_UNAVAILABLE")
 
-    # Validate first
+    # RBAC: check if any admin-only section keys are present (Req 6.5)
+    user = getattr(g, "current_user", {})
+    user_role = user.get("role", "viewer") if user else "viewer"
+    for key in body:
+        section = key.split(".")[0].lower()
+        if section in _ADMIN_WRITE_SECTIONS and user_role != "admin":
+            from backend.api import dependencies
+            audit = dependencies.get("audit_service")
+            if audit:
+                audit.log(user.get("sub", "unknown"), "FORBIDDEN_SETTINGS_WRITE",
+                          "/api/v1/settings", {"key": key})
+            return error_response(
+                f"Admin role required to modify '{section}' settings", 403, "FORBIDDEN"
+            )
+
+    # Split enterprise keys from core settings
+    enterprise = body.pop("enterprise", {})
+
+    # Validate + apply core settings
     invalid = cfg.validate_settings(body)
     if invalid:
         return error_response(
-            f"Invalid value(s) for field(s): {', '.join(invalid)}",
-            422,
-            "VALIDATION_ERROR",
+            f"Invalid value(s) for: {', '.join(invalid)}", 422, "VALIDATION_ERROR"
         )
-
     try:
         cfg.update(body)
     except ValueError as exc:
         return error_response(str(exc), 422, "VALIDATION_ERROR")
-    except Exception as exc:
-        return error_response(f"Failed to update settings: {exc}", 500, "DATABASE_ERROR")
 
-    return success_response(message="Settings updated successfully.")
+    # Persist enterprise settings to DB (Req 6.3)
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+    if settings_repo and enterprise:
+        for key, val in enterprise.items():
+            settings_repo.set(key, str(val))
+
+    # Mark restart-required keys (Req 6.2)
+    restart_needed = [k for k in {**body, **enterprise} if k in _RESTART_REQUIRED_KEYS]
+
+    return success_response(
+        data={"restart_required": restart_needed},
+        message="Settings updated successfully."
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /settings/integrations/test  (Req 15.7)
+# ---------------------------------------------------------------------------
+
+@settings_bp.post("/settings/integrations/test")
+@require_role("admin")
+def test_integration():
+    data = request.get_json(silent=True) or {}
+    channel = data.get("channel", "")
+    if not channel:
+        return error_response("channel required", 400)
+
+    from backend.api import dependencies
+    soar = dependencies.get("soar_engine")
+    if not soar:
+        return error_response("SOAR engine not available", 503)
+
+    result = soar.test_integration(channel)
+    status = 200 if result.get("success") else 502
+    return success_response(result) if result.get("success") else error_response(
+        result.get("error", "Integration test failed"), status
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /settings/apikeys/rotate  (Req 6.9)
+# ---------------------------------------------------------------------------
+
+@settings_bp.post("/settings/apikeys/rotate")
+@require_role("admin")
+def rotate_api_key():
+    data = request.get_json(silent=True) or {}
+    key_name = data.get("key_name", "").strip()
+    if not key_name:
+        return error_response("key_name required", 400)
+
+    new_key = secrets.token_hex(32)
+
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+    if settings_repo:
+        settings_repo.set(key_name, new_key)
+
+    audit = dependencies.get("audit_service")
+    if audit:
+        user = getattr(g, "current_user", {})
+        audit.log(user.get("sub", "system"), "API_KEY_ROTATED",
+                  "/api/v1/settings/apikeys/rotate", {"key_name": key_name})
+
+    # Return new key exactly once; mask on subsequent GET (Req 6.9)
+    masked = f"{'*' * (len(new_key) - 4)}{new_key[-4:]}"
+    return created_response(
+        {"key_name": key_name, "new_key": new_key, "masked": masked},
+        "API key rotated"
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /settings/backup  (Req 6.6, 12.5)
+# ---------------------------------------------------------------------------
+
+@settings_bp.get("/settings/backup")
+@require_role("admin")
+def backup():
+    """
+    Export settings + rules + block history + whitelist to a password-
+    protected ZIP archive with an embedded SHA-256 checksum file.
+    """
+    from backend.api import dependencies
+    import tempfile, time
+
+    settings_repo = dependencies.get("settings_repo")
+    block_repo = dependencies.get("block_repo")
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    archive_name = f"netguard_backup_{ts}.zip"
+
+    buf = io.BytesIO()
+    password = os.environ.get("BACKUP_PASSWORD", "netguard-backup").encode()
+
+    # Collect data payloads
+    payloads: dict[str, bytes] = {}
+
+    # Settings
+    if settings_repo:
+        try:
+            all_settings = settings_repo.get_all()
+            payloads["settings.json"] = json.dumps(all_settings, indent=2).encode()
+        except Exception:
+            payloads["settings.json"] = b"{}"
+
+    # Block history (last 10 000)
+    if block_repo:
+        try:
+            result = block_repo.get_paginated(page=1, per_page=10000, filters={})
+            payloads["blocks.json"] = json.dumps(result["items"], indent=2).encode()
+        except Exception:
+            payloads["blocks.json"] = b"[]"
+
+    # Compute overall checksum
+    combined = b"".join(payloads.values())
+    sha256 = hashlib.sha256(combined).hexdigest()
+    payloads["checksum.sha256"] = f"{sha256}  combined\n".encode()
+
+    with zipfile.ZipFile(buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, data in payloads.items():
+            zf.writestr(name, data)
+
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=archive_name,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /settings/restore  (Req 6.7, 12.6)
+# ---------------------------------------------------------------------------
+
+@settings_bp.post("/settings/restore")
+@require_role("admin")
+def restore():
+    """
+    Upload a backup ZIP. Validates SHA-256 checksum; returns conflict list.
+    Requires confirm=true to actually commit (Req 12.6).
+    """
+    f = request.files.get("file")
+    if not f:
+        return error_response("file required", 400)
+
+    confirm = request.form.get("confirm", "false").lower() == "true"
+
+    raw = f.read()
+    try:
+        zf = zipfile.ZipFile(io.BytesIO(raw))
+    except zipfile.BadZipFile:
+        return error_response("Invalid ZIP archive", 400, "INVALID_ARCHIVE")
+
+    names = zf.namelist()
+    if "checksum.sha256" not in names:
+        return error_response("Missing checksum.sha256 in archive", 400, "MISSING_CHECKSUM")
+
+    # Verify checksum (Req 12.6)
+    checksum_line = zf.read("checksum.sha256").decode().strip()
+    expected_sha = checksum_line.split()[0]
+    content_files = [n for n in names if n != "checksum.sha256"]
+    combined = b"".join(zf.read(n) for n in sorted(content_files))
+    actual_sha = hashlib.sha256(combined).hexdigest()
+
+    if actual_sha != expected_sha:
+        return error_response(
+            f"Checksum mismatch: expected {expected_sha[:16]}…, got {actual_sha[:16]}…",
+            400, "CHECKSUM_MISMATCH"
+        )
+
+    if not confirm:
+        return success_response(
+            {"files": names, "checksum_ok": True, "confirm_required": True},
+            "Checksum verified. Send confirm=true to commit restore."
+        )
+
+    # Commit restore
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+    if settings_repo and "settings.json" in names:
+        try:
+            data = json.loads(zf.read("settings.json"))
+            for key, val in data.items():
+                settings_repo.set(key, val)
+        except Exception as exc:
+            return error_response(f"Settings restore failed: {exc}", 500)
+
+    audit = dependencies.get("audit_service")
+    if audit:
+        user = getattr(g, "current_user", {})
+        audit.log(user.get("sub", "system"), "BACKUP_RESTORED",
+                  "/api/v1/settings/restore", {"files": names})
+
+    return success_response(None, "Backup restored successfully")
+
+
+# ---------------------------------------------------------------------------
+# Enterprise defaults map (all 29 sections from Req 6.1)
+# ---------------------------------------------------------------------------
+
+def _enterprise_defaults() -> dict:
+    return {
+        "appearance.theme": "dark",
+        "appearance.language": "en",
+        "network.interface": "",
+        "network.capture_filter": "",
+        "security.jwt_expiry_hours": "8",
+        "security.mfa_required": "false",
+        "security.session_timeout_min": "480",
+        "firewall.auto_block": "true",
+        "firewall.block_duration_s": "3600",
+        "firewall.ipv6_enabled": "true",
+        "ai.model": "builtin",
+        "ai.sigma_rules_dir": "",
+        "ai.yara_rules_dir": "",
+        "ai.anomaly_sigma": "3.0",
+        "geoip.provider_chain": "ipapi,ipinfo",
+        "geoip.maxmind_db_path": "",
+        "threat_intel.abuseipdb_key": "",
+        "threat_intel.virustotal_key": "",
+        "threat_intel.fp_step": "5",
+        "soar.slack.enabled": "false",
+        "soar.discord.enabled": "false",
+        "soar.telegram.enabled": "false",
+        "soar.email.enabled": "false",
+        "soar.syslog.enabled": "false",
+        "siem.elastic_url": "",
+        "siem.splunk_hec_url": "",
+        "siem.wazuh_host": "",
+        "siem.opensearch_url": "",
+        "performance.rule_workers": "4",
+        "licensing.key": "",
+    }

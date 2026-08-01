@@ -1,0 +1,504 @@
+{
+  "pbtResults": {
+    "2.2 Write property test for password policy (Property 12)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785588107864
+    },
+    "2.3 Write property test for JWT gate (Property 13)": {
+      "status": "passed",
+      "lastRunTimestamp": 1785588283964
+    }
+  },
+  "executionHistory": {
+    "2.2 Write property test for password policy (Property 12)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587619675
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587865548
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785588123179
+      }
+    ],
+    "2.3 Write property test for JWT gate (Property 13)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587620497
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587869593
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785588302080
+      }
+    ],
+    "2.5 Implement `backend/services/audit_service.py` (`AuditService`) and `backend/routes/audit_routes.py` (`audit_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587620604
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587634191
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587860656
+      }
+    ],
+    "2.6 Implement `backend/routes/auth_routes.py` (`auth_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587620692
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587873822
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785588372589
+      }
+    ],
+    "3.1 Extend `backend/repositories/block_repository.py` with new query methods": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587620763
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587878050
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785588510225
+      }
+    ],
+    "3.2 Implement `backend/services/block_manager.py` (`BlockManager`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587620822
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785589156145
+      }
+    ],
+    "3.3 Write property test for threat score formula (Property 4)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587620910
+      }
+    ],
+    "3.4 Write property test for block atomicity (Property 1)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587620965
+      }
+    ],
+    "3.5 Write property test for whitelisted-IP rejection (Property 3)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621027
+      }
+    ],
+    "3.6 Write property test for duplicate-block expiry extension (Property 2)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621083
+      }
+    ],
+    "3.7 Implement `backend/routes/blocks_v2_routes.py` (`blocks_v2_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621150
+      }
+    ],
+    "4.1 Implement `backend/services/threat_simulator.py` (`ThreatSimulator`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621209
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587882152
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785589151695
+      }
+    ],
+    "4.2 Write property test for public-IP exclusion (Property 5)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621271
+      }
+    ],
+    "4.3 Write property test for whitelist non-injection (Property 6)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621329
+      }
+    ],
+    "5.1 Implement `backend/services/geoip_engine.py` (`GeoIPEngine`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621392
+      },
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587887385
+      }
+    ],
+    "5.2 Write property test for GeoIP cache deduplication (Property 7)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621462
+      }
+    ],
+    "5.3 Implement `backend/routes/map_routes.py` (`map_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621522
+      }
+    ],
+    "6. Checkpoint — foundation services integrated": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621577
+      }
+    ],
+    "7.1 Implement `backend/services/anomaly_engine.py` (`AnomalyEngine`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621669
+      }
+    ],
+    "7.2 Write property test for anomaly threshold (Property 8)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621727
+      }
+    ],
+    "7.3 Implement `backend/routes/ai_routes.py` (`ai_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621795
+      }
+    ],
+    "8.1 Implement `backend/services/threat_intel_service.py` (`ThreatIntelService`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621857
+      }
+    ],
+    "8.2 Write property test for composite risk score (Property 9)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621921
+      }
+    ],
+    "8.3 Implement `backend/routes/hunt_routes.py` (`hunt_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587621997
+      }
+    ],
+    "9.1 Implement `backend/services/soar_engine.py` (`SOAREngine`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622058
+      }
+    ],
+    "9.2 Write property test for per-channel severity gating (Property 14)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622120
+      }
+    ],
+    "9.3 Implement SIEM integration routes in `backend/routes/settings_routes.py` (extend existing file)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622185
+      }
+    ],
+    "10.1 Implement `backend/services/scheduler_service.py` (`SchedulerService`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622244
+      }
+    ],
+    "10.2 Implement `backend/routes/scheduler_routes.py` (`scheduler_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622301
+      }
+    ],
+    "11.1 Implement `backend/services/attack_lab_service.py` (`AttackLabService`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622365
+      }
+    ],
+    "11.2 Implement `backend/routes/lab_routes.py` (`lab_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622424
+      }
+    ],
+    "12. Checkpoint — all backend services wired": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622486
+      }
+    ],
+    "13.1 Add Sigma rule loading to `backend/services/detection_service.py`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622545
+      }
+    ],
+    "13.2 Add YARA rule loading and evaluation to `backend/services/detection_service.py`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622603
+      }
+    ],
+    "13.3 Add MITRE ATT&CK tactic/technique annotation to `DetectionEngine`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622664
+      }
+    ],
+    "13.4 Harden `detection/parsers/packet_decoder.py` `decode()` method": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622728
+      }
+    ],
+    "13.5 Write property test for PacketDecoder fuzz robustness (Property 10)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622792
+      }
+    ],
+    "13.6 Add Suricata export endpoint to `backend/routes/detection_routes.py` (extend existing file)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622849
+      }
+    ],
+    "13.7 Add thread pool to `DetectionEngine` for parallel rule evaluation": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622906
+      }
+    ],
+    "14.1 Harden `backend/services/config_service.py` `ConfigurationManager.load()` and `update()`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587622964
+      }
+    ],
+    "14.2 Write property test for ConfigurationManager fuzz robustness (Property 11)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623043
+      }
+    ],
+    "14.3 Extend enterprise settings sections in `backend/routes/settings_routes.py` (extend existing file)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623131
+      }
+    ],
+    "15.1 Implement `backend/services/compliance_reporter.py` (`ComplianceReporter`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623189
+      }
+    ],
+    "15.2 Implement `backend/routes/reports_routes.py` (`reports_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623247
+      }
+    ],
+    "15.3 Implement `backend/services/plugin_registry.py` (`PluginRegistry`) and `backend/routes/plugins_routes.py` (`plugins_bp`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623309
+      }
+    ],
+    "16.1 Implement backup/restore in `backend/routes/settings_routes.py` (extend existing file)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623369
+      }
+    ],
+    "16.2 Write `scripts/backup.sh`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623443
+      }
+    ],
+    "16.3 Add Redis Streams publishing to `DetectionEngine`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623547
+      }
+    ],
+    "16.4 Wire queue-pressure warning into `DetectionEngine`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623607
+      }
+    ],
+    "16.5 Write `Dockerfile` and `docker-compose.yml`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623670
+      }
+    ],
+    "16.6 Add TLS termination to Flask startup in `backend/main.py`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623740
+      }
+    ],
+    "16.7 Add rate limiting per authenticated user (extend `backend/middleware/rate_limiter.py`)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623804
+      }
+    ],
+    "17. Checkpoint — all backend complete, full test suite green": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623867
+      }
+    ],
+    "18.1 Create design token stylesheet `frontend/css/tokens.css` and update `frontend/css/` main stylesheet": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623929
+      }
+    ],
+    "18.2 Create `frontend/login.html` and wire `frontend/js/auth.js`": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587623989
+      }
+    ],
+    "18.3 Redesign `frontend/index.html` as the SOC Dashboard": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587624054
+      }
+    ],
+    "18.4 Create `frontend/map.html` and `frontend/js/map.js` (World Map)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587624120
+      }
+    ],
+    "18.5 Create `frontend/lab.html` and `frontend/js/lab.js` (Attack Lab)": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587624181
+      }
+    ],
+    "18.6 Enhance `frontend/logs.html` as the enterprise Log Viewer": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587624245
+      }
+    ],
+    "19. Final checkpoint — full stack end-to-end": [
+      {
+        "executionId": "5cc7c49d-a637-470e-818e-215a0a930f8d",
+        "chatSessionId": "sess_3b4a15fa-063b-4545-bc55-8a51a9a9d717",
+        "timestamp": 1785587624308
+      }
+    ]
+  }
+}

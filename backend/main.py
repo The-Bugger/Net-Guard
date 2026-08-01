@@ -235,6 +235,14 @@ dependencies.register("event_repo", event_repo)
 dependencies.register("block_repo", block_repo)
 dependencies.register("log_repo", log_repo)
 
+from backend.services.audit_service import AuditService
+audit_service = AuditService(session_factory)
+dependencies.register("audit_service", audit_service)
+
+from backend.services.auth_service import AuthService
+auth_service = AuthService(settings_repo, audit_service)
+dependencies.register("auth_service", auth_service)
+
 from backend.services.ai_explain_service import AIExplainService
 ai_explain_service = AIExplainService()
 dependencies.register("ai_explain_service", ai_explain_service)
@@ -246,6 +254,12 @@ dependencies.register("lan_scan_service", lan_scan_service)
 from backend.services.security_advisor import SecurityAdvisor
 security_advisor = SecurityAdvisor()
 dependencies.register("security_advisor", security_advisor)
+
+from backend.services.threat_simulator import ThreatSimulator
+threat_simulator = ThreatSimulator(
+    whitelist_set={e["ip_address"] for e in whitelist_manager.get_all()}
+)
+dependencies.register("threat_simulator", threat_simulator)
 
 # ── Step 9: Create Flask app and start background threads ────────────────────
 from backend.api import create_app, socketio as _socketio
@@ -310,8 +324,24 @@ if __name__ == "__main__":
     port = int(os.environ.get("FLASK_PORT", 5000))
     debug = settings.debug
 
-    logger.info("Dashboard available at http://localhost:%d", port)
-    logger.info("API base URL: http://localhost:%d/api/v1", port)
+    # TLS termination (Task 16.6, Req 11.8)
+    # When TLS_CERT_FILE and TLS_KEY_FILE env vars are set, Flask serves HTTPS
+    # with a minimum of TLS 1.2 enforced by the ssl_context wrapper.
+    tls_cert = os.environ.get("TLS_CERT_FILE", "")
+    tls_key  = os.environ.get("TLS_KEY_FILE", "")
+    ssl_context = None
+    if tls_cert and tls_key:
+        import ssl as _ssl
+        _ctx = _ssl.SSLContext(_ssl.PROTOCOL_TLS_SERVER)
+        _ctx.minimum_version = _ssl.TLSVersion.TLSv1_2
+        _ctx.load_cert_chain(certfile=tls_cert, keyfile=tls_key)
+        ssl_context = _ctx
+        logger.info("TLS enabled — cert=%s (TLS 1.2+ minimum)", tls_cert)
+        logger.info("Dashboard available at https://localhost:%d", port)
+        logger.info("API base URL: https://localhost:%d/api/v1", port)
+    else:
+        logger.info("Dashboard available at http://localhost:%d", port)
+        logger.info("API base URL: http://localhost:%d/api/v1", port)
 
     _socketio.run(
         app,
@@ -319,4 +349,5 @@ if __name__ == "__main__":
         port=port,
         debug=debug,
         use_reloader=False,
+        ssl_context=ssl_context,
     )

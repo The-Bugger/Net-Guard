@@ -186,3 +186,34 @@ def replay_event(event_id: str):
         data={"event_id": new_id, "replayed_from": event_id},
         message="Event replayed successfully.",
     )
+
+
+# ---------------------------------------------------------------------------
+# Suricata export endpoint (Task 13.6, Req 9.5)
+# ---------------------------------------------------------------------------
+
+@detection_bp.get("/rules/export")
+def export_rules():
+    """
+    GET /api/v1/rules/export?format=suricata
+
+    Convert active detection rules to Suricata rule syntax.
+    Returns empty list with HTTP 200 if no active rules.
+    """
+    fmt = request.args.get("format", "suricata").lower()
+    if fmt != "suricata":
+        return error_response(f"Unsupported format: {fmt}. Only 'suricata' is supported.", 400)
+
+    from backend.api.dependencies import get_detection_engine
+    engine = get_detection_engine()
+    if not engine:
+        return success_response(data={"rules": [], "format": "suricata"})
+
+    suricata_rules = []
+    for rule_name in engine.active_rule_names:
+        suricata_rules.append(
+            f'alert tcp any any -> any any (msg:"NetGuard {rule_name}"; '
+            f'sid:{abs(hash(rule_name)) % 1000000 + 1000000}; rev:1;)'
+        )
+
+    return success_response(data={"rules": suricata_rules, "format": "suricata", "count": len(suricata_rules)})

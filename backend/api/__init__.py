@@ -62,6 +62,10 @@ def create_app(config: dict | None = None) -> Flask:
         engineio_logger=False,
     )
 
+    # Register JWT auth hook (before_request) — must run before rate limiter
+    from backend.middleware.auth_middleware import jwt_required_hook
+    app.before_request(jwt_required_hook)
+
     # Register rate limiter (before_request)
     from backend.middleware.rate_limiter import RateLimiter
     limiter = RateLimiter()
@@ -129,6 +133,8 @@ def _register_blueprints(app: Flask) -> None:
     from backend.routes.lan_devices_routes import lan_devices_bp
     from backend.routes.advisor_routes import advisor_bp
     from backend.routes.reset_routes import reset_bp
+    from backend.routes.auth_routes import auth_bp
+    from backend.routes.audit_routes import audit_bp
 
     prefix = "/api/v1"
     app.register_blueprint(health_bp, url_prefix=prefix)
@@ -148,6 +154,8 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(lan_devices_bp, url_prefix=prefix)
     app.register_blueprint(advisor_bp, url_prefix=prefix)
     app.register_blueprint(reset_bp, url_prefix=prefix)
+    app.register_blueprint(auth_bp, url_prefix=prefix)
+    app.register_blueprint(audit_bp, url_prefix=prefix)
 
     logger.info("All route blueprints registered under %s.", prefix)
 

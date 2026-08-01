@@ -166,6 +166,151 @@ class BlockRepository:
         """Return True if the IP has an active block."""
         return self.get_active(ip_address) is not None
 
+    # ------------------------------------------------------------------
+    # Enterprise extensions (Task 3.1)
+    # ------------------------------------------------------------------
+
+    def get_by_id(self, block_id: int) -> Optional[dict]:
+        """Return a single block record by primary key."""
+        try:
+            with self._session_factory() as session:
+                record = session.query(BlockedIP).filter_by(id=block_id).first()
+                return _block_to_dict(record) if record else None
+        except Exception as exc:
+            logger.error("BlockRepository.get_by_id(%s) failed: %s", block_id, exc)
+            return None
+
+    def set_inactive_by_id(self, block_id: int) -> bool:
+        """Mark a specific block record inactive (unblock by ID)."""
+        try:
+            with self._session_factory() as session:
+                record = session.query(BlockedIP).filter_by(id=block_id).first()
+                if record:
+                    record.active = 0
+                    record.unblock_time = _utc_now()
+                    session.commit()
+                return record is not None
+        except Exception as exc:
+            logger.error("BlockRepository.set_inactive_by_id(%s) failed: %s", block_id, exc)
+            return False
+
+    def get_history(self, ip: str, page: int = 1, per_page: int = 20) -> dict:
+        """Return paginated block history for a specific IP (all records, not just active)."""
+        try:
+            offset = (page - 1) * per_page
+            with self._session_factory() as session:
+                total = session.query(BlockedIP).filter_by(ip_address=ip).count()
+                records = (
+                    session.query(BlockedIP)
+                    .filter_by(ip_address=ip)
+                    .order_by(BlockedIP.blocked_at.desc())
+                    .offset(offset)
+                    .limit(per_page)
+                    .all()
+                )
+                return {
+                    "items": [_block_to_dict(r) for r in records],
+                    "total": total, "page": page, "per_page": per_page,
+                }
+        except Exception as exc:
+            logger.error("BlockRepository.get_history(%s) failed: %s", ip, exc)
+            return {"items": [], "total": 0, "page": page, "per_page": per_page}
+
+    def get_by_type(self, block_type: str) -> list[dict]:
+        """Return all active blocks of a given block_type."""
+        try:
+            with self._session_factory() as session:
+                records = (
+                    session.query(BlockedIP)
+                    .filter_by(active=1)
+                    .filter(BlockedIP.block_type == block_type)
+                    .all()
+                )
+                return [_block_to_dict(r) for r in records]
+        except Exception as exc:
+            logger.error("BlockRepository.get_by_type(%s) failed: %s", block_type, exc)
+            return []
+
+    def get_paginated(
+        self,
+        page: int = 1,
+        per_page: int = 20,
+        filters: Optional[dict] = None,
+    ) -> dict:
+        """
+        Return paginated block records with optional filtering.
+
+        filters keys:
+            ip         – partial match (LIKE %ip%)
+            block_type – exact match
+            status     – "active" → active=1, "inactive" → active=0
+            date_from  – ISO string, created_at >=
+            date_to    – ISO string, created_at <=
+        """
+        try:
+            per_page = min(per_page, 100)  # cap at 100 (Req 1.10)
+            offset = (page - 1) * per_page
+            filters = filters or {}
+            with self._session_factory() as session:
+                q = session.query(BlockedIP)
+                if filters.get("ip"):
+                    q = q.filter(BlockedIP.ip_address.contains(filters["ip"]))
+                if filters.get("block_type"):
+                    q = q.filter(BlockedIP.block_type == filters["block_type"])
+                status = filters.get("status")
+                if status == "active":
+                    q = q.filter(BlockedIP.active == 1)
+                elif status == "inactive":
+                    q = q.filter(BlockedIP.active == 0)
+                if filters.get("date_from"):
+                    q = q.filter(BlockedIP.blocked_at >= filters["date_from"])
+                if filters.get("date_to"):
+                    q = q.filter(BlockedIP.blocked_at <= filters["date_to"])
+                total = q.count()
+                records = q.order_by(BlockedIP.blocked_at.desc()).offset(offset).limit(per_page).all()
+                return {
+                    "items": [_block_to_dict(r) for r in records],
+                    "total": total, "page": page, "per_page": per_page,
+                }
+        except Exception as exc:
+            logger.error("BlockRepository.get_paginated failed: %s", exc)
+            return {"items": [], "total": 0, "page": page, "per_page": per_page}
+
+    def count_hits(self, ip_address: str) -> int:
+        """Return total number of block records (all time) for an IP — used for threat score."""
+        try:
+            with self._session_factory() as session:
+                return session.query(BlockedIP).filter_by(ip_address=ip_address).count()
+        except Exception as exc:
+            logger.error("BlockRepository.count_hits(%s) failed: %s", ip_address, exc)
+            return 0
+
+    def insert_enterprise(self, record_data: dict) -> Optional[int]:
+        """
+        Insert a new block record with enterprise fields.
+        Returns the new record's id, or None on failure.
+        """
+        try:
+            with self._session_factory() as session:
+                record = BlockedIP(
+                    event_id=record_data.get("event_id", ""),
+                    ip_address=record_data["ip_address"],
+                    blocked_at=record_data["blocked_at"],
+                    expires_at=record_data["expires_at"],
+                    reason=record_data.get("reason", ""),
+                    active=1,
+                    block_type=record_data.get("block_type", "ip"),
+                    threat_score=record_data.get("threat_score", 0),
+                    operator_id=record_data.get("operator_id", "system"),
+                    audit_entry_id=record_data.get("audit_entry_id"),
+                )
+                session.add(record)
+                session.commit()
+                return record.id
+        except Exception as exc:
+            logger.error("BlockRepository.insert_enterprise failed: %s", exc, exc_info=True)
+            return None
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -181,6 +326,9 @@ def _block_to_dict(record: BlockedIP) -> dict:
         "unblock_time": record.unblock_time,
         "reason": record.reason,
         "active": bool(record.active),
+        "block_type": getattr(record, "block_type", "ip"),
+        "threat_score": getattr(record, "threat_score", 0),
+        "operator_id": getattr(record, "operator_id", "system"),
     }
 
 

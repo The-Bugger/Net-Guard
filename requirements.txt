@@ -51,7 +51,7 @@ psutil==6.1.0
 # Cross-platform system and process utilities.
 # Used by MonitorService to enumerate available network interfaces.
 
-requests==2.32.3
+requests==2.33.0
 # HTTP client library.
 # Used in demo/ and integration test scripts for HTTP health checks.
 

@@ -21,7 +21,156 @@ development grade" without restructuring the existing architecture.
 
 ---
 
-## Architecture Overview
+## Architecture
+
+See **Architecture Overview** above for the full layered diagram. To summarise:
+
+- **HTTP layer**: Flask + Flask-SocketIO with a `before_request` middleware chain
+  (`sanitise_and_validate → RateLimiter → ApiKeyAuth`) and `after_request` security headers
+- **Route layer**: 16 registered blueprints under `/api/v1`, grouped by concern
+  (monitor, detection, block, whitelist, settings, analytics, AI assistant, reset, …)
+- **Service layer**: stateful singletons registered in `backend/api/dependencies.py`
+  (`DetectionEngine`, `PreventionEngine`, `StatsService`, `MonitorService`, …)
+- **Detection layer**: 8 active rules (`SynFlood`, `PortScan`, `SqlInjection`,
+  `BruteForce`, `ArpSpoof`, `IcmpFlood`, `SlowHttp`, `DnsTunnel`) fed by
+  `CaptureEngine` via a thread-safe `packet_queue`
+- **Repository layer**: SQLAlchemy + SQLite; `EventRepository`, `BlockRepository`,
+  `WhitelistRepository`, `LogRepository`, `SettingsRepository`
+- **Capture layer**: `CaptureEngine` (Scapy or simulation fallback) → `PacketDecoder`
+  → `packet_queue` → `DetectionEngine`
+
+---
+
+## Components and Interfaces
+
+| Component | File | Public Interface |
+|---|---|---|
+| `CaptureEngine` | `detection/capture/sniffer.py` | `start(iface)`, `stop()`, `is_running` |
+| `DetectionEngine` | `backend/services/detection_service.py` | `start()`, `stop()`, `reload_rules()` |
+| `PreventionEngine` | `backend/services/prevention_service.py` | `handle_event(event, explanation)`, `block_ip(ip, reason, event_id)`, `unblock_ip(ip)` |
+| `MonitorService` | `backend/services/monitor_service.py` | `start_monitoring(iface)`, `stop_monitoring()`, `get_interfaces()` |
+| `StatsService` | `backend/services/stats_service.py` | `get_dashboard_data()`, `get_live_stats()`, `get_health_score()`, `record_packet()` |
+| `AIExplainService` | `backend/services/ai_explain_service.py` | `generate(threat_event, base_explanation)` |
+| `LoggingEngine` | `backend/services/log_service.py` | `log_event(event, explanation)`, `log_system(level, module, event, msg)` |
+| `ExpiryThread` | `backend/services/expiry_service.py` | `start()`, `stop()` (daemon thread) |
+| `RateLimiter` | `backend/middleware/rate_limiter.py` | `check() → Response|None` (before_request) |
+| `ApiKeyAuth` | `backend/middleware/auth.py` | `check_api_key() → Response|None` (before_request) |
+| `BaseRule` | `detection/rules/base_rule.py` | `initialize()`, `process_packet(pkt)`, `evaluate() → ThreatEvent|None`, `cleanup()` |
+| All 8 Rules | `detection/rules/*.py` | Inherit `BaseRule`; each implements the four abstract methods |
+
+**Key inter-component data flows:**
+
+1. `CaptureEngine._on_packet(raw)` → `PacketDecoder.decode()` → `packet_queue.put(Packet)`
+2. `DetectionEngine._detection_loop()` → `rule.process_packet(pkt)` → `rule.evaluate()` → `on_event(ThreatEvent)`
+3. `main._on_threat_event(event)` → `ExplainabilityEngine.explain()` → `LoggingEngine.log_event()` → `PreventionEngine.handle_event()` → `socketio.emit("new_threat")`
+4. `SocketIO "live_stats"` background task → `StatsService.get_live_stats()` → broadcast every 1 s
+
+---
+
+## Data Models
+
+### `Packet` (detection/parsers/packet_decoder.py)
+```
+src_ip: str          dst_ip: str          src_port: Optional[int]
+dst_port: Optional[int]   protocol: str        flags: Optional[str]
+timestamp: str       length: int          payload: Optional[bytes]
+hw_src: Optional[str]     arp_op: Optional[int] icmp_type: Optional[int]
+```
+
+### `ThreatEvent` (detection/rules/base_rule.py)
+```
+event_id: str        timestamp: str       attack_type: str
+source_ip: str       destination_ip: str  source_port: Optional[int]
+destination_port: Optional[int]           protocol: str
+rule_name: str       severity: str        confidence: int
+packet_count: int    evidence: dict       blocked: bool
+```
+
+### `Explanation` (detection/rules/base_rule.py)
+```
+plain_english_text: str    recommendation: str    rule_triggered: str
+attack_name: str           source_ip: str         severity: str
+confidence_score: int      timestamp: str
+```
+
+### `Settings` dataclass (backend/services/config_service.py)
+```
+network_interface: str          syn_flood_threshold: int    syn_flood_window: int
+port_scan_threshold: int        port_scan_window: int       brute_force_threshold: int
+brute_force_window: int         icmp_flood_threshold: int   icmp_flood_window: int
+slow_http_threshold: int        slow_http_window: int       block_duration: int
+dashboard_refresh_interval: int rules_enabled: dict[str,bool]   debug: bool
+```
+
+### DB Tables (database/schema.py via SQLAlchemy)
+| Table | Key columns |
+|---|---|
+| `Event` | `event_id PK`, `timestamp`, `attack_type`, `source_ip`, `severity`, `confidence`, `blocked` |
+| `BlockedIP` | `ip_address PK`, `reason`, `blocked_at`, `expires_at`, `active` |
+| `WhitelistEntry` | `ip_address PK`, `description`, `created_at`, `created_by` |
+| `SystemLog` | `id PK`, `timestamp`, `level`, `module`, `event`, `message` |
+| `Settings` | `key PK`, `value` |
+
+---
+
+## Error Handling
+
+| Layer | Strategy |
+|---|---|
+| Route handlers | All return `success_response` / `error_response` JSON envelope; never let exceptions propagate to Flask's default HTML error pages |
+| `DetectionEngine._dispatch()` | Per-rule try/except; a faulty rule is added to `_disabled_rules` and skipped for the session. Engine never crashes. |
+| `CaptureEngine._capture_loop()` | Any Scapy/libpcap exception triggers a fallback to `_simulation_loop()` so monitoring stays active |
+| `PreventionEngine.block_ip()` | iptables failure is caught and logged; returns `False`; does not propagate |
+| `LoggingEngine` | Runs in a daemon thread; `queue.get(timeout=1)` loop; exceptions logged and loop continues |
+| `StatsService` | `get_health_score()` returns `-1` sentinel on DB error; callers must handle `-1` as "unavailable" |
+| `RateLimiter.check()` | Wrapped in try/except; fails open (returns `None`) to avoid locking out legitimate traffic on internal errors |
+| Frontend API calls | `apiRequest()` in `api.js` throws `Error` with `.code` property; all callers have try/catch with `showNotification` |
+
+---
+
+## Correctness Properties
+
+**Property 1:** No double-write — `LoggingEngine.log_event()` is the sole writer for `ThreatEvent` DB rows. `_on_threat_event()` in `main.py` must not call `event_repo.insert()` directly.
+
+**Property 2:** Rate limiter is API-only — `RateLimiter.check()` returns `None` immediately for all paths not starting with `/api/`. Static files are never counted or throttled.
+
+**Property 3:** Private-IP safety — `PreventionEngine.block_ip()` rejects RFC-1918, loopback, link-local, and multicast addresses unless `allow_private_block=True` is explicitly passed.
+
+**Property 4:** Health score bounds — `get_health_score()` always returns a value in `[0, 100]` or the sentinel `-1`. It never raises.
+
+**Property 5:** Rule isolation — an exception inside `BaseRule.process_packet()` or `evaluate()` disables that rule for the session but does not affect other rules or crash the detection thread.
+
+**Property 6:** Simulation fallback — when libpcap is unavailable, `CaptureEngine` enters simulation mode and emits `monitoring_status {active:true, mode:"simulation"}`. `MonitoringState.active` remains `True`.
+
+**Property 7:** Whitelist immutability during block — `PreventionEngine` checks the whitelist before calling iptables. A whitelisted IP can never be blocked, even if a detection fires on it.
+
+---
+
+## Testing Strategy
+
+### Unit tests (pytest, `tests/`)
+- One test file per detection rule (e.g. `test_syn_flood.py`, `test_icmp_flood_rule.py`)
+- `tests/test_rate_limiter.py` — verifies API-only throttling, exempt paths, 429 response
+- `tests/test_auth_middleware.py` — verifies HMAC comparison, dev-mode bypass, 401 shape
+
+### Property-based tests (Hypothesis, `tests/test_properties_*.py`)
+- `test_properties_detection_sqli.py` — includes false-positive test for `--` in date strings
+- `test_properties_api.py` — envelope shape invariants across all endpoints
+
+### Integration tests (`tests/final_test.py`, `tests/integration_test.py`)
+- Full round-trip: start server → hit all 20 endpoints → stop/restart monitoring → verify PPS>0
+- Reset-data endpoint verified: event count returns to 0 after POST `/reset-data`
+
+### Manual / smoke tests (`scripts/attack_tests/`)
+- `attack_icmp_flood.sh`, `attack_slow_http.sh`, `attack_dns_tunnel.sh`
+- Run against a local dev server with monitoring active; verify `ThreatEvent` appears in `/detections`
+
+### What is NOT automated
+- iptables blocking (requires Linux + root; CI runs on Windows)
+- Real packet capture (requires Npcap/libpcap; CI uses simulation mode)
+- UI/UX correctness (no E2E browser test suite; manual verification in Chromium)
+
+---
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

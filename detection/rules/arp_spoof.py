@@ -112,14 +112,27 @@ class ArpSpoofRule(BaseRule):
                 "ArpSpoofRule: IP %s now has MACs: %s", claimed_ip, macs
             )
 
-        # Queue a pending event if threshold reached and not yet emitted
-        if len(macs) >= 2 and claimed_ip not in self._emitted:
-            self._emitted.add(claimed_ip)
-            self._pending.append({
-                "ip": claimed_ip,
-                "macs": set(macs),  # snapshot
-                "timestamp": now,
-            })
+        # Queue or update a pending event when threshold is reached.
+        # If a new MAC arrives for an IP that already has a pending (unevaluated)
+        # event, refresh that pending entry with the current MAC snapshot so that
+        # evaluate() always sees the up-to-date MAC count (enabling the 97 → 100
+        # confidence transition when a 3rd MAC is discovered before evaluate()
+        # is called).
+        if len(macs) >= 2:
+            # Look for an existing pending entry for this IP
+            for entry in self._pending:
+                if entry["ip"] == claimed_ip:
+                    entry["macs"] = set(macs)  # refresh snapshot in place
+                    entry["timestamp"] = now
+                    return
+
+            if claimed_ip not in self._emitted:
+                self._emitted.add(claimed_ip)
+                self._pending.append({
+                    "ip": claimed_ip,
+                    "macs": set(macs),  # snapshot
+                    "timestamp": now,
+                })
 
     def evaluate(self) -> Optional[ThreatEvent]:
         """

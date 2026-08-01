@@ -81,7 +81,7 @@ def replay_event(event_id):
         return error_response("Demo service unavailable.", 500, "SERVICE_UNAVAILABLE")
 
     # Look up event by id
-    event_repo = get("event_repository")
+    event_repo = get("event_repo")
     if event_repo is None:
         return error_response("Event repository unavailable.", 500, "SERVICE_UNAVAILABLE")
 

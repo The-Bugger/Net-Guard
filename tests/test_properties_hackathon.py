@@ -791,7 +791,7 @@ def test_property_13_timeline_chronological_order(template: dict) -> None:
     Validates: Requirements 4.1, 4.2
     """
     import uuid
-    from dateutil.parser import parse
+    from datetime import datetime
     from backend.routes.timeline_routes import _build_timeline
     from backend.repositories.event_repository import EventRepository
 
@@ -828,7 +828,9 @@ def test_property_13_timeline_chronological_order(template: dict) -> None:
     # Timestamps must be non-decreasing for consecutive non-None entries
     timed = [(i, e) for i, e in enumerate(entries) if e["timestamp"] is not None]
     for (i, a), (j, b) in zip(timed, timed[1:]):
-        assert parse(a["timestamp"]) <= parse(b["timestamp"]), (
+        ts_a = datetime.fromisoformat(a["timestamp"].replace("Z", "+00:00"))
+        ts_b = datetime.fromisoformat(b["timestamp"].replace("Z", "+00:00"))
+        assert ts_a <= ts_b, (
             f"Entry {i} ({a['step_name']}) timestamp {a['timestamp']!r} > "
             f"entry {j} ({b['step_name']}) timestamp {b['timestamp']!r}"
         )

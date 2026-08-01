@@ -130,19 +130,26 @@ dashboard_refresh_interval: int rules_enabled: dict[str,bool]   debug: bool
 
 ## Correctness Properties
 
-**Property 1:** No double-write — `LoggingEngine.log_event()` is the sole writer for `ThreatEvent` DB rows. `_on_threat_event()` in `main.py` must not call `event_repo.insert()` directly.
+### Property 1: No double-write
+`LoggingEngine.log_event()` is the sole writer for `ThreatEvent` DB rows. `_on_threat_event()` in `main.py` must not call `event_repo.insert()` directly — doing so causes a UNIQUE constraint violation on `event_id`.
 
-**Property 2:** Rate limiter is API-only — `RateLimiter.check()` returns `None` immediately for all paths not starting with `/api/`. Static files are never counted or throttled.
+### Property 2: Rate limiter is API-only
+`RateLimiter.check()` returns `None` immediately for all paths not starting with `/api/`. Static files, HTML pages, and SocketIO handshakes are never counted or throttled.
 
-**Property 3:** Private-IP safety — `PreventionEngine.block_ip()` rejects RFC-1918, loopback, link-local, and multicast addresses unless `allow_private_block=True` is explicitly passed.
+### Property 3: Private-IP safety
+`PreventionEngine.block_ip()` rejects RFC-1918, loopback, link-local, and multicast addresses unless `allow_private_block=True` is explicitly passed. This prevents the system from accidentally blocking legitimate LAN hosts.
 
-**Property 4:** Health score bounds — `get_health_score()` always returns a value in `[0, 100]` or the sentinel `-1`. It never raises.
+### Property 4: Health score bounds
+`StatsService.get_health_score()` always returns an integer in `[0, 100]` or the sentinel `-1` (DB error). It never raises. Callers must treat `-1` as "unavailable".
 
-**Property 5:** Rule isolation — an exception inside `BaseRule.process_packet()` or `evaluate()` disables that rule for the session but does not affect other rules or crash the detection thread.
+### Property 5: Rule isolation
+An exception inside `BaseRule.process_packet()` or `evaluate()` disables that rule for the session and is logged at ERROR level, but does not affect other rules or crash the detection thread.
 
-**Property 6:** Simulation fallback — when libpcap is unavailable, `CaptureEngine` enters simulation mode and emits `monitoring_status {active:true, mode:"simulation"}`. `MonitoringState.active` remains `True`.
+### Property 6: Simulation fallback continuity
+When libpcap is unavailable, `CaptureEngine` enters `_simulation_loop()` and emits `monitoring_status {active:true, mode:"simulation"}`. `MonitoringState.active` remains `True` — the dashboard never incorrectly shows "Stopped".
 
-**Property 7:** Whitelist immutability during block — `PreventionEngine` checks the whitelist before calling iptables. A whitelisted IP can never be blocked, even if a detection fires on it.
+### Property 7: Whitelist immutability during block
+`PreventionEngine` checks the whitelist before calling iptables. A whitelisted IP can never be blocked, even if a detection fires on it.
 
 ---
 

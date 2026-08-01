@@ -59,6 +59,24 @@ def create_app(config: dict | None = None) -> Flask:
         engineio_logger=False,
     )
 
+    # Register rate limiter (before_request)
+    from backend.middleware.rate_limiter import RateLimiter
+    limiter = RateLimiter()
+    app.before_request(limiter.check)
+
+    # Register security headers + input sanitisation middleware (Req 11.1, 11.2, 11.3)
+    from backend.middleware.security_headers import add_security_headers, sanitise_and_validate
+    app.after_request(add_security_headers)
+    app.before_request(sanitise_and_validate)
+
+    # Global error handler — log traceback, return clean JSON, never expose it (Req 11.4)
+    from flask import jsonify
+
+    @app.errorhandler(Exception)
+    def handle_unhandled(exc: Exception):
+        logger.error("Unhandled exception", exc_info=True)
+        return jsonify({"success": False, "error": "INTERNAL_ERROR", "message": "An internal error occurred."}), 500
+
     # Register all route blueprints
     _register_blueprints(app)
 

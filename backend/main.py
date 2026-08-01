@@ -151,6 +151,7 @@ def _on_threat_event(threat_event):
         }
         event_repo.insert(event_data)
         log_engine.log_event(event_data, {"plain_english_text": explanation.plain_english_text})
+        stats_service.invalidate_cache()
 
         # Prevention
         prevention_engine.handle_event(threat_event, explanation)
@@ -257,16 +258,26 @@ def on_client_disconnect():
 @_socketio.on("request_live_stats")
 def on_request_live_stats():
     data = stats_service.get_live_stats()
+    data["health_score"] = stats_service.get_health_score()
     _socketio.emit("live_stats", data)
 
 
 def _background_live_stats():
     """Emit live_stats to all clients every second while monitoring."""
     refresh = settings.dashboard_refresh_interval or 1
+    _last_health_score = None  # track last emitted value for Req 9.4
     while True:
         eventlet.sleep(refresh)
         try:
             data = stats_service.get_live_stats()
+            # Include health_score on first emit or when it changes by >=5 (Req 9.4)
+            current_score = stats_service.get_health_score()
+            if (
+                _last_health_score is None
+                or abs(current_score - _last_health_score) >= 5
+            ):
+                data["health_score"] = current_score
+                _last_health_score = current_score
             _socketio.emit("live_stats", data)
         except Exception as exc:
             logger.debug("live_stats emit error: %s", exc)

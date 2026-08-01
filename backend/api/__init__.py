@@ -49,10 +49,11 @@ def create_app(config: dict | None = None) -> Flask:
     # Enable CORS for all routes (local dashboard)
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-    # Initialise SocketIO with eventlet async_mode
+    # Initialise SocketIO — use threading mode in tests (eventlet incompatible with Python 3.14)
+    async_mode = app.config.get("SOCKETIO_ASYNC_MODE", "eventlet")
     socketio.init_app(
         app,
-        async_mode="eventlet",
+        async_mode=async_mode,
         cors_allowed_origins="*",
         logger=False,
         engineio_logger=False,

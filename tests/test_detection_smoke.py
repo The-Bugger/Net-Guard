@@ -53,7 +53,7 @@ def test_sql_injection():
     payload = b"GET /login?id=%27%20OR%20%271%27%3D%271 HTTP/1.1\r\nHost: localhost\r\n\r\n"
     # Use a simple payload with the literal pattern
     payload2 = b"POST /login HTTP/1.1\r\nContent-Type: application/x-www-form-urlencoded\r\n\r\nuser=admin&pass=x'%20OR%20'1'='1"
-    pkt = make_pkt(dst_port=80, flags="", payload=b"GET /search?q=UNION+SELECT+1,2,3 HTTP/1.1\r\nHost: x\r\n\r\n")
+    pkt = make_pkt(dst_port=80, flags="", payload=b"GET /search?q=UNION SELECT 1,2,3 HTTP/1.1\r\nHost: x\r\n\r\n")
     rule.process_packet(pkt)
     event = rule.evaluate()
     assert event is not None
@@ -77,14 +77,15 @@ def test_brute_force():
 def test_arp_spoof():
     rule = ArpSpoofRule()
     rule.initialize()
-    # Simulate ARP packets with conflicting MACs
-    # We inject directly into the ip_to_macs dict since we can't generate real ARP payloads easily
-    from detection.rules.arp_spoof import _ArpRecord
-    record = _ArpRecord(macs={"aa:bb:cc:dd:ee:ff", "11:22:33:44:55:66"},
-                        first_seen=ts(), last_seen=ts(), emitted=False)
-    rule._ip_to_macs["192.168.1.1"] = record
-    # Trigger the detection directly
-    rule._pending_event = rule._build_event("192.168.1.1", record, ts())
+    from detection.parsers.packet_decoder import Packet
+    def _arp(mac):
+        return Packet(
+            src_ip="192.168.1.1", dst_ip="0.0.0.0",
+            src_port=None, dst_port=None, protocol="ARP", flags=None,
+            timestamp=ts(), length=28, payload=None, hw_src=mac,
+        )
+    rule.process_packet(_arp("aa:bb:cc:dd:ee:ff"))
+    rule.process_packet(_arp("11:22:33:44:55:66"))
     event = rule.evaluate()
     assert event is not None
     assert event.attack_type == "ARP Spoofing"

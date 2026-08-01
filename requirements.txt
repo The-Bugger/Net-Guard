@@ -1,13 +1,70 @@
+# NetGuard IDPS — Python Dependencies
+# ============================================================
+# Install with: pip install -r requirements.txt
+# Requires:     Python 3.11+
+# Platform:     Linux (root required for packet capture + iptables)
+#               Windows/macOS supported for development only
+# ============================================================
+
+# ── Web Framework ─────────────────────────────────────────────────────────────
 Flask==3.0.3
+# Core web framework. Serves the REST API (21 endpoints) and static frontend.
+# Blueprint-based routing; all routes are thin delegates to the service layer.
+
 flask-socketio==5.3.6
+# Adds WebSocket support via Socket.IO protocol over Flask.
+# Used for real-time push: new_threat, ip_blocked, live_stats, monitoring_status.
+# Requires either eventlet or gevent as the async backend.
+
 flask-cors==4.0.1
+# Enables Cross-Origin Resource Sharing so the browser dashboard can call
+# the API from http://localhost:5000 without CORS errors.
+
 eventlet==0.36.1
+# Async event loop and green-thread library.
+# Required by Flask-SocketIO for the production async_mode="eventlet" server.
+# NOTE: Not compatible with Python 3.14+ — use async_mode="threading" for dev.
+
+# ── Network / Packet Capture ──────────────────────────────────────────────────
 scapy==2.5.0
-SQLAlchemy==2.0.36
+# Packet capture, crafting, and protocol dissection.
+# CaptureEngine wraps Scapy's sniff() in a daemon thread.
+# Requires root/sudo + libpcap (Linux) or Npcap (Windows).
+
+# ── Database ──────────────────────────────────────────────────────────────────
+SQLAlchemy==2.0.51
+# ORM for all database operations. Six models: Event, BlockedIP, WhitelistEntry,
+# DetectionRule, Setting, SystemLog. Parameterized queries only — no raw SQL.
+# Database: SQLite at database/netguard.db.
+
+# ── Configuration ─────────────────────────────────────────────────────────────
 PyYAML==6.0.2
-psutil==6.1.0
+# Parses config/config.yaml. Used by ConfigurationManager to load/persist
+# all runtime thresholds (syn_flood_threshold, block_duration, etc.).
+
 python-dotenv==1.0.1
+# Loads .env file into os.environ at startup.
+# Used for DATABASE_URL, LOG_LEVEL, SECRET_KEY, FLASK_HOST, FLASK_PORT.
+
+# ── System / Utilities ────────────────────────────────────────────────────────
+psutil==6.1.0
+# Cross-platform system and process utilities.
+# Used by MonitorService to enumerate available network interfaces.
+
 requests==2.32.3
+# HTTP client library.
+# Used in demo/ and integration test scripts for HTTP health checks.
+
+# ── Testing ───────────────────────────────────────────────────────────────────
 hypothesis==6.115.6
+# Property-based testing framework.
+# Drives all 40 correctness properties (Properties 1–40) defined in the spec.
+# Generates random inputs to find edge-case failures automatically.
+
 pytest==8.3.3
+# Test runner, fixtures, and assertion helpers.
+# Run: pytest tests/ --ignore=tests/integration -v
+
 pytest-cov==5.0.0
+# Code coverage plugin for pytest.
+# Run: pytest tests/ --cov=backend --cov=detection --cov-report=term-missing

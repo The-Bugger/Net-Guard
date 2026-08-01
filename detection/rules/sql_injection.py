@@ -1,19 +1,51 @@
 """
-sql_injection.py — SQL Injection detection rule for NetGuard IDPS.
+sql_injection.py — SQL Injection Detection Rule for NetGuard IDPS.
 
-Detects SQL injection payloads in HTTP traffic by pattern matching the
-TCP payload of HTTP packets (destination port 80 or 443).
+Module purpose:
+    Detects SQL injection payloads in HTTP traffic by case-insensitive
+    pattern matching on the raw TCP payload of packets destined for HTTP
+    ports (80, 443, 8080, 8443).
 
 Detection logic:
-- Inspect TCP payload of HTTP packets using case-insensitive regex
-- Patterns: ' OR, UNION SELECT, DROP TABLE, --, xp_cmdshell
-- Match in URL path, query string, or request body
-- First detection from an IP → severity High
-- Repeated detection from same IP → severity Critical
-- Confidence always 100 (single matching payload = definitive evidence)
-- No minimum packet count — a single matching payload triggers detection
+    - Inspect TCP payload of HTTP packets using pre-compiled regex patterns
+    - Five canonical patterns: ``' OR``, ``UNION SELECT``, ``DROP TABLE``,
+      ``--``, ``xp_cmdshell``
+    - Match is performed against the URL path, query string, and request body
+    - First detection from a source IP → severity ``High``
+    - Subsequent detections from the same source IP → severity ``Critical``
+    - Confidence is always ``100`` — a single matching payload is definitive
+    - No minimum packet count; a single matching payload triggers detection
+
+Architecture role:
+    One of five detection rules consumed by ``DetectionEngine``.  Implements
+    the ``BaseRule`` interface.  Produces ``ThreatEvent`` objects that are
+    forwarded to ``ExplainabilityEngine`` then ``LoggingEngine``.
+
+Dependencies:
+    - ``detection.parsers.packet_decoder.Packet`` — normalised packet input
+    - ``detection.rules.base_rule.BaseRule`` — abstract rule interface
+    - ``detection.rules.base_rule.ThreatEvent`` — output event type
+    - ``detection.rules.base_rule.Explanation`` — explanation output type
+
+Related modules:
+    - ``detection/rules/syn_flood.py``    — volumetric detection
+    - ``detection/rules/brute_force.py``  — auth failure detection
+    - ``backend/services/detection_service.py`` — rule orchestration
 
 Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6
+
+Example:
+    >>> rule = SqlInjectionRule()
+    >>> rule.initialize()
+    >>> pkt = Packet(dst_port=80, protocol="TCP",
+    ...              payload=b"GET /search?q=UNION SELECT 1 HTTP/1.1\\r\\n\\r\\n",
+    ...              src_ip="10.0.0.1", ...)
+    >>> rule.process_packet(pkt)
+    >>> event = rule.evaluate()
+    >>> event.attack_type
+    'SQL Injection'
+    >>> event.confidence
+    100
 """
 
 from __future__ import annotations

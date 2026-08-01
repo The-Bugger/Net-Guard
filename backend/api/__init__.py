@@ -122,12 +122,12 @@ def _register_blueprints(app: Flask) -> None:
     from backend.routes.evidence_routes import evidence_bp
     from backend.routes.logs_routes import logs_bp
     from backend.routes.settings_routes import settings_bp
-    from backend.routes.demo_routes import demo_bp
     from backend.routes.timeline_routes import timeline_bp
     from backend.routes.analytics_routes import analytics_bp
     from backend.routes.export_routes import export_bp
     from backend.routes.ai_assistant_routes import ai_assistant_bp
     from backend.routes.ai_routes import ai_bp
+    from backend.routes.lan_devices_routes import lan_devices_bp
 
     prefix = "/api/v1"
     app.register_blueprint(health_bp, url_prefix=prefix)
@@ -140,12 +140,12 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(evidence_bp, url_prefix=prefix)
     app.register_blueprint(logs_bp, url_prefix=prefix)
     app.register_blueprint(settings_bp, url_prefix=prefix)
-    app.register_blueprint(demo_bp, url_prefix=prefix)
     app.register_blueprint(timeline_bp, url_prefix=prefix)
     app.register_blueprint(analytics_bp, url_prefix=prefix)
     app.register_blueprint(export_bp, url_prefix=prefix)
     app.register_blueprint(ai_assistant_bp, url_prefix=prefix)
     app.register_blueprint(ai_bp, url_prefix=prefix)
+    app.register_blueprint(lan_devices_bp, url_prefix=prefix)
 
     logger.info("All route blueprints registered under %s.", prefix)
 

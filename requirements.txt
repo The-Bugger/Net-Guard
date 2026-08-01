@@ -20,7 +20,7 @@ flask-cors==4.0.1
 # Enables Cross-Origin Resource Sharing so the browser dashboard can call
 # the API from http://localhost:5000 without CORS errors.
 
-eventlet==0.36.1
+eventlet==0.40.3
 # Async event loop and green-thread library.
 # Required by Flask-SocketIO for the production async_mode="eventlet" server.
 # NOTE: Not compatible with Python 3.14+ — use async_mode="threading" for dev.

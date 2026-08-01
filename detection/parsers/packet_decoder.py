@@ -77,6 +77,9 @@ class Packet:
     arp_op: Optional[int] = field(default=None)
     """ARP opcode: 1=request, 2=reply. None for non-ARP packets."""
 
+    icmp_type: Optional[int] = field(default=None)
+    """ICMP message type (e.g. 8=Echo Request, 0=Echo Reply). None for non-ICMP packets."""
+
 
 # ---------------------------------------------------------------------------
 # Decoder
@@ -215,6 +218,7 @@ class PacketDecoder:
                 timestamp=timestamp,
                 length=length,
                 payload=None,
+                icmp_type=int(raw_pkt[ICMP].type) if raw_pkt.haslayer(ICMP) else None,
             )
 
         # Requirement 3.2: Unknown transport — still pass through with UNKNOWN label

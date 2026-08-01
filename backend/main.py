@@ -119,7 +119,7 @@ whitelist_manager = WhitelistManager(whitelist_repo)
 whitelist_manager.sync_from_db()
 
 # Stats service
-stats_service = StatsService(event_repo, block_repo, monitoring_state)
+stats_service = StatsService(event_repo, block_repo, monitoring_state, whitelist_manager=whitelist_manager)
 
 # Explainability engine
 explain_engine = ExplainabilityEngine(whitelist_manager)
@@ -199,7 +199,11 @@ detection_engine = DetectionEngine(
 
 # Capture engine
 from detection.capture.sniffer import CaptureEngine
-capture_engine = CaptureEngine(packet_queue, socketio_emit=_emit_socketio)
+capture_engine = CaptureEngine(
+    packet_queue,
+    socketio_emit=_emit_socketio,
+    stats_service=stats_service,   # Task 8: wires PPS tracking
+)
 
 # Monitor service
 monitor_service = MonitorService(

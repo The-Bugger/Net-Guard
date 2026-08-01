@@ -1,3 +1,0 @@
-[*] Port Scan Attack against 127.0.0.1
-[*] Starting nmap SYN scan of ports 1-10000...
-/d/NetGuard/demo/attack_scan.sh: line 25: nmap: command not found

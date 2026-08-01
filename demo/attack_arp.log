@@ -1,4 +1,0 @@
-[*] ARP Spoofing Attack
-[*] Target gateway: 192.168.1.1 on eth0
-[!] Neither arpspoof nor Scapy available.
-[!] Install: sudo apt-get install dsniff  or  pip install scapy

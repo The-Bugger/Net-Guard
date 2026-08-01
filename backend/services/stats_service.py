@@ -26,16 +26,18 @@ class StatsService:
     historical counts to the EventRepository.
     """
 
-    def __init__(self, event_repo, block_repo, state) -> None:
+    def __init__(self, event_repo, block_repo, state, whitelist_manager=None) -> None:
         """
         Args:
             event_repo: EventRepository instance.
             block_repo: BlockRepository instance.
             state: Shared MonitoringState.
+            whitelist_manager: Optional WhitelistManager for dashboard whitelist panel.
         """
         self._event_repo = event_repo
         self._block_repo = block_repo
         self._state = state
+        self._whitelist_manager = whitelist_manager
         self._lock = threading.Lock()
 
         # Rolling packets-per-second: timestamps of recent packets (last 60s)
@@ -66,26 +68,25 @@ class StatsService:
 
     def get_health_score(self) -> int:
         """
-        Compute security health score using deterministic weighted deductions.
+        Compute security health score — deterministic weighted deductions.
 
-        Formula (Req 9.1):
-          - Start at 100
-          - Deduct per attack type detected today:
-            SYN Flood: -15, Port Scan: -8, SQL Injection: -12,
-            Brute Force: -10, ARP Spoofing: -20
-          - Deduct additional -15 if ≥3 distinct attack types present
-          - Floor at 0, cap at 100
+        All 8 detection rules contribute deductions (Task 7):
+          SYN Flood:    -15   Port Scan:    -8   SQL Injection: -12
+          Brute Force:  -10   ARP Spoofing: -20  ICMP Flood:    -8
+          Slow HTTP:    -5    DNS Tunneling:-10
+          Diversity penalty: -10 if ≥3 distinct attack types present
 
-        Returns -1 on DB error (sentinel for "unavailable").
-
-        Req 9.1, 9.2, 9.3
+        Returns -1 on DB error.
         """
         DEDUCTIONS = {
-            "SYN Flood": 15,
-            "Port Scan": 8,
+            "SYN Flood":     15,
+            "Port Scan":      8,
             "SQL Injection": 12,
-            "Brute Force": 10,
-            "ARP Spoofing": 20,
+            "Brute Force":   10,
+            "ARP Spoofing":  20,
+            "ICMP Flood":     8,
+            "Slow HTTP":      5,
+            "DNS Tunneling": 10,
         }
         try:
             types_today = self._event_repo.get_distinct_attack_types_today()
@@ -93,8 +94,8 @@ class StatsService:
             for attack, penalty in DEDUCTIONS.items():
                 if attack in types_today:
                     score -= penalty
-            if len(types_today & DEDUCTIONS.keys()) >= 3:
-                score -= 15
+            if len(types_today & set(DEDUCTIONS.keys())) >= 3:
+                score -= 10
             return max(0, min(100, score))
         except Exception as exc:
             logger.error("get_health_score failed: %s", exc, exc_info=True)
@@ -146,6 +147,7 @@ class StatsService:
             "active_blocks": active_blocks,
             "attack_type_counts": attack_counts,
             "health_score": self.get_health_score(),
+            "whitelist": self._get_whitelist_safe(),
         }
 
         with self._lock:
@@ -167,6 +169,16 @@ class StatsService:
         """Return per-rule detection counts."""
         return self._event_repo.get_attack_type_counts()
 
+    def _get_whitelist_safe(self) -> list:
+        """Return whitelist entries; returns [] on any error."""
+        try:
+            if self._whitelist_manager is None:
+                return []
+            return self._whitelist_manager.get_all() or []
+        except Exception as exc:
+            logger.debug("_get_whitelist_safe failed: %s", exc)
+            return []
+
 
 # ---------------------------------------------------------------------------
 # Self-check: verify the formula on a known input at import time.
@@ -177,22 +189,27 @@ class StatsService:
 def _get_health_score_from(types_today: set) -> int:
     """Compute the weighted health score from a set of attack type strings."""
     DEDUCTIONS = {
-        "SYN Flood": 15,
-        "Port Scan": 8,
+        "SYN Flood":     15,
+        "Port Scan":      8,
         "SQL Injection": 12,
-        "Brute Force": 10,
-        "ARP Spoofing": 20,
+        "Brute Force":   10,
+        "ARP Spoofing":  20,
+        "ICMP Flood":     8,
+        "Slow HTTP":      5,
+        "DNS Tunneling": 10,
     }
     score = 100
     for attack, penalty in DEDUCTIONS.items():
         if attack in types_today:
             score -= penalty
-    if len(types_today & DEDUCTIONS.keys()) >= 3:
-        score -= 15
+    if len(types_today & set(DEDUCTIONS.keys())) >= 3:
+        score -= 10
     return max(0, min(100, score))
 
 
 assert _get_health_score_from(set()) == 100, "_get_health_score_from(set()) must equal 100"
-assert _get_health_score_from({"SYN Flood", "Port Scan", "SQL Injection", "Brute Force", "ARP Spoofing"}) == 20, (
-    "All five attack types must yield score 20"
-)
+# All 8 attack types: 100 - 15 - 8 - 12 - 10 - 20 - 8 - 5 - 10 - 10(diversity) = 2
+assert _get_health_score_from({
+    "SYN Flood", "Port Scan", "SQL Injection", "Brute Force",
+    "ARP Spoofing", "ICMP Flood", "Slow HTTP", "DNS Tunneling"
+}) == 2, "All 8 attack types must yield score 2"

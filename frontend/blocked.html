@@ -4,11 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NetGuard — Blocked IPs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/dark-theme.css">
 </head>
 <body>
+
 <header class="header">
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
   <div class="header-logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     NetGuard
@@ -17,47 +22,116 @@
   <div class="header-time" id="system-time"></div>
 </header>
 
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
 <div class="app-layout">
-  <nav class="sidebar">
-    <a href="/" class="nav-item">Dashboard</a>
-    <a href="/threats.html" class="nav-item">Threats</a>
-    <a href="/blocked.html" class="nav-item active">Blocked IPs</a>
-    <a href="/whitelist.html" class="nav-item">Whitelist</a>
-    <a href="/logs.html" class="nav-item">Logs</a>
-    <a href="/rules.html" class="nav-item">Rules</a>
-    <a href="/settings.html" class="nav-item">Settings</a>
+  <nav class="sidebar" id="sidebar">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/threats.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Threats
+    </a>
+    <a href="/blocked.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Blocked IPs
+    </a>
+    <a href="/whitelist.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Whitelist
+    </a>
+    <a href="/logs.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </a>
+    <a href="/rules.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Rules
+    </a>
+    <a href="/settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
   </nav>
+
   <main class="main-content">
-    <div class="page-title">Blocked IPs</div>
-    <div class="card">
-      <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center">
-        <input id="block-ip" class="input" placeholder="IP to block manually…" style="width:200px">
-        <input id="block-reason" class="input" placeholder="Reason…" style="width:160px">
-        <input id="block-duration" class="input" type="number" placeholder="120s" style="width:100px" value="120">
-        <button class="btn btn-danger" onclick="manualBlock()">Block IP</button>
-        <button class="btn btn-ghost" onclick="loadBlocked()">🔄 Refresh</button>
+    <div class="page-header-row">
+      <div>
+        <div class="page-title">Blocked IPs</div>
+        <div class="page-subtitle">Active firewall blocks — auto-expire when timer reaches zero</div>
       </div>
-      <table class="data-table">
-        <thead>
-          <tr><th>IP Address</th><th>Reason</th><th>Blocked At</th><th>Expires At</th><th>Time Remaining</th><th>Action</th></tr>
-        </thead>
-        <tbody id="blocked-tbody"><tr><td colspan="6" class="empty-state"><p>No active blocks.</p></td></tr></tbody>
-      </table>
+      <button class="btn btn-ghost btn-sm" onclick="loadBlocked()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Manual block form -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header" style="margin-bottom:12px">
+        <span class="card-title">Manual Block</span>
+      </div>
+      <div class="action-bar" style="margin-bottom:0">
+        <input id="block-ip"       class="input" placeholder="IP address (e.g. 10.0.0.5)" style="flex:1;min-width:160px;max-width:220px">
+        <input id="block-reason"   class="input" placeholder="Reason"                       style="flex:1;min-width:140px;max-width:200px">
+        <div class="input-with-unit" style="width:130px">
+          <input id="block-duration" class="input" type="number" value="120" min="1" max="3600">
+          <span class="input-unit">sec</span>
+        </div>
+        <button class="btn btn-danger" onclick="manualBlock()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          Block IP
+        </button>
+      </div>
+    </div>
+
+    <!-- Blocked table -->
+    <div class="card" style="padding:0">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <span class="card-title" style="margin:0">Active Blocks</span>
+        <span id="block-count" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Reason</th>
+              <th>Blocked At</th>
+              <th>Expires At</th>
+              <th>Time Remaining</th>
+              <th style="width:80px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="blocked-tbody">
+            <tr><td colspan="6" class="empty-state"><p>No active blocks.</p></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 </div>
+
 <div id="notifications"></div>
+<div id="toast-container"></div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
 <script src="/js/socket.js"></script>
-
 <script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   loadBlocked();
-  setInterval(loadBlocked, 5000);
+  setInterval(loadBlocked, 10000);
   setInterval(() => { document.getElementById('system-time').textContent = new Date().toLocaleTimeString(); }, 1000);
-  SocketManager.on('ip_blocked', loadBlocked);
+  SocketManager.on('ip_blocked',   loadBlocked);
   SocketManager.on('ip_unblocked', loadBlocked);
   SocketManager.connect();
 });
@@ -69,50 +143,68 @@ async function loadBlocked() {
   } catch (err) { console.error(err); }
 }
 
+function formatExpiry(secs) {
+  if (secs === undefined || secs === null) return '—';
+  if (secs <= 0) return '<span style="color:var(--text-muted);font-size:12px">Expiring…</span>';
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  const val = m > 0 ? `${m}m ${s}s` : `${s}s`;
+  const cls = secs < 30 ? 'expiry-soon' : 'expiry-ok';
+  return `<span class="${cls}" style="font-size:13px;font-variant-numeric:tabular-nums">${val}</span>`;
+}
+
 function renderBlocked(blocks) {
-  const tbody = document.getElementById('blocked-tbody');
-  if (!blocks.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>No active blocks.</p></td></tr>'; return; }
+  const tbody   = document.getElementById('blocked-tbody');
+  const counter = document.getElementById('block-count');
+  if (counter) counter.textContent = blocks.length ? `(${blocks.length})` : '';
+
+  if (!blocks.length) {
+    tbody.innerHTML = `<tr><td colspan="6">
+      <div class="empty-state-full">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        <p>No active blocks</p>
+        <small>Blocks are added automatically when threats are detected</small>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = blocks.map(b => `
     <tr>
       <td><code>${escHtml(b.ip_address)}</code></td>
-      <td>${escHtml(b.reason)}</td>
-      <td>${new Date(b.blocked_at).toLocaleString()}</td>
-      <td>${new Date(b.expires_at).toLocaleString()}</td>
-      <td>${b.expires_in !== undefined ? b.expires_in + 's' : '—'}</td>
-      <td><button class="btn btn-danger btn-sm" data-ip="${escHtml(b.ip_address)}" onclick="unblock(this.dataset.ip)">Unblock</button></td>
+      <td style="font-size:13px;max-width:200px">${escHtml(b.reason)}</td>
+      <td style="font-size:12px;white-space:nowrap;color:var(--text-muted)">${new Date(b.blocked_at).toLocaleString()}</td>
+      <td style="font-size:12px;white-space:nowrap;color:var(--text-muted)">${new Date(b.expires_at).toLocaleString()}</td>
+      <td>${formatExpiry(b.expires_in)}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" data-ip="${escHtml(b.ip_address)}"
+                onclick="unblock(this.dataset.ip)">Unblock</button>
+      </td>
     </tr>
   `).join('');
 }
 
 async function manualBlock() {
   const ip  = document.getElementById('block-ip').value.trim();
-  const rsn = document.getElementById('block-reason').value.trim() || 'Manual';
+  const rsn = document.getElementById('block-reason').value.trim() || 'Manual block';
   const dur = parseInt(document.getElementById('block-duration').value) || 120;
-  if (!ip) return;
+  if (!ip) { showToast('Enter an IP address.', 'warning'); return; }
   try {
     await NetGuardAPI.blockIP(ip, rsn, dur);
-    showN(`${ip} blocked.`, 'success');
+    showToast(`${ip} blocked for ${dur}s.`, 'success');
+    document.getElementById('block-ip').value = '';
+    document.getElementById('block-reason').value = '';
     loadBlocked();
-  } catch (e) { showN(e.message, 'error'); }
+  } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function unblock(ip) {
   if (!confirm(`Unblock ${ip}?`)) return;
   try {
     await NetGuardAPI.unblockIP(ip);
-    showN(`${ip} unblocked.`, 'success');
+    showToast(`${ip} unblocked.`, 'success');
     loadBlocked();
-  } catch (e) { showN(e.message, 'error'); }
-}
-
-function showN(msg, type) {
-  const c = document.getElementById('notifications');
-  if (!c) return;
-  const el = document.createElement('div');
-  el.className = `notification ${type}`;
-  el.textContent = msg;
-  c.appendChild(el);
-  setTimeout(() => el.remove(), 5000);
+  } catch (e) { showToast(e.message, 'error'); }
 }
 </script>
 </body>

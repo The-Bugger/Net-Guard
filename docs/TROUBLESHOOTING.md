@@ -277,3 +277,25 @@ tail -100 logs/errors.log
 # Find the traceback and fix the underlying issue
 # Then restart: sudo systemctl restart netguard
 ```
+
+---
+
+### 13. "UNAUTHORIZED" response on API calls
+
+**Symptom:** `POST /api/v1/block` (or any mutating endpoint) returns HTTP 401 with `{"error": "UNAUTHORIZED"}`.
+
+**Cause:** `NETGUARD_API_KEY` is set in the environment but the request is missing the `X-API-Key` header, or the header value is wrong.
+
+**Fix:**
+```bash
+# Check if the key is configured
+echo $NETGUARD_API_KEY
+
+# Include the header in your request
+curl -X POST http://localhost:5000/api/v1/block \
+     -H "Content-Type: application/json" \
+     -H "X-API-Key: your-key-here" \
+     -d '{"ip": "1.2.3.4", "reason": "manual"}'
+```
+
+If `NETGUARD_API_KEY` is not set, the app runs in dev no-auth mode and all requests pass without a key.

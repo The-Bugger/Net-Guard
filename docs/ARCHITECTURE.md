@@ -35,6 +35,9 @@ graph TB
         R3["SqlInjectionRule"]
         R4["BruteForceRule"]
         R5["ArpSpoofRule"]
+        R6["IcmpFloodRule"]
+        R7["SlowHttpRule"]
+        R8["DnsTunnelRule"]
     end
     subgraph Response["Response Layer"]
         EE["ExplainabilityEngine"]
@@ -58,8 +61,8 @@ graph TB
     NIC -->|raw packets| CE
     CE --> PD --> PQ
     PQ --> DE
-    DE --> R1 & R2 & R3 & R4 & R5
-    R1 & R2 & R3 & R4 & R5 -->|ThreatEvent| DE
+    DE --> R1 & R2 & R3 & R4 & R5 & R6 & R7 & R8
+    R1 & R2 & R3 & R4 & R5 & R6 & R7 & R8 -->|ThreatEvent| DE
     DE --> EE --> PE
     EE --> EQ --> LE
     LE --> DB & LF
@@ -93,7 +96,7 @@ graph LR
     end
     subgraph DT["Detection_Thread"]
         DGET["packet_queue.get(timeout=1s)"]
-        DRULE["Run all 5 rules\nprocess_packet + evaluate"]
+        DRULE["Run all 8 rules\nprocess_packet + evaluate"]
         DCALL["on_event callback"]
     end
     subgraph LT["Logging_Thread"]
@@ -141,7 +144,7 @@ sequenceDiagram
     participant PD as PacketDecoder
     participant PQ as packet_queue
     participant DE as DetectionEngine
-    participant Rule as Detection Rule (×5)
+    participant Rule as Detection Rule (×8)
     participant EE as ExplainabilityEngine
     participant PE as PreventionEngine
     participant LE as LoggingEngine
@@ -238,6 +241,19 @@ DetectionEngine:
 4. Exposes the disabled rule name via `disabled_rule_names` property
 5. Restores the rule on the next `reload_rules()` call
 
+### Active Detection Rules
+
+| Rule | ID | Attack Type | Phase |
+|------|----|-------------|-------|
+| `SynFloodRule` | `SYN_FLOOD_001` | TCP SYN Flood | Baseline |
+| `PortScanRule` | `PORT_SCAN_001` | Port Reconnaissance | Baseline |
+| `SqlInjectionRule` | `SQL_INJECT_001` | SQL Injection (HTTP) | Baseline |
+| `BruteForceRule` | `BRUTE_FORCE_001` | Brute Force Login | Baseline |
+| `ArpSpoofRule` | `ARP_SPOOF_001` | ARP Spoofing / MitM | Baseline |
+| `IcmpFloodRule` | `ICMP_FLOOD_001` | ICMP Flood / Smurf Attack | Phase B |
+| `SlowHttpRule` | `SLOW_HTTP_001` | Slow HTTP / Slowloris | Phase B |
+| `DnsTunnelRule` | `DNS_TUNNEL_001` | DNS Tunneling (heuristic) | Phase B |
+
 ---
 
 ## API Flow
@@ -271,6 +287,21 @@ Route handlers are intentionally thin. The pattern is:
 4. Return `success_response()` or `error_response()` from `response.py`
 
 No business logic lives in route handlers.
+
+### Before-Request Chain
+
+Incoming HTTP requests pass through three `before_request` hooks (registered in
+`create_app()`) before reaching any route handler:
+
+| Order | Hook | Purpose |
+|-------|------|---------|
+| 1 | `sanitise_and_validate()` | Reject oversized or malformed input fields |
+| 2 | `RateLimiter.check()` | Rate-limit per client IP (gated on `TRUST_PROXY_HEADERS`) |
+| 3 | `ApiKeyAuth.check()` | Authenticate mutating requests via `X-API-Key` header |
+
+After the route handler returns, `add_security_headers()` runs as an
+`after_request` hook and appends CSP, HSTS (HTTPS only), and Permissions-Policy
+response headers.
 
 ---
 

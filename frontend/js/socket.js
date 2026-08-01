@@ -13,22 +13,16 @@
 const SocketManager = (() => {
   let socket = null;
   let reconnectTimer = null;
+  // Support multiple handlers per event (array, not single-slot dict)
   const handlers = {};
 
-  /**
-   * Register a handler for a SocketIO event.
-   * @param {string} event - Event name
-   * @param {function} fn  - Handler function
-   */
   function on(event, fn) {
-    handlers[event] = fn;
+    if (!handlers[event]) handlers[event] = [];
+    // Avoid double-registration of the same function reference
+    if (!handlers[event].includes(fn)) handlers[event].push(fn);
     if (socket) socket.on(event, fn);
   }
 
-  /**
-   * Initialise the SocketIO connection.
-   * Falls back gracefully if SocketIO is not available.
-   */
   function connect() {
     if (typeof io === 'undefined') {
       console.warn('SocketIO not loaded — falling back to polling.');
@@ -37,17 +31,16 @@ const SocketManager = (() => {
 
     socket = io({
       transports: ['websocket', 'polling'],
-      reconnection: false, // we handle reconnect manually
+      reconnection: false,
     });
 
     socket.on('connect', () => {
       _hideBanner();
-      if (reconnectTimer) {
-        clearInterval(reconnectTimer);
-        reconnectTimer = null;
-      }
+      if (reconnectTimer) { clearInterval(reconnectTimer); reconnectTimer = null; }
       // Re-register all handlers on reconnect
-      Object.entries(handlers).forEach(([ev, fn]) => socket.on(ev, fn));
+      Object.entries(handlers).forEach(([ev, fns]) =>
+        fns.forEach(fn => socket.on(ev, fn))
+      );
     });
 
     socket.on('disconnect', () => {
@@ -61,8 +54,10 @@ const SocketManager = (() => {
       _scheduleReconnect();
     });
 
-    // Register any handlers already added before connect()
-    Object.entries(handlers).forEach(([ev, fn]) => socket.on(ev, fn));
+    // Register handlers added before connect()
+    Object.entries(handlers).forEach(([ev, fns]) =>
+      fns.forEach(fn => socket.on(ev, fn))
+    );
   }
 
   function _scheduleReconnect() {

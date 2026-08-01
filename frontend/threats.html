@@ -4,11 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NetGuard — Threats</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/dark-theme.css">
 </head>
 <body>
+
 <header class="header">
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
   <div class="header-logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     NetGuard
@@ -18,60 +23,117 @@
   <div class="header-time" id="system-time"></div>
 </header>
 
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
 <div class="app-layout">
-  <nav class="sidebar">
-    <a href="/" class="nav-item">Dashboard</a>
-    <a href="/threats.html" class="nav-item active">Threats</a>
-    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
-    <a href="/whitelist.html" class="nav-item">Whitelist</a>
-    <a href="/logs.html" class="nav-item">Logs</a>
-    <a href="/rules.html" class="nav-item">Rules</a>
-    <a href="/settings.html" class="nav-item">Settings</a>
+  <nav class="sidebar" id="sidebar">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/threats.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Threats
+    </a>
+    <a href="/blocked.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Blocked IPs
+    </a>
+    <a href="/whitelist.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Whitelist
+    </a>
+    <a href="/logs.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </a>
+    <a href="/rules.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Rules
+    </a>
+    <a href="/settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
   </nav>
+
   <main class="main-content">
-    <div class="page-title">All Threats</div>
+    <div class="page-header-row">
+      <div>
+        <div class="page-title">All Threats</div>
+        <div class="page-subtitle">Detected intrusion events with evidence</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadThreats()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
 
     <!-- Filters -->
-    <div class="card" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap">
-      <select id="f-severity" class="input" style="width:140px">
+    <div class="filter-bar">
+      <select id="f-severity" class="input" style="width:150px">
         <option value="">All Severities</option>
         <option>Low</option><option>Medium</option><option>High</option><option>Critical</option>
       </select>
-      <select id="f-attack" class="input" style="width:160px">
+      <select id="f-attack" class="input" style="width:170px">
         <option value="">All Attacks</option>
-        <option>SYN Flood</option><option>Port Scan</option>
-        <option>SQL Injection</option><option>Brute Force</option><option>ARP Spoofing</option>
+        <option>SYN Flood</option>
+        <option>Port Scan</option>
+        <option>SQL Injection</option>
+        <option>Brute Force</option>
+        <option>ARP Spoofing</option>
+        <option>ICMP Flood</option>
+        <option>Slow HTTP</option>
+        <option>DNS Tunneling</option>
       </select>
-      <input id="f-ip" class="input" placeholder="Source IP…" style="width:160px">
-      <input id="f-date" class="input" type="date" style="width:160px">
-      <button class="btn btn-primary" onclick="applyFilters()">Filter</button>
-      <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
+      <input id="f-ip"   class="input" placeholder="Source IP…"  style="width:160px">
+      <input id="f-date" class="input" type="date"               style="width:160px">
+      <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()">Reset</button>
     </div>
 
-    <div class="card">
-      <table class="data-table">
-        <thead>
-          <tr><th>Time</th><th>Attack</th><th>Source IP</th><th>Severity</th><th>Confidence</th><th>Blocked</th><th>Actions</th></tr>
-        </thead>
-        <tbody id="threats-tbody"><tr><td colspan="7" class="empty-state"><p>Loading…</p></td></tr></tbody>
-      </table>
-      <div id="pagination" style="padding:12px;display:flex;gap:8px;justify-content:flex-end"></div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Attack</th>
+              <th>Source IP</th>
+              <th>Severity</th>
+              <th>Confidence</th>
+              <th>Blocked</th>
+              <th style="width:60px">Details</th>
+            </tr>
+          </thead>
+          <tbody id="threats-tbody">
+            <tr><td colspan="7" class="empty-state"><p>Loading…</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="pagination" style="padding:12px 16px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border)"></div>
     </div>
   </main>
 </div>
-<div id="notifications"></div>
 
-<!-- Toast container -->
+<div id="notifications"></div>
 <div id="toast-container"></div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/utils.js"></script>
 <script src="/js/socket.js"></script>
-
 <script>
 let currentOffset = 0;
 const PAGE_SIZE = 50;
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   loadThreats();
@@ -84,7 +146,7 @@ function showSkeletons() {
   const tbody = document.getElementById('threats-tbody');
   if (!tbody) return;
   tbody.innerHTML = Array.from({ length: 8 }, () =>
-    `<tr><td colspan="7" style="padding:4px 0"><div class="skeleton-row"></div></td></tr>`
+    `<tr><td colspan="7" style="padding:4px 14px"><div class="skeleton-row"></div></td></tr>`
   ).join('');
 }
 
@@ -94,10 +156,10 @@ async function loadThreats() {
   const atk = document.getElementById('f-attack').value;
   const ip  = document.getElementById('f-ip').value.trim();
   const dt  = document.getElementById('f-date').value;
-  if (sev) params.severity = sev;
+  if (sev) params.severity    = sev;
   if (atk) params.attack_type = atk;
-  if (ip)  params.source_ip = ip;
-  if (dt)  params.date = dt;
+  if (ip)  params.source_ip   = ip;
+  if (dt)  params.date        = dt;
   params.limit  = PAGE_SIZE;
   params.offset = currentOffset;
 
@@ -106,57 +168,109 @@ async function loadThreats() {
   try {
     const data = await NetGuardAPI.getDetections(params);
     renderTable(data.events || []);
+    renderPagination(data.total || 0);
   } catch (err) {
     document.getElementById('threats-tbody').innerHTML =
-      `<tr><td colspan="7" style="color:var(--danger);padding:16px">${err.message}</td></tr>`;
+      `<tr><td colspan="7" style="color:var(--danger);padding:20px 16px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="vertical-align:-3px;margin-right:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        ${escHtml(err.message)}
+      </td></tr>`;
   }
 }
 
 function renderTable(events) {
   const tbody = document.getElementById('threats-tbody');
   if (!events.length) {
-    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <p>No detections found</p>
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state-full">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <p>No detections found</p>
+        <small>Adjust the filters or wait for monitoring to detect activity</small>
+      </div>
     </td></tr>`;
     return;
   }
   tbody.innerHTML = events.map(e => `
     <tr>
-      <td>${new Date(e.timestamp).toLocaleString()}</td>
-      <td>${escHtml(e.attack_type)}</td>
+      <td style="font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums">${new Date(e.timestamp).toLocaleString()}</td>
+      <td style="font-weight:500">${escHtml(e.attack_type)}</td>
       <td><code>${escHtml(e.source_ip)}</code></td>
       <td><span class="severity-badge severity-${(e.severity||'').toLowerCase()}">${escHtml(e.severity)}</span></td>
-      <td>${e.confidence}%</td>
-      <td>${e.blocked ? '🔴 Yes' : '—'}</td>
-      <td><a href="#" data-evid="${escHtml(e.event_id)}" onclick="viewEvidence(this.dataset.evid); return false">View</a></td>
+      <td>
+        <div class="confidence-bar" style="min-width:100px">
+          <div class="confidence-track"><div class="confidence-fill" style="width:${e.confidence}%"></div></div>
+          <span style="font-size:12px;white-space:nowrap">${e.confidence}%</span>
+        </div>
+      </td>
+      <td>${e.blocked
+        ? '<span style="color:var(--danger);font-weight:600;font-size:12px">● Blocked</span>'
+        : '<span style="color:var(--text-muted);font-size:12px">—</span>'}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" data-evid="${escHtml(e.event_id)}"
+                onclick="viewEvidence(this.dataset.evid, this)" style="padding:3px 8px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          View
+        </button>
+      </td>
     </tr>
     <tr id="ev-row-${escHtml(e.event_id)}" style="display:none">
-      <td colspan="7"><div class="evidence-panel" id="ev-${escHtml(e.event_id)}">Loading…</div></td>
+      <td colspan="7" style="padding:0 16px 16px">
+        <div class="evidence-panel" id="ev-${escHtml(e.event_id)}">
+          <div class="skeleton-row" style="height:20px;width:80%;margin-bottom:8px"></div>
+          <div class="skeleton-row" style="height:16px;width:60%"></div>
+        </div>
+      </td>
     </tr>
   `).join('');
 }
 
-async function viewEvidence(id) {
-  const row = document.getElementById(`ev-row-${id}`);
-  if (!row) return;
-  row.style.display = row.style.display === 'none' ? '' : 'none';
+async function viewEvidence(id, btn) {
+  const row   = document.getElementById(`ev-row-${id}`);
   const panel = document.getElementById(`ev-${id}`);
-  if (panel && panel.textContent === 'Loading…') {
+  if (!row) return;
+
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : '';
+  if (btn) btn.textContent = isOpen ? '▶ View' : '▼ Hide';
+
+  if (!isOpen && panel && panel.querySelector('.skeleton-row')) {
     try {
       const ev = await NetGuardAPI.getEvidence(id);
       panel.innerHTML = `
-        <div class="evidence-explanation">${ev.plain_english_text||''}</div>
-        <div class="evidence-recommendation"><strong>Recommendation:</strong> ${ev.recommendation||''}</div>
+        <div class="evidence-explanation">${escHtml(ev.plain_english_text || 'No explanation available.')}</div>
+        ${ev.recommendation ? `<div class="evidence-recommendation" style="margin-top:10px"><strong>Recommendation:</strong> ${escHtml(ev.recommendation)}</div>` : ''}
       `;
-    } catch (e) { panel.textContent = 'Failed to load evidence.'; }
+    } catch (e) {
+      panel.innerHTML = `<p style="color:var(--danger);font-size:13px">Failed to load evidence: ${escHtml(e.message)}</p>`;
+    }
   }
+}
+
+function renderPagination(total) {
+  const container = document.getElementById('pagination');
+  if (!container) return;
+  const pages = Math.ceil(total / PAGE_SIZE);
+  const current = Math.floor(currentOffset / PAGE_SIZE);
+  if (pages <= 1) { container.innerHTML = ''; return; }
+  container.innerHTML = `
+    <span style="font-size:12px;color:var(--text-muted);margin-right:8px">
+      ${currentOffset + 1}–${Math.min(currentOffset + PAGE_SIZE, total)} of ${total}
+    </span>
+    <button class="btn btn-ghost btn-sm" onclick="changePage(-1)" ${current === 0 ? 'disabled' : ''}>← Prev</button>
+    <button class="btn btn-ghost btn-sm" onclick="changePage(1)"  ${current >= pages - 1 ? 'disabled' : ''}>Next →</button>
+  `;
+}
+
+function changePage(dir) {
+  currentOffset = Math.max(0, currentOffset + dir * PAGE_SIZE);
+  loadThreats();
 }
 
 function applyFilters() { currentOffset = 0; loadThreats(); }
 function resetFilters() {
-  ['f-severity','f-attack','f-ip','f-date'].forEach(id => { document.getElementById(id).value = ''; });
-  currentOffset = 0; loadThreats();
+  ['f-severity', 'f-attack', 'f-ip', 'f-date'].forEach(id => { document.getElementById(id).value = ''; });
+  currentOffset = 0;
+  loadThreats();
 }
 function startClock() {
   const el = document.getElementById('system-time');

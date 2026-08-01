@@ -44,6 +44,7 @@ python -c "from database.init_db import initialize_db; initialize_db()"
 
 # 5. Copy environment config
 cp .env.example .env
+# ⚠️  NEVER commit .env — it contains local secrets. Use .env.example as the template.
 
 # 6. Run the test suite to verify setup
 pytest --tb=short
@@ -122,6 +123,9 @@ Module-level docstrings must include: purpose, responsibilities, dependencies, u
 - Routes return HTTP 422 for validation errors, 404 for not found, 500 for unexpected failures.
 
 ### Security
+
+> **Never commit `.env`.**  It contains local secrets (SECRET_KEY, API keys, database
+> passwords). Always use `.env.example` as the template and keep your `.env` local only.
 
 - Always validate IP addresses with `require_valid_ip()` before passing to iptables or the DB.
 - Never log passwords, tokens, secrets, or private keys (see `_SENSITIVE_KEYS` in `log_service.py`).

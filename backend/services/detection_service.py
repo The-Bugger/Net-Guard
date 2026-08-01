@@ -29,7 +29,10 @@ from detection.parsers.packet_decoder import Packet
 from detection.rules.base_rule import BaseRule, ThreatEvent
 from detection.rules.arp_spoof import ArpSpoofRule
 from detection.rules.brute_force import BruteForceRule
+from detection.rules.dns_tunnel import DnsTunnelRule
+from detection.rules.icmp_flood import IcmpFloodRule
 from detection.rules.port_scan import PortScanRule
+from detection.rules.slow_http import SlowHttpRule
 from detection.rules.sql_injection import SqlInjectionRule
 from detection.rules.syn_flood import SynFloodRule
 
@@ -328,6 +331,21 @@ class DetectionEngine:
         arp_rule = ArpSpoofRule()
         arp_rule.enabled = rules_enabled.get("arp_spoof", True)
         rules.append(arp_rule)
+
+        # ICMP Flood
+        icmp_rule = IcmpFloodRule()
+        icmp_rule.enabled = rules_enabled.get("icmp_flood", True)
+        rules.append(icmp_rule)
+
+        # Slow HTTP / Slowloris
+        slow_http_rule = SlowHttpRule()
+        slow_http_rule.enabled = rules_enabled.get("slow_http", True)
+        rules.append(slow_http_rule)
+
+        # DNS Tunneling
+        dns_tunnel_rule = DnsTunnelRule()
+        dns_tunnel_rule.enabled = rules_enabled.get("dns_tunnel", True)
+        rules.append(dns_tunnel_rule)
 
         return rules
 

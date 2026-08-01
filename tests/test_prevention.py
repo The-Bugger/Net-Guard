@@ -85,7 +85,7 @@ class TestBlockIP:
     @patch("backend.services.prevention_service.subprocess")
     def test_block_ip_success(self, mock_sub, engine, mock_block_repo):
         mock_sub.run.return_value = MagicMock(returncode=0)
-        result = engine.block_ip("10.0.0.5", "SYN Flood", "evt-001")
+        result = engine.block_ip("10.0.0.5", "SYN Flood", "evt-001", allow_private_block=True)
         assert result is True
         mock_block_repo.insert.assert_called_once()
         record = mock_block_repo.insert.call_args[0][0]
@@ -95,7 +95,7 @@ class TestBlockIP:
     @patch("backend.services.prevention_service.subprocess")
     def test_block_ip_calls_iptables(self, mock_sub, engine):
         mock_sub.run.return_value = MagicMock(returncode=0)
-        engine.block_ip("10.0.0.5", "SYN Flood", "evt-001")
+        engine.block_ip("10.0.0.5", "SYN Flood", "evt-001", allow_private_block=True)
         args = mock_sub.run.call_args[0][0]
         assert "iptables" in args
         assert "10.0.0.5" in args
@@ -103,7 +103,7 @@ class TestBlockIP:
     @patch("backend.services.prevention_service.subprocess")
     def test_block_ip_emits_socketio(self, mock_sub, engine, mock_emit):
         mock_sub.run.return_value = MagicMock(returncode=0)
-        engine.block_ip("10.0.0.5", "SYN Flood", "evt-001")
+        engine.block_ip("10.0.0.5", "SYN Flood", "evt-001", allow_private_block=True)
         mock_emit.assert_called_once()
         event_name, data = mock_emit.call_args[0]
         assert event_name == "ip_blocked"
@@ -143,7 +143,7 @@ class TestWhitelistBypass:
     def test_non_whitelisted_ip_blocked(self, mock_sub, engine, mock_whitelist):
         mock_whitelist.is_whitelisted.return_value = False
         mock_sub.run.return_value = MagicMock(returncode=0)
-        event = make_threat_event(source_ip="10.0.0.5")
+        event = make_threat_event(source_ip="203.0.113.5")
         explanation = _make_explanation()
         engine.handle_event(event, explanation)
         assert mock_sub.run.called
@@ -161,7 +161,7 @@ class TestDuplicateBlock:
             "ip_address": "10.0.0.5",
             "expires_at": "2026-07-29T12:00:00Z",
         }
-        result = engine.block_ip("10.0.0.5", "SYN Flood", "evt-002")
+        result = engine.block_ip("10.0.0.5", "SYN Flood", "evt-002", allow_private_block=True)
         assert result is True
         mock_block_repo.extend_expiry.assert_called_once()
         # Should NOT call iptables again
@@ -181,7 +181,7 @@ class TestIptablesFailure:
         mock_sub.run.return_value = MagicMock(
             returncode=1, stderr=b"Permission denied"
         )
-        result = engine.block_ip("10.0.0.5", "SYN Flood", "evt-003")
+        result = engine.block_ip("10.0.0.5", "SYN Flood", "evt-003", allow_private_block=True)
         assert result is False
 
     @patch("backend.services.prevention_service.subprocess")

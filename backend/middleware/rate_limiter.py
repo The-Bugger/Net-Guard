@@ -23,14 +23,21 @@ logger = logging.getLogger("netguard.rate_limiter")
 
 
 class RateLimiter:
-    """Sliding-window rate limiter: 120 requests per 60-second window per client IP."""
+    """Sliding-window rate limiter: 120 API requests per 60-second window per client IP.
+
+    Only applies to /api/v1/ routes. Static files, HTML pages, and Socket.IO
+    traffic are never rate-limited so a single browser page load (which fetches
+    8+ JS/CSS files) cannot trigger the limit.
+    """
 
     _WINDOW = 60      # seconds
-    _MAX_REQ = 120    # requests per window
+    _MAX_REQ = 120    # requests per window (API calls only)
+
+    # Paths that are completely exempt even if counted would exceed the limit.
+    # High-frequency polling endpoints that must always succeed.
     _EXEMPT = {"/api/v1/health", "/api/v1/dashboard/live", "/api/v1/status"}
 
     def __init__(self) -> None:
-        """Initialize the sliding-window rate limiter with an empty per-IP request store."""
         self._windows: dict[str, deque] = defaultdict(deque)
         self._lock = threading.Lock()
 
@@ -38,33 +45,37 @@ class RateLimiter:
         """
         Flask before_request handler.
 
-        Counts every request in the sliding window regardless of exemption.
-        Returns 429 Response with Retry-After header when over limit on non-exempt paths.
-        Returns None (allow) on exempt paths even if over limit, and for all allowed requests.
-        On any exception, logs ERROR and returns None (fail open).
+        Only counts and limits requests to /api/v1/ paths.
+        Static files, HTML, and Socket.IO handshakes are passed through unconditionally.
+        Returns None (allow) for all non-API and exempt paths.
+        Returns 429 with Retry-After header when the API rate limit is exceeded.
+        Fails open on any internal error.
         """
         try:
+            path = request.path
+
+            # Only rate-limit API routes — never static files or HTML pages
+            if not path.startswith("/api/"):
+                return None
+
+            # High-frequency endpoints are always exempt
+            if path in self._EXEMPT:
+                return None
+
             ip = self._client_ip()
             now = time.monotonic()
             cutoff = now - self._WINDOW
 
             with self._lock:
                 window = self._windows[ip]
-                # Evict timestamps outside the window
                 while window and window[0] <= cutoff:
                     window.popleft()
-                # Count this request
                 window.append(now)
                 count = len(window)
-
-            # Exempt endpoints are never blocked
-            if request.path in self._EXEMPT:
-                return None
 
             if count > self._MAX_REQ:
                 with self._lock:
                     window = self._windows[ip]
-                    # Retry-After = seconds until oldest timestamp falls outside window
                     retry_after = math.ceil(window[0] + self._WINDOW - now) if window else self._WINDOW
 
                 response = jsonify({
@@ -74,6 +85,7 @@ class RateLimiter:
                 })
                 response.status_code = 429
                 response.headers["Retry-After"] = str(retry_after)
+                logger.warning("Rate limit exceeded for %s (%d reqs in %ds)", ip, count, self._WINDOW)
                 return response
 
             return None

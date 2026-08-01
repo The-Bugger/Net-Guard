@@ -637,3 +637,314 @@ a:hover { text-decoration: underline; }
   border-radius: 6px;
   margin-bottom: 8px;
 }
+
+/* ── Mobile Nav (hamburger) ─────────────────────────────────────────────── */
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background var(--transition);
+}
+.hamburger:hover { background: rgba(255,255,255,0.08); }
+.hamburger svg { width: 22px; height: 22px; display: block; }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 89;
+}
+.sidebar-overlay.visible { display: block; }
+
+@media (max-width: 768px) {
+  :root { --sidebar-w: 240px; }
+
+  .hamburger { display: flex; align-items: center; justify-content: center; }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 95;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .main-content {
+    margin-left: 0;
+    padding: 16px;
+  }
+
+  .page-header-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .charts-grid { grid-template-columns: 1fr !important; }
+  .kpi-grid    { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr !important; }
+  .filter-bar { flex-direction: column !important; }
+  .filter-bar .input,
+  .filter-bar select { width: 100% !important; }
+  .action-bar { flex-direction: column !important; align-items: stretch !important; }
+  .action-bar .input,
+  .action-bar select { width: 100% !important; }
+}
+
+/* ── Page header row ────────────────────────────────────────────────────── */
+.page-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+}
+.page-header-row .page-title { margin-bottom: 0; }
+.page-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Filter / Action bars ───────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+
+.action-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ── Rule cards ─────────────────────────────────────────────────────────── */
+.rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.rule-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+.rule-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--info);
+  border-radius: 3px 0 0 3px;
+}
+.rule-card.enabled::before  { background: var(--success); }
+.rule-card.disabled::before { background: var(--border); }
+.rule-card:hover { border-color: rgba(59,130,246,0.4); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+
+.rule-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.rule-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.rule-card-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, monospace;
+  margin-top: 2px;
+}
+
+.rule-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.rule-meta-item {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.rule-meta-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 2px;
+}
+.rule-meta-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.rule-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.rule-status-text {
+  font-size: 12px;
+  font-weight: 600;
+}
+.rule-status-text.enabled  { color: var(--success); }
+.rule-status-text.disabled { color: var(--text-muted); }
+
+/* Detection count pill */
+.detection-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(59,130,246,0.12);
+  color: var(--info);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.detection-pill.has-detections {
+  background: rgba(250,204,21,0.12);
+  color: var(--warning);
+}
+
+/* ── Log level badges ───────────────────────────────────────────────────── */
+.log-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.log-badge.INFO     { background: rgba(59,130,246,0.15);  color: var(--info); }
+.log-badge.WARNING  { background: rgba(250,204,21,0.15);  color: var(--warning); }
+.log-badge.ERROR    { background: rgba(239,68,68,0.15);   color: var(--danger); }
+.log-badge.CRITICAL { background: rgba(220,38,38,0.2);    color: var(--critical); border: 1px solid rgba(220,38,38,0.4); }
+.log-badge.DEBUG    { background: rgba(148,163,184,0.15); color: var(--text-muted); }
+
+/* ── Settings groups ────────────────────────────────────────────────────── */
+.settings-group {
+  margin-bottom: 28px;
+}
+.settings-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-group-title svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+
+.input-with-unit {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.input-with-unit .input { padding-right: 48px; }
+.input-unit {
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Responsive table wrapper ───────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* ── IP code tag ────────────────────────────────────────────────────────── */
+code {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  color: var(--accent);
+}
+
+/* ── Expiry countdown ───────────────────────────────────────────────────── */
+.expiry-soon { color: var(--danger) !important; font-weight: 600; }
+.expiry-ok   { color: var(--text-muted); }
+
+/* ── Empty state (enhanced) ─────────────────────────────────────────────── */
+.empty-state-full {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  color: var(--text-muted);
+  gap: 12px;
+  text-align: center;
+}
+.empty-state-full svg { opacity: 0.3; }
+.empty-state-full p   { font-size: 14px; margin: 0; }
+.empty-state-full small { font-size: 12px; opacity: .7; }
+
+/* ── Divider ────────────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+/* ── World Attack Map — pulsing dot animation ─────────────────────────── */
+@keyframes map-pulse {
+  0%   { r: 6;  opacity: 0.85; }
+  50%  { r: 10; opacity: 0.4;  }
+  100% { r: 6;  opacity: 0.85; }
+}
+#map-dots circle.attack-dot {
+  animation: map-pulse 2s ease-in-out infinite;
+}
+/* Stagger animation for each dot by index (set via JS style.animationDelay) */

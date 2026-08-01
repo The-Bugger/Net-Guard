@@ -44,6 +44,9 @@
   
 <!-- Header -->
 <header class="header">
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
   <div class="header-logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -60,10 +63,12 @@
   <div class="header-time" id="system-time"></div>
 </header>
 
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
 <div class="app-layout">
 
   <!-- Sidebar -->
-  <nav class="sidebar">
+  <nav class="sidebar" id="sidebar">
     <a href="/" class="nav-item active">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       Dashboard
@@ -85,7 +90,7 @@
       Logs
     </a>
     <a href="/rules.html" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
       Rules
     </a>
     <a href="/settings.html" class="nav-item">
@@ -97,10 +102,18 @@
   <!-- Main Content -->
   <main class="main-content">
 
+    <!-- Dashboard page header -->
+    <div class="page-header-row" style="margin-bottom:16px">
+      <div>
+        <div class="page-title">Dashboard</div>
+        <div class="page-subtitle">Live network security overview</div>
+      </div>
+    </div>
+
     <!-- Monitor Controls -->
-    <div class="card" style="margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <select id="interface-select" class="input" style="width:160px" onclick="loadInterfaces()">
-        <option value="">Select interface…</option>
+    <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <select id="interface-select" class="input" style="width:180px">
+        <option value="">Loading interfaces…</option>
       </select>
       <button class="btn btn-primary" onclick="startMonitoring()">▶ Start Monitoring</button>
       <button class="btn btn-ghost" onclick="stopMonitoring()">⏹ Stop</button>
@@ -108,7 +121,7 @@
     </div>
 
     <!-- Quick Actions Bar -->
-    <div class="quick-actions" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)">
+    <div class="filter-bar" style="margin-bottom:16px">
       <button class="btn btn-ghost btn-sm" onclick="exportJSON()" title="Export to JSON">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Export JSON
@@ -453,7 +466,13 @@
 <script src="/js/charts.js"></script>
 <script src="/js/topology.js"></script>
 <script src="/js/dashboard.js"></script>
-<script>loadInterfaces();</script>
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
+}
+loadInterfaces();
+</script>
 
 <!-- Judges / Presentation Mode -->
 <script>

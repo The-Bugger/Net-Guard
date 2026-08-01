@@ -1,67 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NetGuard — Whitelist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/dark-theme.css">
 </head>
 <body>
+
 <header class="header">
-  <div class="header-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>NetGuard</div>
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
   <div class="header-spacer"></div>
   <div class="header-time" id="system-time"></div>
 </header>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
 <div class="app-layout">
-  <nav class="sidebar">
-    <a href="/" class="nav-item">Dashboard</a>
-    <a href="/threats.html" class="nav-item">Threats</a>
-    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
-    <a href="/whitelist.html" class="nav-item active">Whitelist</a>
-    <a href="/logs.html" class="nav-item">Logs</a>
-    <a href="/rules.html" class="nav-item">Rules</a>
-    <a href="/settings.html" class="nav-item">Settings</a>
+  <nav class="sidebar" id="sidebar">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/threats.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Threats
+    </a>
+    <a href="/blocked.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Blocked IPs
+    </a>
+    <a href="/whitelist.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Whitelist
+    </a>
+    <a href="/logs.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </a>
+    <a href="/rules.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Rules
+    </a>
+    <a href="/settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
   </nav>
+
   <main class="main-content">
-    <div class="page-title">Whitelist</div>
-    <div class="card" style="margin-bottom:16px">
-      <div class="section-title">Add Trusted Device</div>
-      <div style="display:flex;gap:12px">
-        <input id="wl-ip" class="input" placeholder="IP address (e.g. 192.168.1.1)" style="width:220px">
-        <input id="wl-desc" class="input" placeholder="Description (optional)" style="flex:1">
-        <button class="btn btn-primary" onclick="addEntry()">Add</button>
+    <div class="page-header-row">
+      <div>
+        <div class="page-title">Whitelist</div>
+        <div class="page-subtitle">Trusted IPs — never blocked, never flagged</div>
       </div>
     </div>
-    <div class="card">
-      <table class="data-table">
-        <thead><tr><th>IP Address</th><th>Description</th><th>Added</th><th>Added By</th><th>Action</th></tr></thead>
-        <tbody id="wl-tbody"><tr><td colspan="5" class="empty-state"><p>Whitelist is empty.</p></td></tr></tbody>
-      </table>
+
+    <!-- Add form -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header" style="margin-bottom:12px">
+        <span class="card-title">Add Trusted Device</span>
+      </div>
+      <div class="action-bar" style="margin-bottom:0">
+        <input id="wl-ip"   class="input" placeholder="IP address (e.g. 192.168.1.1)" style="flex:1;min-width:180px;max-width:240px">
+        <input id="wl-desc" class="input" placeholder="Description (optional)"         style="flex:2;min-width:160px">
+        <button class="btn btn-primary" onclick="addEntry()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add to Whitelist
+        </button>
+      </div>
+    </div>
+
+    <!-- Whitelist table -->
+    <div class="card" style="padding:0">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+        <span class="card-title" style="margin:0">Trusted IPs</span>
+        <span id="wl-count" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Description</th>
+              <th>Added</th>
+              <th>Added By</th>
+              <th style="width:80px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="wl-tbody">
+            <tr><td colspan="5" class="empty-state"><p>Loading…</p></td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </main>
 </div>
+
 <div id="notifications"></div>
+<div id="toast-container"></div>
+
 <script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => { loadWL(); setInterval(() => { document.getElementById('system-time').textContent = new Date().toLocaleTimeString(); }, 1000); });
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadWL();
+  setInterval(() => { document.getElementById('system-time').textContent = new Date().toLocaleTimeString(); }, 1000);
+});
+
 async function loadWL() {
-  const data = await NetGuardAPI.getWhitelist();
-  const entries = data.whitelist || [];
-  const tbody = document.getElementById('wl-tbody');
-  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><p>Whitelist is empty.</p></td></tr>'; return; }
-  tbody.innerHTML = entries.map(e => `<tr><td><code>${escHtml(e.ip_address)}</code></td><td>${escHtml(e.description || '—')}</td><td>${new Date(e.created_at).toLocaleString()}</td><td>${escHtml(e.created_by || 'admin')}</td><td><button class="btn btn-danger btn-sm" data-ip="${escHtml(e.ip_address)}" onclick="removeEntry(this.dataset.ip)">Remove</button></td></tr>`).join('');
+  try {
+    const data = await NetGuardAPI.getWhitelist();
+    const entries = data.whitelist || [];
+    const counter = document.getElementById('wl-count');
+    if (counter) counter.textContent = entries.length ? `(${entries.length})` : '';
+
+    const tbody = document.getElementById('wl-tbody');
+    if (!entries.length) {
+      tbody.innerHTML = `<tr><td colspan="5">
+        <div class="empty-state-full">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <p>Whitelist is empty</p>
+          <small>Add trusted IPs above to exclude them from detection</small>
+        </div>
+      </td></tr>`;
+      return;
+    }
+    tbody.innerHTML = entries.map(e => `
+      <tr>
+        <td><code>${escHtml(e.ip_address)}</code></td>
+        <td style="color:var(--text-muted);font-size:13px">${escHtml(e.description || '—')}</td>
+        <td style="font-size:12px;color:var(--text-muted);white-space:nowrap">${new Date(e.created_at).toLocaleString()}</td>
+        <td style="font-size:13px">${escHtml(e.created_by || 'admin')}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" data-ip="${escHtml(e.ip_address)}"
+                  onclick="removeEntry(this.dataset.ip)">Remove</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    document.getElementById('wl-tbody').innerHTML =
+      `<tr><td colspan="5" style="color:var(--danger);padding:20px 16px">${escHtml(err.message)}</td></tr>`;
+  }
 }
+
 async function addEntry() {
-  const ip = document.getElementById('wl-ip').value.trim();
+  const ip   = document.getElementById('wl-ip').value.trim();
   const desc = document.getElementById('wl-desc').value.trim();
-  if (!ip) return;
-  try { await NetGuardAPI.addWhitelist(ip, desc); document.getElementById('wl-ip').value=''; document.getElementById('wl-desc').value=''; showN(`${ip} added.`,'success'); loadWL(); } catch(e){showN(e.message,'error');}
+  if (!ip) { showToast('Enter an IP address.', 'warning'); return; }
+  try {
+    await NetGuardAPI.addWhitelist(ip, desc);
+    document.getElementById('wl-ip').value   = '';
+    document.getElementById('wl-desc').value = '';
+    showToast(`${ip} added to whitelist.`, 'success');
+    loadWL();
+  } catch (e) { showToast(e.message, 'error'); }
 }
+
 async function removeEntry(ip) {
   if (!confirm(`Remove ${ip} from whitelist?`)) return;
-  try { await NetGuardAPI.removeWhitelist(ip); showN(`${ip} removed.`,'success'); loadWL(); } catch(e){showN(e.message,'error');}
+  try {
+    await NetGuardAPI.removeWhitelist(ip);
+    showToast(`${ip} removed.`, 'success');
+    loadWL();
+  } catch (e) { showToast(e.message, 'error'); }
 }
-function showN(m,t){const c=document.getElementById('notifications');if(!c)return;const el=document.createElement('div');el.className=`notification ${t}`;el.textContent=m;c.appendChild(el);setTimeout(()=>el.remove(),5000);}
 </script>
 </body>
 </html>

@@ -1,45 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NetGuard — Logs</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — System Logs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/dark-theme.css">
 </head>
 <body>
+
 <header class="header">
-  <div class="header-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>NetGuard</div>
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
   <div class="header-spacer"></div>
   <div class="header-time" id="system-time"></div>
 </header>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
 <div class="app-layout">
-  <nav class="sidebar">
-    <a href="/" class="nav-item">Dashboard</a>
-    <a href="/threats.html" class="nav-item">Threats</a>
-    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
-    <a href="/whitelist.html" class="nav-item">Whitelist</a>
-    <a href="/logs.html" class="nav-item active">Logs</a>
-    <a href="/rules.html" class="nav-item">Rules</a>
-    <a href="/settings.html" class="nav-item">Settings</a>
+  <nav class="sidebar" id="sidebar">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/threats.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Threats
+    </a>
+    <a href="/blocked.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Blocked IPs
+    </a>
+    <a href="/whitelist.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Whitelist
+    </a>
+    <a href="/logs.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </a>
+    <a href="/rules.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Rules
+    </a>
+    <a href="/settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
   </nav>
+
   <main class="main-content">
-    <div class="page-title">System Logs</div>
-    <div class="card" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap">
-      <select id="l-level" class="input" style="width:140px">
-        <option value="">All Levels</option>
-        <option>INFO</option><option>WARNING</option><option>ERROR</option><option>CRITICAL</option>
-      </select>
-      <input id="l-date" class="input" type="date" style="width:160px">
-      <input id="l-module" class="input" placeholder="Module…" style="width:160px">
-      <button class="btn btn-primary" onclick="applyFilters()">Filter</button>
-      <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
+    <div class="page-header-row">
+      <div>
+        <div class="page-title">System Logs</div>
+        <div class="page-subtitle">Audit trail of all IDPS activity</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="applyFilters()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
     </div>
-    <div class="card">
-      <table class="data-table">
-        <thead><tr><th>Time</th><th>Level</th><th>Module</th><th>Event</th><th>Message</th></tr></thead>
-        <tbody id="logs-tbody"><tr><td colspan="5" class="empty-state"><p>Loading…</p></td></tr></tbody>
-      </table>
-      <div style="padding:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <select id="l-level" class="input" style="width:150px">
+        <option value="">All Levels</option>
+        <option>DEBUG</option>
+        <option>INFO</option>
+        <option>WARNING</option>
+        <option>ERROR</option>
+        <option>CRITICAL</option>
+      </select>
+      <input id="l-module" class="input" placeholder="Module…" style="width:160px">
+      <input id="l-date"   class="input" type="date"           style="width:160px">
+      <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="resetFilters()">Reset</button>
+    </div>
+
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:150px">Time</th>
+              <th style="width:90px">Level</th>
+              <th style="width:130px">Module</th>
+              <th style="width:160px">Event</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody id="logs-tbody">
+            <tr><td colspan="5" class="empty-state"><p>Loading…</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination footer -->
+      <div style="padding:12px 16px;display:flex;gap:8px;justify-content:space-between;align-items:center;border-top:1px solid var(--border)">
         <span id="log-count" style="color:var(--text-muted);font-size:13px"></span>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="prevPage()">← Prev</button>
@@ -49,44 +115,87 @@
     </div>
   </main>
 </div>
+
 <div id="notifications"></div>
+<div id="toast-container"></div>
+
 <script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
 <script>
-let offset=0;const PAGE=50;let totalLogs=0;
-document.addEventListener('DOMContentLoaded', ()=>{ loadLogs(); setInterval(()=>{document.getElementById('system-time').textContent=new Date().toLocaleTimeString();},1000); });
-async function loadLogs() {
-  const params={limit:PAGE,offset};
-  const lv=document.getElementById('l-level').value;
-  const dt=document.getElementById('l-date').value;
-  const md=document.getElementById('l-module').value.trim();
-  if(lv) params.severity=lv;
-  if(dt) params.date=dt;
-  if(md) params.module=md;
-  try {
-    const data=await NetGuardAPI.getLogs(params);
-    totalLogs=data.total||0;
-    renderLogs(data.logs||[]);
-    document.getElementById('log-count').textContent=`Showing ${offset+1}–${Math.min(offset+PAGE,totalLogs)} of ${totalLogs}`;
-  } catch(e){document.getElementById('logs-tbody').innerHTML=`<tr><td colspan="5" style="color:var(--danger);padding:16px">${e.message}</td></tr>`;}
+let offset = 0;
+const PAGE = 50;
+let totalLogs = 0;
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadLogs();
+  setInterval(() => { document.getElementById('system-time').textContent = new Date().toLocaleTimeString(); }, 1000);
+});
+
+async function loadLogs() {
+  const params = { limit: PAGE, offset };
+  const lv = document.getElementById('l-level').value;
+  const dt = document.getElementById('l-date').value;
+  const md = document.getElementById('l-module').value.trim();
+  if (lv) params.severity = lv;
+  if (dt) params.date     = dt;
+  if (md) params.module   = md;
+
+  // skeleton
+  document.getElementById('logs-tbody').innerHTML =
+    Array.from({ length: 6 }, () =>
+      `<tr><td colspan="5" style="padding:4px 14px"><div class="skeleton-row"></div></td></tr>`
+    ).join('');
+
+  try {
+    const data = await NetGuardAPI.getLogs(params);
+    totalLogs = data.total || 0;
+    renderLogs(data.logs || []);
+    const count = document.getElementById('log-count');
+    if (count) count.textContent = totalLogs
+      ? `Showing ${offset + 1}–${Math.min(offset + PAGE, totalLogs)} of ${totalLogs}`
+      : 'No logs found';
+  } catch (e) {
+    document.getElementById('logs-tbody').innerHTML =
+      `<tr><td colspan="5" style="color:var(--danger);padding:20px 16px">${escHtml(e.message)}</td></tr>`;
+  }
+}
+
 function renderLogs(logs) {
-  const tbody=document.getElementById('logs-tbody');
-  if(!logs.length){tbody.innerHTML='<tr><td colspan="5" class="empty-state"><p>No logs found.</p></td></tr>';return;}
-  const colorMap={INFO:'var(--info)',WARNING:'var(--warning)',ERROR:'var(--danger)',CRITICAL:'var(--critical)'};
-  tbody.innerHTML=logs.map(l=>`
+  const tbody = document.getElementById('logs-tbody');
+  if (!logs.length) {
+    tbody.innerHTML = `<tr><td colspan="5">
+      <div class="empty-state-full">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="44" height="44"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <p>No logs found</p>
+        <small>Try changing the filters</small>
+      </div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = logs.map(l => `
     <tr>
-      <td style="font-size:12px;font-variant-numeric:tabular-nums">${new Date(l.timestamp).toLocaleString()}</td>
-      <td><span style="color:${colorMap[l.level]||'var(--text-muted)'};font-weight:600;font-size:12px">${escHtml(l.level)}</span></td>
-      <td style="font-size:12px;color:var(--text-muted)">${escHtml(l.module)}</td>
-      <td style="font-size:12px">${escHtml(l.event)}</td>
+      <td style="font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--text-muted)">${new Date(l.timestamp).toLocaleString()}</td>
+      <td><span class="log-badge ${escHtml(l.level)}">${escHtml(l.level)}</span></td>
+      <td style="font-size:12px;color:var(--text-muted);font-family:ui-monospace,monospace">${escHtml(l.module)}</td>
+      <td style="font-size:12px;color:var(--accent)">${escHtml(l.event)}</td>
       <td style="font-size:13px">${escHtml(l.message)}</td>
     </tr>
   `).join('');
 }
-function applyFilters(){offset=0;loadLogs();}
-function resetFilters(){['l-level','l-date','l-module'].forEach(id=>{document.getElementById(id).value='';});offset=0;loadLogs();}
-function prevPage(){if(offset>0){offset=Math.max(0,offset-PAGE);loadLogs();}}
-function nextPage(){if(offset+PAGE<totalLogs){offset+=PAGE;loadLogs();}}
+
+function applyFilters() { offset = 0; loadLogs(); }
+function resetFilters() {
+  ['l-level', 'l-date', 'l-module'].forEach(id => { document.getElementById(id).value = ''; });
+  offset = 0;
+  loadLogs();
+}
+function prevPage() { if (offset > 0) { offset = Math.max(0, offset - PAGE); loadLogs(); } }
+function nextPage() { if (offset + PAGE < totalLogs) { offset += PAGE; loadLogs(); } }
 </script>
 </body>
 </html>

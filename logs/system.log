@@ -29,3 +29,828 @@
 2026-07-31T12:40:23  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Loopback Pseudo-Interface 1
 2026-07-31T12:41:09  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Loopback Pseudo-Interface 1
 2026-07-31T12:41:12  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Loopback Pseudo-Interface 1
+2026-08-01T01:59:20  INFO      netguard.system  LoggingEngine started.
+2026-08-01T01:59:20  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T02:00:28  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:00:28  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:01:15  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:01:15  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:01:19  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:01:19  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:01:56  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:01:56  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:06:52  INFO      netguard.system  LoggingEngine started.
+2026-08-01T02:06:52  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T02:07:36  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:07:36  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:09:03  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:09:03  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:11:41  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:11:41  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:12:50  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:12:50  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:23:47  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    sniff(
+    ~~~~~^
+        iface=self._interface,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+        count=0,      # 0 = no limit per burst
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:23:47  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:28:06  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    # ------------------------------------------------------------------
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        Uses store=False to avoid memory accumulation and prn callback to
+        ^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:28:06  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:30:12  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    # ------------------------------------------------------------------
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        """
+        ^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:30:12  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T02:32:15  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    # ------------------------------------------------------------------
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        """
+        ^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:32:15  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T02:37:31  INFO      netguard.system  LoggingEngine started.
+2026-08-01T02:37:31  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T02:37:48  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    # ------------------------------------------------------------------
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        """
+        ^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:37:48  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T02:38:35  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    # ------------------------------------------------------------------
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        """
+        ^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:38:35  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T02:40:34  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 138, in _capture_loop
+    # ------------------------------------------------------------------
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        """
+        ^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+2026-08-01T02:40:34  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T03:00:45  INFO      netguard.system  LoggingEngine started.
+2026-08-01T03:00:45  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T03:00:55  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T03:04:34  INFO      netguard.system  LoggingEngine started.
+2026-08-01T03:04:34  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T03:04:52  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T03:06:16  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Wi-Fi
+2026-08-01T03:06:24  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T03:06:36  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Wi-Fi
+2026-08-01T03:06:37  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T03:06:48  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Ethernet
+2026-08-01T03:07:46  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T03:09:20  INFO      netguard.system  LoggingEngine started.
+2026-08-01T03:09:20  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T03:10:00  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T03:10:13  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Wi-Fi
+2026-08-01T03:16:49  INFO      netguard.system  LoggingEngine started.
+2026-08-01T03:16:49  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T03:25:21  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T03:31:22  INFO      netguard.system  LoggingEngine started.
+2026-08-01T03:31:22  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T03:31:41  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T03:32:00  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Wi-Fi
+2026-08-01T03:32:28  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T03:35:15  INFO      netguard.system  LoggingEngine started.
+2026-08-01T03:35:15  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T03:36:34  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T03:36:41  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Ethernet
+2026-08-01T03:36:46  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T03:49:03  INFO      netguard.system  LoggingEngine started.
+2026-08-01T03:49:03  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T03:50:14  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T03:52:58  INFO      netguard.system  MonitorService | MONITOR_STOP — Monitoring stopped on Ethernet
+2026-08-01T04:02:10  INFO      netguard.system  LoggingEngine started.
+2026-08-01T04:02:10  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T04:02:47  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:02:47  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:02:50  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:02:50  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:02:56  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:02:56  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:02:59  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:02:59  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:03:01  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:03:01  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:03:02  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:03:02  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:03:03  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:03:03  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:03:05  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:03:05  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:03:06  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:03:06  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:03:06  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:03:06  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:03:08  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Wi-Fi' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:03:08  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Wi-Fi
+2026-08-01T04:06:33  INFO      netguard.system  LoggingEngine started.
+2026-08-01T04:06:33  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-08-01T04:06:52  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:06:52  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet
+2026-08-01T04:07:00  ERROR     netguard.system  CaptureEngine: capture loop failed on 'Ethernet' — NameError: name 'ATTACKER_IPS' is not defined
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 167, in _capture_loop
+    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          stop_filter=lambda _: True)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1311, in sniff
+    sniffer._run(*args, **kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\sendrecv.py", line 1171, in _run
+    sniff_sockets[_RL2(iface)(type=ETH_P_ALL, iface=iface,
+                  ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                              **karg)] = iface
+                              ^^^^^^^
+  File "C:\Users\acer\AppData\Local\Programs\Python\Python314\Lib\site-packages\scapy\arch\windows\__init__.py", line 1019, in __init__
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Sniffing and sending packets is not available at layer 2: winpcap is not installed. You may use conf.L3socket orconf.L3socket6 to access layer 3
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 184, in _capture_loop
+    self._simulation_loop()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "E:\PRAMESH\Hackthon MVIC\midvalleyproject\detection\capture\sniffer.py", line 295, in _simulation_loop
+    self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+                          ^^^^^^^^^^^^
+NameError: name 'ATTACKER_IPS' is not defined. Did you mean: 'ATTACKER_IPS_ASIA'?
+2026-08-01T04:07:00  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet

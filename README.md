@@ -1,13 +1,13 @@
 # NetGuard — Explainable Intrusion Detection & Prevention System
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-511%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-653%20passing-brightgreen.svg)](#testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Flask](https://img.shields.io/badge/flask-3.0.3-lightgrey.svg)](https://flask.palletsprojects.com)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-orange.svg)](https://sqlalchemy.org)
 
 NetGuard is a real-time, explainable Intrusion Detection and Prevention System (IDPS) that
-captures live network traffic, detects five attack categories, generates plain-English
+captures live network traffic, detects eight attack categories, generates plain-English
 explanations for every alert, and automatically blocks attackers via iptables — all visible
 through a live SOC-style dashboard.
 
@@ -46,7 +46,7 @@ machine. No cloud, no proprietary hardware, no agents.
 | Feature | Detail |
 |---------|--------|
 | Live packet capture | Scapy-based; TCP, UDP, ICMP, ARP on any OS interface |
-| 5 detection rules | SYN Flood, Port Scan, SQL Injection, Brute Force, ARP Spoofing |
+| 8 detection rules | SYN Flood, Port Scan, SQL Injection, Brute Force, ARP Spoofing, ICMP Flood, Slow HTTP, DNS Tunneling |
 | Explainable alerts | Plain-English text, severity, confidence 0–100, actionable recommendation |
 | Auto-blocking | iptables DROP rule applied within seconds of detection |
 | Auto-expiry | Background thread removes expired blocks every 5 seconds |
@@ -54,7 +54,7 @@ machine. No cloud, no proprietary hardware, no agents.
 | REST API | 21 endpoints — monitor, detect, block, whitelist, stats, logs, settings |
 | Live dashboard | WebSocket KPIs, traffic chart, severity chart, threat timeline |
 | SQLite persistence | Events, blocks, whitelist, settings, logs via SQLAlchemy ORM |
-| 511 tests | Unit + property-based (Hypothesis) + integration |
+| 653 tests | Unit + property-based (Hypothesis) + integration |
 | Rotating log files | system.log, detections.log, errors.log — max 10 MB each, 5 backups |
 
 
@@ -108,10 +108,15 @@ graph TB
 | Thread | Module | Role |
 |--------|--------|------|
 | `Packet_Capture_Thread` | `detection/capture/sniffer.py` | Scapy `sniff()` → decodes packets → puts onto `packet_queue` |
-| `Detection_Thread` | `backend/services/detection_service.py` | Consumes `packet_queue` → runs all 5 rules → emits `ThreatEvent` via callback |
+| `Detection_Thread` | `backend/services/detection_service.py` | Consumes `packet_queue` → runs all 8 rules → emits `ThreatEvent` via callback |
 | `Logging_Thread` | `backend/services/log_service.py` | Consumes `event_queue` → persists to SQLite and log files |
 | `Expiry_Thread` | `backend/services/expiry_service.py` | Polls DB every 5 s → removes expired iptables rules |
 | `API_Thread` | Flask + eventlet | Serves HTTP REST + WebSocket |
+
+> **Python 3.14 note:** eventlet is incompatible with Python 3.14 threading changes.
+> When running under Python 3.14 (or in the test suite), set
+> `SOCKETIO_ASYNC_MODE=threading` in your environment. The app factory reads this
+> variable and falls back to threading mode automatically.
 
 ### Packet Flow
 
@@ -201,7 +206,10 @@ NetGuard/
 │       ├── port_scan.py         # PortScanRule
 │       ├── sql_injection.py     # SqlInjectionRule
 │       ├── brute_force.py       # BruteForceRule
-│       └── arp_spoof.py         # ArpSpoofRule
+│       ├── arp_spoof.py         # ArpSpoofRule
+│       ├── icmp_flood.py        # IcmpFloodRule
+│       ├── slow_http.py         # SlowHttpRule
+│       └── dns_tunnel.py        # DnsTunnelRule
 ├── frontend/
 │   ├── css/dark-theme.css
 │   ├── js/                      # socket.js, api.js, dashboard.js, charts.js, ...
@@ -232,7 +240,7 @@ NetGuard/
 ├── scripts/
 │   ├── setup.sh                 # One-shot setup script
 │   └── start_demo.sh            # Full demo launcher
-├── tests/                       # 511 unit + property-based + integration tests
+├── tests/                       # 653+ unit + property-based + integration tests
 ├── .env                         # Environment variables
 ├── .env.example                 # Environment variable documentation
 ├── requirements.txt             # Pinned Python dependencies
@@ -331,10 +339,13 @@ See [`.env.example`](.env.example) for full documentation. Key variables:
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite:///database/netguard.db` | SQLAlchemy DB URL |
 | `LOG_LEVEL` | `INFO` | Python logging level (DEBUG, INFO, WARNING, ERROR) |
-| `SECRET_KEY` | `change-me-before-production` | Flask session secret |
+| `SECRET_KEY` | `change-me-before-production` | Flask session secret — must be set in production or app refuses to start |
 | `FLASK_HOST` | `0.0.0.0` | Bind address |
 | `FLASK_PORT` | `5000` | Listen port |
 | `FLASK_ENV` | `development` | Flask environment |
+| `NETGUARD_API_KEY` | _(unset)_ | API key required in `X-API-Key` header for mutating endpoints; when unset, app operates in dev no-auth mode |
+| `TRUST_PROXY_HEADERS` | `false` | When `true`, reads client IP from `X-Forwarded-For` for rate limiting; only enable behind a trusted proxy |
+| `REQUIRE_AUTH_FOR_READS` | `false` | When `true`, `X-API-Key` is also enforced on `GET` endpoints (SocketIO always exempt) |
 
 
 ---
@@ -498,6 +509,42 @@ Detects ARP spoofing by identifying conflicting MAC addresses for the same IP.
 **Confidence:** 97 for exactly 2 conflicting MACs · 100 for ≥3 MACs  
 **Evidence fields:** `conflicting_ip`, `conflicting_macs`, `mac_count`, `first_observed_timestamp`, `most_recent_timestamp`
 
+---
+
+### IcmpFloodRule (`detection/rules/icmp_flood.py`)
+
+Detects ICMP Echo Request (ping) floods and Smurf attacks by counting ICMP type-8 packets per
+source IP within a sliding window.
+
+**Rule ID:** `ICMP_FLOOD_001` · **Attack type:** `ICMP Flood`  
+**Severity tiers (non-Smurf):** `count < 2×threshold` → Medium · `< 4×threshold` → High · `≥ 4×threshold` → Critical  
+**Smurf detection:** broadcast destination (`*.255` or `255.255.255.255`) always forces `Critical`.  
+**Evidence fields:** `icmp_packet_count`, `time_window_seconds`, `threshold`, `smurf_pattern`, `sample_dst_ips`
+
+---
+
+### SlowHttpRule (`detection/rules/slow_http.py`)
+
+Detects Slowloris-style slow HTTP connection exhaustion by tracking TCP connections to ports 80/443
+that stay open without completing an HTTP request header block (`\r\n\r\n`).
+
+**Rule ID:** `SLOW_HTTP_001` · **Attack type:** `Slow HTTP`  
+**Severity tiers:** concurrent slow connections `≥ threshold` → Medium · `≥ 2×threshold` → High.  
+**Note:** tracks connection longevity and low data rate — not a duplicate of `SynFloodRule`, which counts raw SYN volume.  
+**Evidence fields:** `concurrent_connections`, `threshold`, `connection_timeout_seconds`, `target_ports`
+
+---
+
+### DnsTunnelRule (`detection/rules/dns_tunnel.py`)
+
+Heuristic detection of DNS tunneling via three independent indicators: abnormally long DNS labels
+(>50 chars), elevated TXT/NULL query rate, and high Shannon entropy in query names.
+
+**Rule ID:** `DNS_TUNNEL_001` · **Attack type:** `DNS Tunneling`  
+**Confidence:** always capped at 80 (heuristic rule — legitimate high-volume DNS resolvers may trigger).  
+**Severity:** only TXT-rate indicator → Low · single label/entropy indicator → Medium · two or more indicators → High.  
+**Evidence fields:** `triggered_indicators`, `max_label_length`, `txt_query_count`, `avg_entropy`, `sample_queries`
+
 
 ---
 
@@ -620,7 +667,7 @@ See [`docs/DATABASE.md`](docs/DATABASE.md) for full column documentation.
 ## Testing
 
 ```bash
-# Run all 511 tests with coverage
+# Run all 653 tests with coverage
 pytest --cov=backend --cov=detection --cov=database --cov-report=term-missing
 
 # Run only unit tests (fast, no network)
@@ -733,7 +780,10 @@ Click **"Start Demo"** to begin continuous synthetic attack generation, or visit
 | `GEMINI_API_KEY` | — | Required when `AI_PROVIDER=gemini` |
 | `OPENAI_API_KEY` | — | Required when `AI_PROVIDER=openai` |
 | `ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins (restrict in production) |
-| `SECRET_KEY` | dev default | Flask secret key |
+| `SECRET_KEY` | dev default | Flask secret key — **must be set in production** or app refuses to start |
+| `NETGUARD_API_KEY` | _(unset)_ | API key required in `X-API-Key` header for all mutating endpoints; when unset, app runs in dev no-auth mode |
+| `TRUST_PROXY_HEADERS` | `false` | When `true`, rate limiter reads client IP from `X-Forwarded-For`; leave `false` unless behind a trusted reverse proxy |
+| `REQUIRE_AUTH_FOR_READS` | `false` | When `true`, `X-API-Key` is also required for `GET` requests (SocketIO paths are always exempt) |
 
 ---
 

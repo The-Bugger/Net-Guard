@@ -513,6 +513,12 @@ function onLiveStats(data) {
 function onMonitoringStatus(data) {
   updateMonitoringStatus(data.active, data.interface || '');
   _setBadge('badge-monitoring', data.active, 'Monitoring Active', 'Monitoring Stopped');
+  // Start or stop the demo simulator based on mode flag
+  if (data.active && data.mode === 'simulation') {
+    _startDemoSimulator();
+  } else if (!data.active) {
+    _stopDemoSimulator();
+  }
 }
 
 // ── Reconnecting banner helpers ────────────────────────────────────────────
@@ -549,22 +555,45 @@ async function startMonitoring() {
   const ifaceEl = document.getElementById('interface-select');
   const iface = ifaceEl ? ifaceEl.value : '';
   if (!iface) { showNotification('Select a network interface first.', 'warning'); return; }
+  const btn = document.querySelector('button[onclick="startMonitoring()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Starting…'; }
   try {
     await NetGuardAPI.startMonitoring(iface);
     showNotification('Monitoring started.', 'success');
     updateMonitoringStatus(true, iface);
   } catch (err) {
-    showNotification(`Failed: ${err.message}`, 'error');
+    // 409 = already monitoring — that's fine, just update badge
+    if (err.code === 409 || (err.message && err.message.includes('already'))) {
+      updateMonitoringStatus(true, iface);
+      showNotification('Monitoring is already active.', 'info');
+    } else {
+      showNotification(`Failed to start: ${err.message}`, 'error');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '▶ Start Monitoring'; }
   }
 }
 
 async function stopMonitoring() {
+  const btn = document.querySelector('button[onclick="stopMonitoring()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Stopping…'; }
   try {
+    // Stop simulator immediately — don't wait for the API response
+    _stopDemoSimulator();
+    updateMonitoringStatus(false, '');
+    _setBadge('badge-monitoring', false, 'Monitoring Active', 'Monitoring Stopped');
+    setKPI('kpi-pps', '0.0');
+
     await NetGuardAPI.stopMonitoring();
     showNotification('Monitoring stopped.', 'success');
-    updateMonitoringStatus(false, '');
   } catch (err) {
-    showNotification(`Failed: ${err.message}`, 'error');
+    if (err.code === 409 || (err.message && err.message.includes('not active'))) {
+      // Was already stopped — badge already updated above, no error shown
+    } else {
+      showNotification(`Failed to stop: ${err.message}`, 'error');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '⏹ Stop'; }
   }
 }
 
@@ -572,10 +601,43 @@ async function loadInterfaces() {
   const sel = document.getElementById('interface-select');
   if (!sel) return;
   try {
-    const data = await NetGuardAPI.getInterfaces();
-    const ifaces = data.interfaces || [];
-    sel.innerHTML = ifaces.map(i => `<option value="${escHtml(i)}">${escHtml(i)}</option>`).join('');
-  } catch (_) {}
+    // Use /interfaces (v2) — returns [{name, is_up}, ...] from psutil directly
+    const resp = await fetch('/api/v1/interfaces');
+    const json = await resp.json();
+    const ifaces = (json.data && json.data.interfaces) || [];
+
+    if (!ifaces.length) {
+      sel.innerHTML = '<option value="">No interfaces found</option>';
+      return;
+    }
+
+    // Keep a leading placeholder, then list up-interfaces first
+    const up   = ifaces.filter(i => i.is_up  && !i.name.toLowerCase().startsWith('lo'));
+    const down = ifaces.filter(i => !i.is_up && !i.name.toLowerCase().startsWith('lo'));
+    const sorted = [...up, ...down];
+
+    sel.innerHTML = '<option value="">Select interface…</option>' +
+      sorted.map(i => {
+        const label = i.is_up ? i.name : `${i.name} (down)`;
+        return `<option value="${escHtml(i.name)}" ${!i.is_up ? 'disabled' : ''}>${escHtml(label)}</option>`;
+      }).join('');
+
+    // Auto-select first active interface
+    if (up.length > 0 && !sel.value) {
+      sel.value = up[0].name;
+    }
+  } catch (err) {
+    console.warn('loadInterfaces failed:', err);
+    // Fallback to old endpoint
+    try {
+      const data = await NetGuardAPI.getInterfaces();
+      const ifaces = data.interfaces || [];
+      sel.innerHTML = '<option value="">Select interface…</option>' +
+        ifaces.map(i => `<option value="${escHtml(i)}">${escHtml(i)}</option>`).join('');
+    } catch (_) {
+      sel.innerHTML = '<option value="">Unable to load interfaces</option>';
+    }
+  }
 }
 
 // ── Utilities ──────────────────────────────────────────────────────────────
@@ -798,3 +860,222 @@ async function loadRecentIncidents() {
     list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">Unable to load recent incidents.</p>';
   }
 }
+
+// ── Demo Traffic Simulator ─────────────────────────────────────────────────
+// Server: Kathmandu, Nepal. 70% Asia-region attackers, 30% global.
+// Rate: 20+ attacks per 10 min = avg ~2/min, gaps vary 15-45s.
+// Continent rotation: at least one from each continent every ~10 min.
+
+let _simTimer   = null;
+let _simPps     = 0;
+let _simAlerts  = 0;
+let _simPackets = 0;
+let _bgTimer    = null;
+
+// ── Attack pool — Asia-centric, Kathmandu as target ───────────────────────
+// weight determines relative frequency; Asia combined ~70% of total weight
+const _SIM_ATTACK_POOL = [
+
+  // ── ASIA / SOUTH ASIA — heavy (nearby, ~45% of attacks) ──────────────
+  { type:'SYN Flood',     sev:'High',     baseConf:88, weight:15, continent:'Asia',
+    ips:['103.41.167.21','182.72.180.1','27.251.16.1','49.36.187.45',
+         '103.92.45.1','39.32.100.1','202.83.24.1','202.166.196.1'] },
+  { type:'Brute Force',   sev:'High',     baseConf:91, weight:14, continent:'Asia',
+    ips:['115.112.82.1','49.231.100.1','14.225.196.1','103.168.206.1',
+         '91.185.186.1','91.212.68.1','209.58.130.1','118.189.149.1'] },
+  { type:'Port Scan',     sev:'Medium',   baseConf:79, weight:12, continent:'Asia',
+    ips:['116.228.101.1','183.2.172.1','101.71.57.1','163.177.65.1',
+         '203.0.113.42','221.148.18.1','180.214.232.1','194.165.16.11'] },
+
+  // ── CHINA / EAST ASIA (~15% of attacks) ──────────────────────────────
+  { type:'SQL Injection', sev:'Critical', baseConf:94, weight:10, continent:'China',
+    ips:['203.0.113.99','116.228.101.1','183.2.172.1','163.177.65.1'] },
+  { type:'DNS Tunneling', sev:'High',     baseConf:77, weight:6,  continent:'China',
+    ips:['101.71.57.1','203.0.113.99','116.228.101.1','183.2.172.1'] },
+
+  // ── SOUTHEAST ASIA (~10% of attacks) ─────────────────────────────────
+  { type:'ICMP Flood',    sev:'Medium',   baseConf:72, weight:8,  continent:'SEAsia',
+    ips:['203.0.113.200','103.77.4.82','14.225.196.1','49.231.100.1'] },
+  { type:'Slow HTTP',     sev:'Medium',   baseConf:68, weight:6,  continent:'SEAsia',
+    ips:['118.189.149.1','180.214.232.1','103.77.4.82','203.0.113.200'] },
+
+  // ── MIDDLE EAST (~8% of attacks) ─────────────────────────────────────
+  { type:'Brute Force',   sev:'High',     baseConf:85, weight:6,  continent:'MiddleEast',
+    ips:['5.42.92.1','185.81.96.1','176.221.97.1'] },
+  { type:'ARP Spoofing',  sev:'Critical', baseConf:83, weight:4,  continent:'MiddleEast',
+    ips:['5.42.92.1','176.221.97.1','185.81.96.1'] },
+
+  // ── EUROPE (~8% of attacks, lower weight) ────────────────────────────
+  { type:'Port Scan',     sev:'Medium',   baseConf:76, weight:5,  continent:'Europe',
+    ips:['198.51.100.7','185.220.101.45','80.82.77.33','193.32.126.163'] },
+  { type:'SQL Injection', sev:'Critical', baseConf:91, weight:4,  continent:'Europe',
+    ips:['85.93.93.93','194.61.24.102','185.220.101.45','198.51.100.7'] },
+
+  // ── NORTH AMERICA (~5% of attacks) ───────────────────────────────────
+  { type:'SYN Flood',     sev:'High',     baseConf:86, weight:4,  continent:'NorthAmerica',
+    ips:['45.33.32.156','104.21.45.1','198.51.100.14'] },
+  { type:'Brute Force',   sev:'High',     baseConf:88, weight:3,  continent:'NorthAmerica',
+    ips:['104.21.45.1','45.33.32.156','198.51.100.14'] },
+
+  // ── AFRICA (~3%) ──────────────────────────────────────────────────────
+  { type:'Port Scan',     sev:'Medium',   baseConf:72, weight:3,  continent:'Africa',
+    ips:['41.215.180.1','197.255.127.1','196.216.2.1'] },
+
+  // ── SOUTH AMERICA (~2%) ───────────────────────────────────────────────
+  { type:'ICMP Flood',    sev:'Medium',   baseConf:69, weight:2,  continent:'SouthAmerica',
+    ips:['177.54.144.1','190.57.20.1'] },
+
+  // ── AUSTRALIA (~1%) ───────────────────────────────────────────────────
+  { type:'DNS Tunneling', sev:'High',     baseConf:74, weight:1,  continent:'Australia',
+    ips:['1.0.0.1','101.0.69.1'] },
+];
+
+// Build weighted selection pool
+const _SIM_WEIGHTED = [];
+_SIM_ATTACK_POOL.forEach(a => {
+  for (let i = 0; i < a.weight; i++) _SIM_WEIGHTED.push(a);
+});
+
+// Continent rotation tracker — ensure every continent fires at least once per 10 min
+const _CONTINENT_DUE = {
+  Africa: 0, SouthAmerica: 0, Australia: 0, Europe: 0, NorthAmerica: 0
+};
+const _CONTINENT_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
+function _pickAttack() {
+  const now = Date.now();
+
+  // Check if any under-represented continent is overdue
+  for (const [cont, lastTime] of Object.entries(_CONTINENT_DUE)) {
+    if (now - lastTime > _CONTINENT_INTERVAL_MS) {
+      const pool = _SIM_ATTACK_POOL.filter(a => a.continent === cont);
+      if (pool.length > 0) {
+        _CONTINENT_DUE[cont] = now;
+        const a = pool[Math.floor(Math.random() * pool.length)];
+        const ip   = a.ips[Math.floor(Math.random() * a.ips.length)];
+        const conf = Math.max(50, Math.min(99, a.baseConf + Math.round((Math.random() * 14) - 7)));
+        return { type: a.type, sev: a.sev, conf, ip, continent: cont };
+      }
+    }
+  }
+
+  // Normal weighted pick
+  const a = _SIM_WEIGHTED[Math.floor(Math.random() * _SIM_WEIGHTED.length)];
+  const ip   = a.ips[Math.floor(Math.random() * a.ips.length)];
+  const conf = Math.max(50, Math.min(99, a.baseConf + Math.round((Math.random() * 14) - 7)));
+  return { type: a.type, sev: a.sev, conf, ip, continent: a.continent };
+}
+
+function _startDemoSimulator() {
+  if (_simTimer || _bgTimer) return; // already running
+  console.info('[NetGuard] Simulation mode — attacks begin in ~25s');
+  _showSimBanner();
+
+  // ── Phase 1: Quiet warmup (20-30s) — normal traffic only ─────────────────
+  const warmupMs = (20 + Math.random() * 10) * 1000;
+  _bgTimer = setInterval(_tickBackground, 1500);
+
+  setTimeout(() => {
+    // ── Phase 2: Live traffic + attack scheduler ──────────────────────────
+    clearInterval(_bgTimer);
+    _bgTimer = null;
+    _simTimer = setInterval(_tickBackground, 1500);
+    _scheduleNextAttack();
+  }, warmupMs);
+}
+
+function _tickBackground() {
+  // Random walk PPS — realistic idle server traffic
+  const drift = (Math.random() - 0.48) * 10; // slight upward bias
+  _simPps = Math.max(5, Math.min(95, _simPps + drift));
+  _simPackets += Math.round(_simPps * 1.5);
+  updateTrafficChart(_simPps);
+  setKPI('kpi-pps', _simPps.toFixed(1));
+  setKPI('kpi-packets', fmtNumber(_simPackets));
+}
+
+let _attackSchedulerTimer = null;
+
+function _scheduleNextAttack() {
+  if (!_simTimer) return; // stopped
+
+  // Variable gap: 15-45s (avg ~25s = ~2.4 attacks/min = ~24 per 10 min)
+  // Occasionally very short gaps (10s) to mimic attack bursts
+  let gapMs;
+  const r = Math.random();
+  if (r < 0.15) {
+    gapMs = (10 + Math.random() * 8) * 1000;   // 10-18s: attack burst (15% chance)
+  } else if (r < 0.70) {
+    gapMs = (20 + Math.random() * 15) * 1000;  // 20-35s: normal rate (55% chance)
+  } else {
+    gapMs = (35 + Math.random() * 10) * 1000;  // 35-45s: quiet period (30% chance)
+  }
+
+  _attackSchedulerTimer = setTimeout(() => {
+    if (!_simTimer) return;
+    const attack = _pickAttack();
+    _simAlerts++;
+    setKPI('kpi-alerts', fmtNumber(_simAlerts));
+
+    onNewThreat({
+      event_id:    'sim-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      attack_type: attack.type,
+      source_ip:   attack.ip,
+      severity:    attack.sev,
+      confidence:  attack.conf,
+      blocked:     Math.random() < 0.28,
+      timestamp:   new Date().toISOString(),
+      explanation: `[SIM] ${attack.type} detected from ${attack.ip} (${attack.continent || 'Unknown'}) — ${attack.conf}% confidence`,
+      rule_name:   attack.type.toUpperCase().replace(/[\s/]+/g, '_') + '_001',
+    });
+
+    _scheduleNextAttack();
+  }, gapMs);
+}
+
+// Keep _SIM_ATTACKS alias for settings.html Reset Data button label compatibility
+const _SIM_ATTACKS = _SIM_ATTACK_POOL;
+
+function _stopDemoSimulator() {
+  if (_bgTimer)            { clearInterval(_bgTimer);                _bgTimer  = null; }
+  if (_simTimer)           { clearInterval(_simTimer);               _simTimer = null; }
+  if (_attackSchedulerTimer){ clearTimeout(_attackSchedulerTimer); _attackSchedulerTimer = null; }
+  _simPps = 0;
+  _hideSimBanner();
+}
+
+function _showSimBanner() {
+  let b = document.getElementById('sim-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'sim-banner';
+    b.setAttribute('role', 'status');
+    b.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           width="14" height="14" style="flex-shrink:0;vertical-align:-2px">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <strong>Simulation Mode</strong> — Npcap/libpcap unavailable; showing synthetic traffic.
+      <a href="https://npcap.com" target="_blank" rel="noopener"
+         style="color:var(--accent);margin-left:4px">Install Npcap</a> for real packet capture.
+    `;
+    Object.assign(b.style, {
+      position: 'fixed', bottom: '60px', left: '50%', transform: 'translateX(-50%)',
+      background: 'rgba(250,204,21,0.12)', border: '1px solid var(--warning)',
+      color: 'var(--warning)', padding: '8px 18px', borderRadius: '8px',
+      fontSize: '12px', fontWeight: '500', zIndex: '250',
+      display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+    });
+    document.body.appendChild(b);
+  }
+}
+
+function _hideSimBanner() {
+  const b = document.getElementById('sim-banner');
+  if (b) b.remove();
+}
+// NOTE: monitoring_status is handled by onMonitoringStatus (registered in DOMContentLoaded)
+// which now also controls the simulator — no second registration needed.

@@ -30,10 +30,26 @@ Common HTTP Status Codes:
 - `201` — Created
 - `204` — No Content (successful DELETE)
 - `400` — Bad Request (missing fields)
+- `401` — Unauthorized (X-API-Key missing or invalid)
 - `404` — Not Found
 - `409` — Conflict (e.g. already monitoring)
 - `422` — Validation Error
 - `500` — Internal Server Error
+
+---
+
+## Authentication
+
+When `NETGUARD_API_KEY` is set in the environment, all mutating endpoints
+(`POST`, `PUT`, `DELETE`, `PATCH`) require an `X-API-Key` request header:
+
+```
+X-API-Key: <your-api-key>
+```
+
+When `NETGUARD_API_KEY` is **not set**, the app runs in dev no-auth mode and
+the header is not checked. When `REQUIRE_AUTH_FOR_READS=true`, `GET` endpoints
+are also protected. SocketIO paths (`/socket.io/`) are always exempt.
 
 ---
 
@@ -87,6 +103,9 @@ Response `200`:
 
 Start packet capture on a specified network interface.
 
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
+
 Request Body:
 ```json
 {
@@ -115,6 +134,9 @@ Error Responses:
 **POST /monitor/stop**
 
 Stop packet capture.
+
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
 
 Request Body: `{}` (empty)
 
@@ -312,6 +334,9 @@ Error Responses:
 
 Submit a detection event manually (internal endpoint for the detection engine).
 
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
+
 Request Body:
 ```json
 {
@@ -382,6 +407,9 @@ Error Responses:
 
 Manually block an IP address via iptables.
 
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
+
 Request Body:
 ```json
 {
@@ -418,6 +446,9 @@ Error Responses:
 **POST /unblock**
 
 Manually unblock an IP address.
+
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
 
 Request Body:
 ```json
@@ -500,6 +531,9 @@ Response `200`:
 
 Add an IP address to the whitelist. Whitelisted IPs are monitored but never blocked.
 
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
+
 Request Body:
 ```json
 {
@@ -537,6 +571,9 @@ Error Responses:
 **DELETE /whitelist/{ip}**
 
 Remove an IP address from the whitelist.
+
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
 
 Response `204`: No Content (successful removal)
 
@@ -689,6 +726,9 @@ Response `200`:
 
 Update system configuration settings. Only provided fields are updated.
 
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
+
 Request Body (partial updates supported):
 ```json
 {
@@ -725,6 +765,167 @@ Valid Ranges for Settings:
 
 ---
 
+### 23. Incident Timeline
+
+**GET /timeline/{event_id}**
+
+Step-by-step incident timeline for a single detection event.
+
+Response `200`:
+```json
+{
+  "success": true,
+  "data": {
+    "timeline": [
+      { "step_name": "Detected",  "timestamp": "2026-07-29T10:30:00Z", "description": "Attack detected by SYN_FLOOD_001", "status": "completed" },
+      { "step_name": "Analyzed",  "timestamp": "2026-07-29T10:30:00.500Z", "description": "Explanation generated", "status": "completed" },
+      { "step_name": "Blocked",   "timestamp": "2026-07-29T10:30:01Z", "description": "Source IP blocked", "status": "completed" },
+      { "step_name": "Notified",  "timestamp": null, "description": "No notification sent", "status": "skipped" },
+      { "step_name": "Reported",  "timestamp": null, "description": "No report generated", "status": "skipped" }
+    ]
+  }
+}
+```
+
+Error Responses:
+- `404 NOT_FOUND` — event ID not found
+
+---
+
+### 24. Analytics
+
+**GET /analytics**
+
+Hourly, daily, or weekly detection statistics for charts and dashboards.
+
+Query Parameters:
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `period` | string | `hourly` (24 h), `daily` (7 d, default), or `weekly` (4 w) |
+
+Response `200`:
+```json
+{
+  "success": true,
+  "data": {
+    "buckets": [
+      { "bucket": "2026-07-29", "count": 12, "breakdown": { "SYN Flood": 8, "Port Scan": 4 } }
+    ],
+    "top_ips": [{ "source_ip": "10.0.0.5", "count": 8 }],
+    "severity_counts": { "High": 10, "Medium": 2 },
+    "protocol_counts": { "TCP": 12 },
+    "total_events": 12,
+    "blocked_count": 10,
+    "detected_count": 2
+  }
+}
+```
+
+---
+
+### 25. Export
+
+**GET /export**
+
+Export detection events as JSON, CSV, Markdown, or PDF.
+
+Query Parameters:
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `format` | string | `json`, `csv`, `markdown`, or `pdf` (required) |
+| `severity` | string | Filter by severity |
+| `attack_type` | string | Filter by attack type |
+| `source_ip` | string | Filter by source IP |
+| `date` | string | Filter by date (ISO 8601) |
+| `search` | string | Free-text search |
+
+Response: File download with appropriate `Content-Disposition` and MIME type.
+
+Error Responses:
+- `400 INVALID_EXPORT_FORMAT` — unknown format value
+- `501` — PDF export not supported (missing optional dependency)
+
+---
+
+### 26. AI Security Assistant
+
+**POST /ai-assistant**
+
+Ask the AI security assistant a free-text question. Returns a contextual answer based on
+current detections.
+
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
+
+Request Body:
+```json
+{ "question": "What are the most common attacks today?" }
+```
+
+Response `200`:
+```json
+{
+  "success": true,
+  "data": { "answer": "You asked about: ..." }
+}
+```
+
+Error Responses:
+- `400 VALIDATION_ERROR` — missing `question` field
+
+---
+
+### 27. LAN Devices
+
+**GET /lan-devices** _(alias: GET /devices)_
+
+List all LAN devices discovered by the most recent ARP scan.
+
+Response `200`:
+```json
+{
+  "success": true,
+  "data": {
+    "devices": [
+      { "ip": "192.168.1.1", "mac": "aa:bb:cc:dd:ee:ff", "hostname": "gateway" }
+    ],
+    "count": 1
+  }
+}
+```
+
+Error Responses:
+- `503 SERVICE_UNAVAILABLE` — LAN scan service not initialised
+
+---
+
+**POST /lan-devices/refresh**
+
+Invalidate the device cache and trigger a fresh ARP scan.
+
+Request Headers:
+- `X-API-Key: <key>` — required when `NETGUARD_API_KEY` is set
+
+Response `200`: Same shape as `GET /lan-devices`.
+
+---
+
+### 28. Security Advisor
+
+**GET /advisor**
+
+Return contextual security advice based on the current health score and today's attack types.
+
+Response `200`:
+```json
+{
+  "health_score": 85,
+  "advice": [ "Enable rate limiting on port 22.", "Review recent SYN Flood detections." ]
+}
+```
+
+---
+
 ## Socket.IO Events
 
 The server emits the following real-time events via Socket.IO:
@@ -742,6 +943,7 @@ The server emits the following real-time events via Socket.IO:
 | Code | Meaning |
 |------|---------|
 | `VALIDATION_ERROR` | Required fields missing or invalid |
+| `UNAUTHORIZED` | X-API-Key header missing or invalid |
 | `INVALID_IP` | IP address format validation failed |
 | `INVALID_INTERFACE` | Network interface not found |
 | `ALREADY_MONITORING` | Capture already active |

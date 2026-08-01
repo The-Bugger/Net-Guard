@@ -1,14 +1,18 @@
 """
 detection_routes.py — Detection event endpoints.
 
-GET  /detections         (with filters: severity, attack_type, source_ip, date)
+GET  /detections                  (with filters: severity, attack_type, source_ip, date)
 GET  /detections/<id>
-POST /detect             (internal — submit packet for manual analysis)
+POST /detect                      (internal — submit packet for manual analysis)
+GET  /events/<id>/replay          (re-emit a stored event through the pipeline)
 
 Requirements: 13.2, 13.3, 13.4, 13.8
 """
 
 from __future__ import annotations
+
+import uuid
+from datetime import datetime, timezone
 
 from flask import Blueprint, request
 
@@ -115,4 +119,70 @@ def detect():
         data={"received": True},
         message="Detection received.",
         status_code=201,
+    )
+
+
+@detection_bp.get("/events/<string:event_id>/replay")
+def replay_event(event_id: str):
+    """
+    GET /events/<id>/replay
+
+    Re-emit a stored detection event as a new synthetic event with a fresh
+    event_id and current timestamp.  Useful for demo/testing the pipeline
+    without live traffic.
+
+    Returns the new event_id so the dashboard can highlight it.
+    """
+    repo = get_event_repo()
+    if repo is None:
+        return error_response("Event repository unavailable", 500, "SERVICE_UNAVAILABLE")
+
+    original = repo.get_by_id(event_id)
+    if original is None:
+        return error_response(f"Event {event_id} not found.", 404, "NOT_FOUND")
+
+    # Build a new synthetic event from the original's data
+    new_id = str(uuid.uuid4())
+    now    = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    new_event = {
+        "event_id":        new_id,
+        "timestamp":       now,
+        "attack_type":     original.get("attack_type", "Unknown"),
+        "source_ip":       original.get("source_ip", "0.0.0.0"),
+        "destination_ip":  original.get("destination_ip", ""),
+        "source_port":     original.get("source_port"),
+        "destination_port": original.get("destination_port"),
+        "protocol":        original.get("protocol", "TCP"),
+        "rule_name":       original.get("rule_name", ""),
+        "severity":        original.get("severity", "Medium"),
+        "confidence":      original.get("confidence", 75),
+        "packet_count":    original.get("packet_count", 1),
+        "evidence":        original.get("evidence", {}),
+        "explanation":     f"[REPLAYED] {original.get('explanation', '')}",
+        "recommendation":  original.get("recommendation", ""),
+        "blocked":         False,
+    }
+
+    repo.insert(new_event)
+
+    # Emit to connected SocketIO clients so dashboard updates live
+    try:
+        from backend.api import socketio
+        socketio.emit("new_threat", {
+            "event_id":    new_id,
+            "attack_type": new_event["attack_type"],
+            "source_ip":   new_event["source_ip"],
+            "severity":    new_event["severity"],
+            "confidence":  new_event["confidence"],
+            "timestamp":   now,
+            "explanation": new_event["explanation"],
+            "rule_name":   new_event["rule_name"],
+        })
+    except Exception:
+        pass  # SocketIO emit is best-effort
+
+    return success_response(
+        data={"event_id": new_id, "replayed_from": event_id},
+        message="Event replayed successfully.",
     )

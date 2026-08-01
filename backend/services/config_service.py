@@ -65,15 +65,18 @@ def _get_logger() -> logging.Logger:
 
 
 # ---------------------------------------------------------------------------
-# Default rules_enabled dict
+# Default rules_enabled dict — ALL 8 detection rules
 # ---------------------------------------------------------------------------
 
 _DEFAULT_RULES_ENABLED: dict[str, bool] = {
-    "syn_flood": True,
-    "port_scan": True,
-    "sql_injection": True,
-    "brute_force": True,
-    "arp_spoof": True,
+    "syn_flood":    True,
+    "port_scan":    True,
+    "sql_injection":True,
+    "brute_force":  True,
+    "arp_spoof":    True,
+    "icmp_flood":   True,
+    "slow_http":    True,
+    "dns_tunnel":   True,
 }
 
 
@@ -111,6 +114,18 @@ class Settings:
     brute_force_window: int = 60
     """Brute-force sliding-window duration in seconds (1–300)."""
 
+    icmp_flood_threshold: int = 100
+    """ICMP flood packet threshold (≥ 1)."""
+
+    icmp_flood_window: int = 3
+    """ICMP flood sliding-window duration in seconds (1–60)."""
+
+    slow_http_threshold: int = 10
+    """Slow HTTP connection threshold (≥ 1)."""
+
+    slow_http_window: int = 10
+    """Slow HTTP sliding-window duration in seconds (1–60)."""
+
     block_duration: int = 120
     """Auto-block duration in seconds (1–3600)."""
 
@@ -133,17 +148,20 @@ class Settings:
 # Maps setting key → (min_inclusive, max_inclusive | None)
 # None for max means no upper bound.
 _INT_RANGES: dict[str, tuple[int, int | None]] = {
-    "syn_flood_threshold": (1, None),
-    "syn_flood_window": (1, 60),
-    "port_scan_threshold": (1, None),
-    "port_scan_window": (1, 60),
+    "syn_flood_threshold":   (1, None),
+    "syn_flood_window":      (1, 60),
+    "port_scan_threshold":   (1, None),
+    "port_scan_window":      (1, 60),
     "brute_force_threshold": (1, None),
-    "brute_force_window": (1, 300),
-    "block_duration": (1, 3600),
+    "brute_force_window":    (1, 300),
+    "icmp_flood_threshold":  (1, None),
+    "icmp_flood_window":     (1, 60),
+    "slow_http_threshold":   (1, None),
+    "slow_http_window":      (1, 60),
+    "block_duration":        (1, 3600),
     "dashboard_refresh_interval": (1, 60),
 }
 
-# All recognised top-level keys (excluding rules_enabled sub-keys)
 _VALID_KEYS: frozenset[str] = frozenset(
     {
         "network_interface",
@@ -153,6 +171,10 @@ _VALID_KEYS: frozenset[str] = frozenset(
         "port_scan_window",
         "brute_force_threshold",
         "brute_force_window",
+        "icmp_flood_threshold",
+        "icmp_flood_window",
+        "slow_http_threshold",
+        "slow_http_window",
         "block_duration",
         "dashboard_refresh_interval",
         "rules_enabled",
@@ -340,6 +362,10 @@ class ConfigurationManager:
             port_scan_window=_int("port_scan_window"),
             brute_force_threshold=_int("brute_force_threshold"),
             brute_force_window=_int("brute_force_window"),
+            icmp_flood_threshold=_int("icmp_flood_threshold"),
+            icmp_flood_window=_int("icmp_flood_window"),
+            slow_http_threshold=_int("slow_http_threshold"),
+            slow_http_window=_int("slow_http_window"),
             block_duration=_int("block_duration"),
             dashboard_refresh_interval=_int("dashboard_refresh_interval"),
             rules_enabled=rules_enabled,

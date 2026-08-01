@@ -1,5 +1,7 @@
 # NetGuard Roadmap
 
+> **Status as of latest release:** Phase A–D complete. Items marked ✓ below have been implemented.
+
 This roadmap is based on gaps and limitations observed in the current v1.0.0
 implementation. Items are grouped by priority and complexity.
 
@@ -47,6 +49,8 @@ removed at OS restart or by a `flush`).
 
 ### API Authentication
 
+> **✓ IMPLEMENTED in Phase A** — API key authentication is live. `NETGUARD_API_KEY` + `X-API-Key` header with `hmac.compare_digest`. See `SECURITY.md` for details.
+
 **Current state:** No authentication on any API endpoint. Anyone on the network
 can manage blocks and whitelist entries.
 
@@ -83,6 +87,8 @@ backtick execution, etc.
 ---
 
 ### Rate Limiting on the REST API
+
+> **✓ IMPLEMENTED** — In-process sliding-window rate limiter (120 req/60s per IP) with `Retry-After` header. Trust proxy headers gated on `TRUST_PROXY_HEADERS` env var. See `SECURITY.md`. Redis backend remains a future upgrade path.
 
 **Current state:** No rate limiting on any endpoint. A client could flood
 `POST /block` or `POST /whitelist` to DoS the dashboard.

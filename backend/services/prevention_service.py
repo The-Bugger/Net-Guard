@@ -5,16 +5,19 @@ Automatically blocks confirmed attackers via iptables. Checks the whitelist
 before issuing any block. Handles duplicate blocks by extending expiry.
 Verifies iptables privileges at startup.
 
-Requirements: 11.1, 11.2, 11.4, 11.5, 11.6, 11.7, 11.8
+Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 11.1, 11.2, 11.4, 11.5, 11.6, 11.7, 11.8
 """
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import shlex
 import subprocess
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+
+import psutil
 
 from detection.rules.base_rule import Explanation, ThreatEvent
 
@@ -24,6 +27,51 @@ logger = logging.getLogger("netguard.prevention_engine")
 _IPTABLES_BLOCK = "iptables -I INPUT -s {ip} -j DROP"
 _IPTABLES_UNBLOCK = "iptables -D INPUT -s {ip} -j DROP"
 _IPTABLES_CHECK = "iptables -L INPUT -n"
+
+# Private, loopback, link-local, and multicast ranges that must never be blocked.
+# ponytail: stdlib ipaddress only — no new dependency needed.
+_PRIVATE_NETS: list = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("224.0.0.0/4"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fe80::/10"),
+    ipaddress.ip_network("ff00::/8"),
+]
+
+
+def _is_private(ip: str) -> tuple:
+    """Return (True, range_name) if ip falls in a protected range, else (False, '')."""
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False, ""
+    for net in _PRIVATE_NETS:
+        if addr in net:
+            return True, str(net)
+    return False, ""
+
+
+def _is_own_address(ip: str) -> bool:
+    """Return True if ip matches any address assigned to this host's network interfaces."""
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    try:
+        for iface_addrs in psutil.net_if_addrs().values():
+            for snic in iface_addrs:
+                try:
+                    if ipaddress.ip_address(snic.address) == addr:
+                        return True
+                except ValueError:
+                    continue
+    except Exception:
+        pass
+    return False
 
 
 class PreventionEngine:
@@ -105,7 +153,7 @@ class PreventionEngine:
 
         self.block_ip(ip, event.attack_type, event.event_id)
 
-    def block_ip(self, ip: str, reason: str, event_id: str) -> bool:
+    def block_ip(self, ip: str, reason: str, event_id: str, *, allow_private_block: bool = False) -> bool:
         """
         Block an IP address via iptables and record the block in the database.
 
@@ -119,6 +167,21 @@ class PreventionEngine:
         Returns:
             True if block was applied (new or extended), False on failure.
         """
+        # Private-IP safety guard — Requirement 3.1–3.5
+        if not allow_private_block:
+            private, range_name = _is_private(ip)
+            if private:
+                logger.warning(
+                    "PreventionEngine: refusing to block private/special IP %s — reason: %s",
+                    ip, range_name,
+                )
+                return False
+            if _is_own_address(ip):
+                logger.warning(
+                    "PreventionEngine: refusing to block own interface address %s", ip
+                )
+                return False
+
         now = _utc_now()
         expires_at = _utc_future(self._block_duration)
 

@@ -106,6 +106,9 @@ const NetGuardAPI = {
   // Settings
   getSettings:      ()       => api.get('/settings'),
   updateSettings:   (body)   => api.put('/settings', body),
+
+  // Data reset (demo utility)
+  resetData:        ()       => api.post('/reset-data', {}),
 };
 
 // ── Security: HTML-escape a string for safe innerHTML assignment ─────────────

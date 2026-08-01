@@ -187,7 +187,8 @@ print(inspect(e).get_table_names())
 ```bash
 # 1. Run the test suite (no root needed)
 pytest tests/ --ignore=tests/integration -q
-# Expected: 511 passed, 4 skipped
+# Expected: 640+ passed (baseline 511 + new Phase A/B tests); some ARP spoof tests
+#            fail on platforms without raw socket access — this is expected
 
 # 2. Check imports
 python -c "

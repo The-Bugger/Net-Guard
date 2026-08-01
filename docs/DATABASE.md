@@ -30,7 +30,7 @@ Stores every threat event detected by the five detection rules.
 | `id` | INTEGER | PK, autoincrement | Internal surrogate key |
 | `event_id` | VARCHAR(36) | UNIQUE, NOT NULL | UUID4 string assigned by the detection rule |
 | `timestamp` | VARCHAR(30) | NOT NULL | UTC ISO-8601 string: `2025-07-01T12:34:56Z` |
-| `attack_type` | VARCHAR(50) | NOT NULL | `SYN Flood`, `Port Scan`, `SQL Injection`, `Brute Force`, `ARP Spoofing` |
+| `attack_type` | VARCHAR(50) | NOT NULL | `SYN Flood`, `Port Scan`, `SQL Injection`, `Brute Force`, `ARP Spoofing`, `ICMP Flood`, `Slow HTTP`, `DNS Tunneling` |
 | `source_ip` | VARCHAR(45) | NOT NULL | Attacker source IP (IPv4 or IPv6) |
 | `destination_ip` | VARCHAR(45) | NOT NULL | Primary target IP (empty string if not applicable) |
 | `source_port` | INTEGER | NULL | Source port or NULL |
@@ -172,6 +172,9 @@ Configurable detection rule definitions seeded on first run.
 | SQL_INJECTION_001 | SQL Injection | 1 | High | 120 | 3 |
 | BRUTE_FORCE_001 | Brute Force | 10 | Medium | 120 | 4 |
 | ARP_SPOOF_001 | ARP Spoofing | 2 | High | 120 | 5 |
+| ICMP_FLOOD_001 | ICMP Flood | 100 | High | 120 | 6 |
+| SLOW_HTTP_001 | Slow HTTP | 10 | Medium | 120 | 7 |
+| DNS_TUNNEL_001 | DNS Tunneling | 5 | Medium | 120 | 8 |
 
 ### ORM model
 
@@ -204,7 +207,7 @@ Key-value configuration store. Mirrors `config/config.yaml`.
 | `brute_force_window` | `"60"` |
 | `block_duration` | `"120"` |
 | `dashboard_refresh_interval` | `"1"` |
-| `rules_enabled` | `'{"syn_flood": true, ...}'` (JSON) |
+| `rules_enabled` | `'{"syn_flood": true, "port_scan": true, "sql_injection": true, "brute_force": true, "arp_spoof": true, "icmp_flood": true, "slow_http": true, "dns_tunnel": true}'` (JSON) |
 | `debug` | `"false"` |
 
 ### ORM model

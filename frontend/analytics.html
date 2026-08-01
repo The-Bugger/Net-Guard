@@ -12,6 +12,9 @@
 
 <!-- Header -->
 <header class="header">
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
   <div class="header-logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -19,21 +22,15 @@
     NetGuard
   </div>
   <div class="header-spacer"></div>
-  <div style="display:flex;align-items:center;gap:12px">
-    <label for="period-select" style="font-size:13px;color:var(--text-muted)">Period:</label>
-    <select id="period-select" class="input" style="width:130px">
-      <option value="hourly">Hourly</option>
-      <option value="daily" selected>Daily</option>
-      <option value="weekly">Weekly</option>
-    </select>
-  </div>
   <div class="header-time" id="system-time"></div>
 </header>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <div class="app-layout">
 
   <!-- Sidebar -->
-  <nav class="sidebar">
+  <nav class="sidebar" id="sidebar">
     <a href="/" class="nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
       Dashboard
@@ -58,6 +55,10 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Analytics
     </a>
+    <a href="/rules.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Rules
+    </a>
     <a href="/settings.html" class="nav-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Settings
@@ -67,10 +68,19 @@
   <!-- Main Content -->
   <main class="main-content">
 
-    <!-- Page Title -->
-    <div style="margin-bottom:20px">
-      <h1 style="font-size:22px;font-weight:700;color:var(--text-primary)">Analytics</h1>
-      <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Attack trends and traffic analysis</p>
+    <div class="page-header-row">
+      <div>
+        <div class="page-title">Analytics</div>
+        <div class="page-subtitle">Attack trends and traffic analysis</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label for="period-select" style="font-size:13px;color:var(--text-muted)">Period:</label>
+        <select id="period-select" class="input" style="width:130px">
+          <option value="hourly">Hourly</option>
+          <option value="daily" selected>Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
+      </div>
     </div>
 
     <!-- KPI Cards -->
@@ -114,38 +124,18 @@
 
       <!-- World Attack Map -->
       <div class="card card-glass">
-        <div class="card-header"><span class="card-title">World Attack Origins</span></div>
-        <!-- ponytail: static equirectangular SVG, JS-positioned circles; no Leaflet/Mapbox;
-             ceiling: not geo-accurate, upgrade path is Leaflet + IP geolocation API -->
-        <div id="attack-map" style="position:relative;width:100%;background:rgba(0,0,0,0.2);border-radius:6px;overflow:hidden">
-          <svg id="attack-map-svg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg"
-               aria-label="World attack origins map" role="img"
-               style="width:100%;display:block">
-            <!-- Simplified continent outlines — basic polygon approximations -->
-            <!-- North America -->
-            <polygon points="60,60 200,55 215,80 220,130 200,160 180,190 160,200 130,195 110,180 80,170 55,140 45,110 50,80"
-                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
-            <!-- South America -->
-            <polygon points="150,210 195,205 210,220 215,260 205,310 185,340 165,345 150,330 140,300 138,260 142,230"
-                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
-            <!-- Europe -->
-            <polygon points="350,45 410,40 430,55 425,80 410,95 390,100 370,95 355,80 348,65"
-                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
-            <!-- Africa -->
-            <polygon points="355,110 415,105 435,120 440,160 430,210 415,245 395,260 375,255 360,235 350,195 348,155 350,130"
-                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
-            <!-- Russia / Northern Asia -->
-            <polygon points="430,30 620,25 660,45 650,80 610,90 560,85 500,90 460,80 435,65 428,45"
-                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
-            <!-- Asia (excluding Russia) -->
-            <polygon points="460,90 620,85 665,100 680,130 670,170 645,200 610,210 570,205 530,195 500,175 475,155 460,130 455,105"
-                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
-            <!-- Australia / Oceania -->
-            <polygon points="620,230 690,225 720,240 730,270 715,295 690,300 660,295 635,275 620,255 615,240"
-                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
-            <!-- Dot overlay group — JS populates these -->
-            <g id="map-dots"></g>
-          </svg>
+        <div class="card-header">
+          <span class="card-title">World Attack Origins</span>
+          <span id="map-attack-count" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <!-- Canvas-rendered world map: Natural Earth-inspired land polygons drawn via JS.
+             Attack dots animate with bezier arcs from attacker IP to EU server centroid.
+             IPs mapped to approximate geo-coordinates; upgrade path = MaxMind GeoLite2. -->
+        <div id="map-wrap" style="position:relative;width:100%;border-radius:6px;overflow:hidden;
+             background:#071220;border:1px solid var(--border);line-height:0">
+          <canvas id="attack-map-canvas"
+                  style="width:100%;display:block;cursor:crosshair"
+                  aria-label="World attack origins map" role="img"></canvas>
         </div>
       </div>
 
@@ -189,5 +179,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/js/utils.js"></script>
 <script src="/js/analytics.js"></script>
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
+}
+</script>
 </body>
 </html>

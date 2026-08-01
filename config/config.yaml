@@ -1,0 +1,35 @@
+# NetGuard Configuration
+# All settings below have documented defaults.
+# Changes applied via PUT /api/v1/settings take effect immediately without restart.
+
+# Network interface to monitor (e.g. eth0, wlan0) — leave empty for auto-select
+network_interface: ""
+
+# SYN Flood Detection
+syn_flood_threshold: 100        # packets per window before alert
+syn_flood_window: 3             # sliding window in seconds
+
+# Port Scan Detection
+port_scan_threshold: 20         # unique destination ports per window before alert
+port_scan_window: 10            # sliding window in seconds
+
+# Brute Force Detection
+brute_force_threshold: 10       # failed auth attempts per window before alert
+brute_force_window: 60          # sliding window in seconds
+
+# Prevention
+block_duration: 120             # seconds an IP remains blocked before auto-unblock
+
+# Dashboard
+dashboard_refresh_interval: 1  # seconds between dashboard data refreshes
+
+# Detection rules toggle (set to false to disable individual rules)
+rules_enabled:
+  syn_flood: true
+  port_scan: true
+  sql_injection: true
+  brute_force: true
+  arp_spoof: true
+
+# General
+debug: false

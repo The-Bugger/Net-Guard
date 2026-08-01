@@ -1,0 +1,112 @@
+"""
+backend/api/__init__.py — Flask application factory for NetGuard IDPS.
+
+Creates the Flask app, registers all route blueprints, configures CORS,
+and initialises Flask-SocketIO with the eventlet worker.
+
+Eventlet monkey-patching is applied in main.py BEFORE this module is imported.
+
+Requirements: 13.1, 13.2
+"""
+
+from __future__ import annotations
+
+import logging
+
+from flask import Flask
+from flask_cors import CORS
+from flask_socketio import SocketIO
+
+logger = logging.getLogger("netguard.app")
+
+# SocketIO instance — shared across the application
+socketio = SocketIO()
+
+
+def create_app(config: dict | None = None) -> Flask:
+    """
+    Flask application factory.
+
+    Args:
+        config: Optional dict of Flask config overrides.
+
+    Returns:
+        Configured Flask application instance.
+    """
+    app = Flask(
+        __name__,
+        static_folder="../../frontend",
+        template_folder="../../frontend",
+    )
+
+    # Default configuration
+    app.config["SECRET_KEY"] = "netguard-dev-secret-change-in-production"
+    app.config["JSON_SORT_KEYS"] = False
+
+    if config:
+        app.config.update(config)
+
+    # Enable CORS for all routes (local dashboard)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+    # Initialise SocketIO with eventlet async_mode
+    socketio.init_app(
+        app,
+        async_mode="eventlet",
+        cors_allowed_origins="*",
+        logger=False,
+        engineio_logger=False,
+    )
+
+    # Register all route blueprints
+    _register_blueprints(app)
+
+    # Serve dashboard at root
+    _register_frontend_routes(app)
+
+    logger.info("Flask application created.")
+    return app
+
+
+def _register_blueprints(app: Flask) -> None:
+    """Register all API route blueprints under /api/v1."""
+    from backend.routes.health_routes import health_bp
+    from backend.routes.monitor_routes import monitor_bp
+    from backend.routes.detection_routes import detection_bp
+    from backend.routes.block_routes import block_bp
+    from backend.routes.whitelist_routes import whitelist_bp
+    from backend.routes.dashboard_routes import dashboard_bp
+    from backend.routes.stats_routes import stats_bp
+    from backend.routes.evidence_routes import evidence_bp
+    from backend.routes.logs_routes import logs_bp
+    from backend.routes.settings_routes import settings_bp
+
+    prefix = "/api/v1"
+    app.register_blueprint(health_bp, url_prefix=prefix)
+    app.register_blueprint(monitor_bp, url_prefix=prefix)
+    app.register_blueprint(detection_bp, url_prefix=prefix)
+    app.register_blueprint(block_bp, url_prefix=prefix)
+    app.register_blueprint(whitelist_bp, url_prefix=prefix)
+    app.register_blueprint(dashboard_bp, url_prefix=prefix)
+    app.register_blueprint(stats_bp, url_prefix=prefix)
+    app.register_blueprint(evidence_bp, url_prefix=prefix)
+    app.register_blueprint(logs_bp, url_prefix=prefix)
+    app.register_blueprint(settings_bp, url_prefix=prefix)
+
+    logger.info("All route blueprints registered under %s.", prefix)
+
+
+def _register_frontend_routes(app: Flask) -> None:
+    """Serve the frontend HTML pages."""
+    from flask import render_template, send_from_directory
+    import os
+
+    frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
+
+    @app.route("/")
+    def index():
+        return send_from_directory(frontend_dir, "index.html")
+
+    @app.route("/<path:filename>")
+    def frontend_static(filename):
+        return send_from_directory(frontend_dir, filename)

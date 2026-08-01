@@ -31,10 +31,11 @@ logger = logging.getLogger("netguard.rule.sql_injection")
 
 _RECOMMENDATION = "Inspect application logs and validate input sanitization on affected endpoints."
 
-# HTTP ports to inspect
+# HTTP ports to inspect (80 and 443 per requirements 6.1; 8080/8443 added for coverage)
 _HTTP_PORTS = {80, 443, 8080, 8443}
 
-# SQL injection detection patterns (case-insensitive)
+# SQL injection detection patterns (case-insensitive) as (label, compiled_pattern) pairs.
+# Pattern labels are the exact strings referenced in Requirement 6.1.
 _SQL_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("' OR", re.compile(r"'\s*or\b", re.IGNORECASE)),
     ("UNION SELECT", re.compile(r"\bunion\s+select\b", re.IGNORECASE)),
@@ -57,22 +58,23 @@ class SqlInjectionRule(BaseRule):
 
     def __init__(self) -> None:
         self.enabled = True
-        # Track which source IPs have previously triggered this rule
-        self._previous_triggers: set[str] = set()
-        # Last pending event (evaluate returns it once)
-        self._pending_event: Optional[ThreatEvent] = None
+        # Track which source IPs have previously triggered this rule (Req 6.2, 6.3)
+        self._seen_ips: set[str] = set()
+        # Queue of pending ThreatEvent objects; evaluate() pops the first one
+        self._pending: list[ThreatEvent] = []
 
     def initialize(self) -> None:
         """Reset all state."""
-        self._previous_triggers.clear()
-        self._pending_event = None
+        self._seen_ips.clear()
+        self._pending.clear()
         logger.debug("SqlInjectionRule initialised.")
 
     def process_packet(self, packet: Packet) -> None:
         """
         Inspect HTTP packets for SQL injection patterns.
 
-        Sets self._pending_event if a match is found; evaluate() returns it.
+        Appends a ThreatEvent to self._pending if a match is found;
+        evaluate() pops and returns it.
 
         Args:
             packet: Normalised packet from PacketDecoder.
@@ -97,12 +99,14 @@ class SqlInjectionRule(BaseRule):
         if matched_pattern is None:
             return
 
-        # Determine severity
+        # Determine severity based on whether this source IP has been seen before
         src = packet.src_ip
-        if src in self._previous_triggers:
+        if src in self._seen_ips:
             severity = "Critical"
         else:
             severity = "High"
+        # Mark IP as seen before creating the event so next call escalates correctly
+        self._seen_ips.add(src)
 
         evidence = {
             "source_ip": src,
@@ -112,7 +116,7 @@ class SqlInjectionRule(BaseRule):
             "matched_pattern": matched_pattern,
         }
 
-        self._pending_event = ThreatEvent(
+        event = ThreatEvent(
             event_id=str(uuid.uuid4()),
             timestamp=_utc_now(),
             attack_type=self.attack_type,
@@ -127,18 +131,18 @@ class SqlInjectionRule(BaseRule):
             packet_count=1,
             evidence=evidence,
         )
-        self._previous_triggers.add(src)
+        self._pending.append(event)
 
     def evaluate(self) -> Optional[ThreatEvent]:
         """
-        Return and clear any pending ThreatEvent.
+        Pop and return the first pending ThreatEvent, if any.
 
         Returns:
             ThreatEvent if a SQL injection was detected, otherwise None.
         """
-        event = self._pending_event
-        self._pending_event = None
-        return event
+        if self._pending:
+            return self._pending.pop(0)
+        return None
 
     def generate_event(self) -> ThreatEvent:
         raise NotImplementedError("Use process_packet() + evaluate().")
@@ -158,7 +162,7 @@ class SqlInjectionRule(BaseRule):
         url = event.evidence.get("request_url", "")
         action = "Blocked." if event.blocked else "Monitoring."
 
-        url_part = f" ({url})" if url else ""
+        url_part = f" ({url})" if url and url != "UNKNOWN" else ""
         text = (
             f"Detected SQL injection pattern '{pattern}' in HTTP request "
             f"from {event.source_ip} to {dst_ip}{url_part}. {action}"
@@ -178,8 +182,8 @@ class SqlInjectionRule(BaseRule):
 
     def cleanup(self) -> None:
         """Release all state."""
-        self._previous_triggers.clear()
-        self._pending_event = None
+        self._seen_ips.clear()
+        self._pending.clear()
         logger.debug("SqlInjectionRule cleaned up.")
 
 
@@ -188,7 +192,7 @@ class SqlInjectionRule(BaseRule):
 # ---------------------------------------------------------------------------
 
 def _find_sql_pattern(payload: str) -> Optional[str]:
-    """Search payload for any SQL injection pattern. Returns pattern name or None."""
+    """Search payload for any SQL injection pattern. Returns pattern label or None."""
     for name, pattern in _SQL_PATTERNS:
         if pattern.search(payload):
             return name
@@ -200,7 +204,7 @@ def _parse_http_request_line(payload: str) -> tuple[str, str]:
     Extract HTTP method and request URL from raw HTTP payload.
 
     Returns:
-        Tuple of (method, url). Both empty strings if not parseable.
+        Tuple of (method, url). Returns ("UNKNOWN", "UNKNOWN") if not parseable.
     """
     try:
         first_line = payload.split("\r\n", 1)[0].split("\n", 1)[0]
@@ -210,10 +214,11 @@ def _parse_http_request_line(payload: str) -> tuple[str, str]:
             url = parts[1]
             # Sanitise — keep only printable ASCII
             url = "".join(c for c in url if 32 <= ord(c) < 127)[:500]
-            return method, url
+            if method and url:
+                return method, url
     except Exception:
         pass
-    return "", ""
+    return "UNKNOWN", "UNKNOWN"
 
 
 def _utc_now() -> str:

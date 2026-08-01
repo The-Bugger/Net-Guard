@@ -1,0 +1,3 @@
+2026-07-28T17:16:16  INFO      netguard.detections  BLOCK     | ip=192.168.1.100 reason=SYN Flood duration=120s
+2026-07-28T17:16:16  INFO      netguard.detections  UNBLOCK   | ip=192.168.1.100 reason=expired
+2026-07-28T17:17:39  INFO      netguard.detections  DETECTION | timestamp=2024-01-01T00:00:00Z source_ip=10.0.0.1 attack_type=SYN Flood severity=High confidence=95 rule=SYN_FLOOD_001 action=DETECTED

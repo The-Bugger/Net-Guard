@@ -21,18 +21,18 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - Register both hooks in `backend/api/__init__.py` `create_app()`; add global `@app.errorhandler(Exception)` returning 500 INTERNAL_ERROR (no traceback)
   - _Requirements: 11.1, 11.2, 11.3, 11.4_
 
-  - [ ] 1.1 Write property test for security headers (Property 10)
+  - [x] 1.1 Write property test for security headers (Property 10)
     - **Property 10: Security Headers on All Responses** — for any sampled `/api/v1` endpoint, all 4 headers present regardless of status code
     - **Validates: Requirements 11.1**
     - `# Feature: netguard-hackathon-upgrade, Property 10`
     - File: `tests/test_properties_hackathon.py`
 
-- [ ] 2. Add rate limiter middleware
+- [x] 2. Add rate limiter middleware
   - Create `backend/middleware/rate_limiter.py` — `RateLimiter` class with `before_request` sliding-window check; 120 req/60 s per IP; exempt set `{"/api/v1/health", "/api/v1/dashboard/live", "/api/v1/status"}`; `X-Forwarded-For` leftmost IP; returns 429 with `Retry-After` header
   - Register `RateLimiter` in `create_app()` via `app.before_request(limiter.check)`
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-  - [ ] 2.1 Write property test for rate limiter (Property 9)
+  - [x] 2.1 Write property test for rate limiter (Property 9)
     - **Property 9: Rate Limit Enforcement** — 121 mock requests within window → 121st returns 429; first 120 pass normally
     - **Validates: Requirements 10.1, 14.7**
     - `# Feature: netguard-hackathon-upgrade, Property 9`
@@ -47,7 +47,7 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - Add `health_score` to `GET /api/v1/dashboard` response in `dashboard_routes.py`
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 12.2, 12.3_
 
-  - [ ] 3.1 Write property test for health score bounds (Property 5)
+  - [-] 3.1 Write property test for health score bounds (Property 5)
     - **Property 5: Health Score Bounds** — for any non-negative integers `alerts_today`, `active_blocks`, `get_health_score()` ∈ [0, 100]
     - **Validates: Requirements 9.1, 9.5, 14.3**
     - `# Feature: netguard-hackathon-upgrade, Property 5`
@@ -59,14 +59,14 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - Update `backend/routes/detection_routes.py`: parse `search` param; validate `limit >= 1`, `offset >= 0`, non-integer → HTTP 422 INVALID_PAGINATION_PARAMS; clamp `limit` to 500 silently; add `total` and `offset` to response
   - _Requirements: 8.1, 8.3, 8.5, 8.6, 8.7_
 
-  - [ ] 4.1 Write property tests for search and AND filter correctness (Properties 11, 12)
+  - [-] 4.1 Write property tests for search and AND filter correctness (Properties 11, 12)
     - **Property 11: Detections Search Correctness** — every result contains search string in source_ip, destination_ip, or attack_type
     - **Property 12: AND Filter Correctness** — every result satisfies ALL active filter conditions simultaneously
     - **Validates: Requirements 8.1, 8.3**
     - `# Feature: netguard-hackathon-upgrade, Property 11` and `Property 12`
     - File: `tests/test_properties_hackathon.py`
 
-  - [ ] 4.2 Write property test for pagination non-overlap (Property 8)
+  - [-] 4.2 Write property test for pagination non-overlap (Property 8)
     - **Property 8: Pagination Non-Overlap** — for any N ∈ [1, 500], offset=0 and offset=N result sets share no `event_id` values
     - **Validates: Requirements 14.6**
     - `# Feature: netguard-hackathon-upgrade, Property 8`
@@ -91,13 +91,13 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - On `start()`: add all TEST-NET ranges to `whitelist_manager`; on `stop()`: remove them
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8_
 
-  - [ ] 7.1 Write property test for demo source IP in TEST-NET (Property 1)
+  - [-] 7.1 Write property test for demo source IP in TEST-NET (Property 1)
     - **Property 1: Demo Source IP in TEST-NET** — for any generated event, `source_ip` falls within one of the three RFC 5737 ranges
     - **Validates: Requirements 1.6**
     - `# Feature: netguard-hackathon-upgrade, Property 1`
     - File: `tests/test_properties_hackathon.py`
 
-  - [ ] 7.2 Write property test for demo event schema invariant (Property 2)
+  - [-] 7.2 Write property test for demo event schema invariant (Property 2)
     - **Property 2: Demo Event Schema Invariant** — for any sampled Attack_Template, built event has non-null/non-empty: event_id, timestamp, attack_type, source_ip, rule_name, severity, confidence, explanation, recommendation; evidence contains `demo: True`
     - **Validates: Requirements 1.8, 14.1**
     - `# Feature: netguard-hackathon-upgrade, Property 2`
@@ -109,13 +109,13 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - `_stub_response()` f-string template contains all 7 required markdown section headers
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.10_
 
-  - [ ] 8.1 Write property test for AI explanation fields invariant (Property 3)
+  - [-] 8.1 Write property test for AI explanation fields invariant (Property 3)
     - **Property 3: AI Explanation Fields Invariant** — for any valid (non-None) inputs, returned `AIExplanation` has non-empty `markdown_report` with all 7 section headers; list fields are `list` (not None)
     - **Validates: Requirements 2.4, 2.9, 14.2**
     - `# Feature: netguard-hackathon-upgrade, Property 3`
     - File: `tests/test_properties_hackathon.py`
 
-  - [ ] 8.2 Write property test for AI ValueError on None inputs (Property 4)
+  - [-] 8.2 Write property test for AI ValueError on None inputs (Property 4)
     - **Property 4: AI Explanation Rejects Null Inputs** — `generate(None, x)` and `generate(x, None)` both raise `ValueError` before any provider call
     - **Validates: Requirements 2.1, 2.10**
     - `# Feature: netguard-hackathon-upgrade, Property 4`
@@ -128,7 +128,7 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - All formats ordered by timestamp descending; filename pattern `netguard-export-{YYYY-MM-DD}.{fmt}` (UTC)
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7_
 
-  - [ ] 9.1 Write property test for export count parity (Property 7)
+  - [-] 9.1 Write property test for export count parity (Property 7)
     - **Property 7: Export Count Parity** — for any valid filter combo, JSON export record count equals `total` from `GET /api/v1/detections` with same filters
     - **Validates: Requirements 6.5, 14.5**
     - `# Feature: netguard-hackathon-upgrade, Property 7`
@@ -157,7 +157,7 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - Register `timeline_bp` in `backend/api/__init__.py`
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7_
 
-  - [ ] 13.1 Write property test for timeline chronological order (Property 13)
+  - [~] 13.1 Write property test for timeline chronological order (Property 13)
     - **Property 13: Timeline Chronological Order** — for any existing event_id, Timeline_Entry timestamps are non-decreasing; first entry has `step_name = "Detected"` and `status = "completed"`
     - **Validates: Requirements 4.1, 4.2**
     - `# Feature: netguard-hackathon-upgrade, Property 13`
@@ -168,7 +168,7 @@ Language: Python 3.11+ (backend), vanilla JavaScript ES6 (frontend).
   - Register `analytics_bp` in `backend/api/__init__.py`
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-  - [ ] 14.1 Write property test for analytics bucket sum (Property 6)
+  - [~] 14.1 Write property test for analytics bucket sum (Property 6)
     - **Property 6: Analytics Bucket Sum Equals Total Events** — for any DB state and any period, sum of bucket counts equals `total_events` in same response
     - **Validates: Requirements 5.4, 14.4**
     - `# Feature: netguard-hackathon-upgrade, Property 6`

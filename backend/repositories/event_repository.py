@@ -109,7 +109,9 @@ class EventRepository:
         Query events with optional filters.
 
         Args:
-            filters: Dict with optional keys: severity, attack_type, source_ip, date.
+            filters: Dict with optional keys: severity, attack_type, source_ip, date, search.
+                     search: case-insensitive substring match on source_ip, destination_ip,
+                             or attack_type (OR logic). Req 8.1.
             limit: Maximum records to return.
             offset: Pagination offset.
 
@@ -118,18 +120,7 @@ class EventRepository:
         """
         try:
             with self._session_factory() as session:
-                q = session.query(Event)
-
-                if filters:
-                    if filters.get("severity"):
-                        q = q.filter(Event.severity == filters["severity"])
-                    if filters.get("attack_type"):
-                        q = q.filter(Event.attack_type == filters["attack_type"])
-                    if filters.get("source_ip"):
-                        q = q.filter(Event.source_ip == filters["source_ip"])
-                    if filters.get("date"):
-                        q = q.filter(Event.timestamp.like(f"{filters['date']}%"))
-
+                q = _apply_filters(session.query(Event), filters)
                 records = (
                     q.order_by(Event.timestamp.desc())
                     .limit(limit)
@@ -140,6 +131,23 @@ class EventRepository:
         except Exception as exc:
             logger.error("EventRepository.get_all failed: %s", exc)
             return []
+
+    def count_filtered(self, filters: Optional[dict] = None) -> int:
+        """
+        COUNT(*) with the same filter logic as get_all(). Req 8.5.
+
+        Args:
+            filters: Same optional filter dict as get_all().
+
+        Returns:
+            Integer count of matching records, or 0 on error.
+        """
+        try:
+            with self._session_factory() as session:
+                return _apply_filters(session.query(Event), filters).count()
+        except Exception as exc:
+            logger.error("EventRepository.count_filtered failed: %s", exc)
+            return 0
 
     def update_blocked(self, event_id: str, blocked: bool) -> bool:
         """Update the blocked flag on an event."""
@@ -211,8 +219,32 @@ class EventRepository:
 
 
 # ---------------------------------------------------------------------------
-# Helper
+# Helpers
 # ---------------------------------------------------------------------------
+
+def _apply_filters(q, filters: Optional[dict]):
+    """Apply shared filter logic to a SQLAlchemy query. Req 8.1, 8.3."""
+    if not filters:
+        return q
+    if filters.get("severity"):
+        q = q.filter(Event.severity == filters["severity"])
+    if filters.get("attack_type"):
+        q = q.filter(Event.attack_type == filters["attack_type"])
+    if filters.get("source_ip"):
+        q = q.filter(Event.source_ip == filters["source_ip"])
+    if filters.get("date"):
+        q = q.filter(Event.timestamp.like(f"{filters['date']}%"))
+    if filters.get("search"):
+        # Req 8.1: case-insensitive OR match across three fields
+        from sqlalchemy import or_, func
+        term = f"%{filters['search']}%"
+        q = q.filter(or_(
+            func.lower(Event.source_ip).like(func.lower(term)),
+            func.lower(Event.destination_ip).like(func.lower(term)),
+            func.lower(Event.attack_type).like(func.lower(term)),
+        ))
+    return q
+
 
 def _event_to_dict(record: Event) -> dict:
     """Convert an Event ORM object to a plain dict."""

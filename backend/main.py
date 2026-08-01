@@ -17,8 +17,15 @@ Requirements: 1.7, 11.8
 from __future__ import annotations
 
 # ── Step 1: Eventlet monkey-patch MUST happen before any other imports ──
-import eventlet
-eventlet.monkey_patch()
+# eventlet is incompatible with Python 3.14+ (missing start_joinable_thread).
+# Fall back to threading async_mode automatically.
+import sys as _sys
+if _sys.version_info < (3, 14):
+    import eventlet
+    eventlet.monkey_patch()
+else:
+    import os as _os
+    _os.environ.setdefault("SOCKETIO_ASYNC_MODE", "threading")
 
 import logging
 import os
@@ -273,10 +280,11 @@ def on_request_live_stats():
 
 def _background_live_stats():
     """Emit live_stats to all clients every second while monitoring."""
+    import time as _time
     refresh = settings.dashboard_refresh_interval or 1
     _last_health_score = None  # track last emitted value for Req 9.4
     while True:
-        eventlet.sleep(refresh)
+        _time.sleep(refresh)
         try:
             data = stats_service.get_live_stats()
             # Include health_score on first emit or when it changes by >=5 (Req 9.4)

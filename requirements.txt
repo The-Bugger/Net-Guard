@@ -7,7 +7,7 @@
 # ============================================================
 
 # ── Web Framework ─────────────────────────────────────────────────────────────
-Flask==3.0.3
+Flask==3.1.3
 # Core web framework. Serves the REST API (21 endpoints) and static frontend.
 # Blueprint-based routing; all routes are thin delegates to the service layer.
 

@@ -74,6 +74,9 @@ class Packet:
     hw_src: Optional[str] = field(default=None)
     """ARP sender hardware (MAC) address, e.g. 'aa:bb:cc:dd:ee:ff'. None for non-ARP packets."""
 
+    arp_op: Optional[int] = field(default=None)
+    """ARP opcode: 1=request, 2=reply. None for non-ARP packets."""
+
 
 # ---------------------------------------------------------------------------
 # Decoder
@@ -151,6 +154,7 @@ class PacketDecoder:
             dst_ip = arp_layer.pdst or ""
             # Extract sender hardware (MAC) address for ARP spoof detection
             hw_src = str(arp_layer.hwsrc).lower() if arp_layer.hwsrc else None
+            arp_op = int(arp_layer.op) if arp_layer.op is not None else None
             return Packet(
                 src_ip=src_ip,
                 dst_ip=dst_ip,
@@ -162,6 +166,7 @@ class PacketDecoder:
                 length=length,
                 payload=_extract_payload(raw_pkt),
                 hw_src=hw_src,
+                arp_op=arp_op,
             )
         else:
             # No recognisable IP layer — cannot build a meaningful Packet

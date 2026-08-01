@@ -1,0 +1,325 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Delete demo service, routes, and shell scripts": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509766873
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509777177
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509856926
+      }
+    ],
+    "2. Strip demo UI from frontend": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509766986
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509862578
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509958896
+      }
+    ],
+    "3. Checkpoint — app starts, dashboard loads, zero state on fresh DB": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767061
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509965121
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510011804
+      }
+    ],
+    "4. Add `GET /api/v1/interfaces` endpoint": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767194
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510016550
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510071918
+      }
+    ],
+    "5. Wire interface auto-select in MonitorService": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767260
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510076717
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510104443
+      }
+    ],
+    "6. Emit `monitoring_error` SocketIO event on capture failure": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767320
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510109125
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510149759
+      }
+    ],
+    "7.1 Property test for new health score formula": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767385
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510159541
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510172969
+      }
+    ],
+    "8.1 Property test for SecurityAdvisor": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767450
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510183229
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510201048
+      }
+    ],
+    "9. Add `GET /api/v1/advisor` route": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767528
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510207056
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510384412
+      }
+    ],
+    "10. Add Security Advisor panel to dashboard": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767600
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510394119
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510557011
+      }
+    ],
+    "11. Add Connected Devices panel to dashboard": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767703
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510567693
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510761911
+      }
+    ],
+    "12. Add `GET /api/v1/devices` route": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767769
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510767975
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510778186
+      }
+    ],
+    "13. Add interface name and monitoring status to dashboard": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767866
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510783186
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510795890
+      }
+    ],
+    "14. Checkpoint — dashboard loads with real data, advisor panel visible,": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767923
+      },
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510807155
+      },
+      {
+        "executionId": "ed5d9c2a-eb9d-4aae-a9a4-c7f90c1d96e6",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785512100008
+      }
+    ],
+    "15. Create `scripts/attack_tests/` directory and five attack scripts": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509767982
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511007287
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511132234
+      }
+    ],
+    "16. Create `scripts/attack_tests/README.md`": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509768081
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511141141
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511226091
+      }
+    ],
+    "17. Audit existing detection rules against requirements": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509768150
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511231770
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511526807
+      }
+    ],
+    "18. Final checkpoint — end-to-end smoke test": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785509768253
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511532114
+      },
+      {
+        "executionId": "62b3887b-025b-45a3-9c46-ae432039c230",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785511898771
+      }
+    ],
+    "7. Replace `get_health_score()` in StatsService": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510173167
+      }
+    ],
+    "8. Implement `backend/services/security_advisor.py`": [
+      {
+        "executionId": "d81a79e9-e2c6-4244-b068-f00339ca6d67",
+        "chatSessionId": "sess_cd24218a-ac1c-4bff-9656-be22a0fe4451",
+        "timestamp": 1785510201101
+      }
+    ]
+  }
+}

@@ -19,6 +19,7 @@ def _svc():
     return get("lan_scan_service")
 
 
+@lan_devices_bp.get("/devices")
 @lan_devices_bp.get("/lan-devices")
 def list_lan_devices():
     """Return currently known LAN devices (from cache if fresh)."""

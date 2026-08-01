@@ -239,6 +239,10 @@ from backend.services.lan_scan_service import LanScanService
 lan_scan_service = LanScanService()
 dependencies.register("lan_scan_service", lan_scan_service)
 
+from backend.services.security_advisor import SecurityAdvisor
+security_advisor = SecurityAdvisor()
+dependencies.register("security_advisor", security_advisor)
+
 # ── Step 9: Create Flask app and start background threads ────────────────────
 from backend.api import create_app, socketio as _socketio
 

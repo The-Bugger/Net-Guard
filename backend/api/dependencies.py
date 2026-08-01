@@ -71,3 +71,6 @@ def get_block_repo():
 
 def get_log_repo():
     return _services.get("log_repo")
+
+def get_security_advisor():
+    return _services.get("security_advisor")

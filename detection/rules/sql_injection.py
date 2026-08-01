@@ -119,7 +119,7 @@ class SqlInjectionRule(BaseRule):
             return
 
         try:
-            payload_str = packet.payload.decode("utf-8", errors="replace")
+            payload_str = packet.payload.decode("utf-8", errors="ignore")
         except Exception:
             return
 
@@ -231,12 +231,12 @@ def _find_sql_pattern(payload: str) -> Optional[str]:
     return None
 
 
-def _parse_http_request_line(payload: str) -> tuple[str, str]:
+def _parse_http_request_line(payload: str) -> tuple[str, Optional[str]]:
     """
     Extract HTTP method and request URL from raw HTTP payload.
 
     Returns:
-        Tuple of (method, url). Returns ("UNKNOWN", "UNKNOWN") if not parseable.
+        Tuple of (method, url). Returns ("Unknown", None) if not parseable.
     """
     try:
         first_line = payload.split("\r\n", 1)[0].split("\n", 1)[0]
@@ -250,7 +250,7 @@ def _parse_http_request_line(payload: str) -> tuple[str, str]:
                 return method, url
     except Exception:
         pass
-    return "UNKNOWN", "UNKNOWN"
+    return "Unknown", None
 
 
 def _utc_now() -> str:

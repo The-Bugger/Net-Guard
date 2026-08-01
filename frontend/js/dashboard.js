@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   startHealthPolling();
   startRecentIncidentsRefresh();
   loadLanDevices();
+  loadAdvisor();
+  if (!_advisorTimer) _advisorTimer = setInterval(loadAdvisor, 30000);
 
   // Track SocketIO connection state for countUp gating
   SocketManager.on('connect',    () => { socketConnected = true;  _hideReconnectingBanner(); stopFallbackPolling(); });
@@ -483,6 +485,9 @@ function onNewThreat(event) {
 
   // Refresh KPI counts
   loadDashboard();
+
+  // Re-fetch advisor on new threat (Req 10.7)
+  loadAdvisor();
 }
 
 function onIpBlocked(data) {
@@ -618,17 +623,21 @@ function viewAnalytics() {
   window.location.href = '/analytics';
 }
 
-// ── Connected Devices (LAN) ────────────────────────────────────────────────
+// ── Connected Devices (LAN) — Req 11.1, 11.6 ──────────────────────────────
+let _devicesTimer = null;
+
 async function loadLanDevices() {
   const container = document.getElementById('lan-devices-list');
   if (!container) return;
   try {
-    const data = await api.get('/lan-devices');
+    const data = await api.get('/devices');   // GET /api/v1/devices (Req 11.1)
     renderLanDevices(data.devices || []);
   } catch (_) {
     const el = document.getElementById('lan-devices-list');
     if (el) el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">ARP scan requires root on Linux. Start monitoring first.</p>';
   }
+  // 30-second auto-refresh (Req 11.6) — start once
+  if (!_devicesTimer) _devicesTimer = setInterval(loadLanDevices, 30000);
 }
 
 async function refreshLanDevices() {
@@ -729,7 +738,31 @@ async function replayEvent(eventId) {
   }
 }
 
-// ── Recent Incidents Widget (Task 40) ──────────────────────────────────────
+// ── Security Advisor (Req 10.7) ───────────────────────────────────────────
+let _advisorTimer = null;
+
+async function loadAdvisor() {
+  try {
+    const resp = await fetch('/api/v1/advisor');
+    if (!resp.ok) return;
+    const d = await resp.json();
+    const badge = document.getElementById('advisor-score-badge');
+    const title = document.getElementById('advisor-title');
+    const msg   = document.getElementById('advisor-message');
+    const list  = document.getElementById('advisor-actions');
+    if (badge) {
+      badge.className = `badge-${d.badge_color || 'green'}`;
+      badge.textContent = (d.score !== undefined ? d.score : '—') + '%';
+    }
+    if (title) title.textContent = d.title || '';
+    if (msg)   msg.textContent   = d.message || '';
+    if (list) {
+      list.innerHTML = (d.actions || []).map(a => `<li>${escHtml(a)}</li>`).join('');
+    }
+  } catch (_) {}
+}
+
+
 let _recentIncidentsTimer = null;
 
 function startRecentIncidentsRefresh() {

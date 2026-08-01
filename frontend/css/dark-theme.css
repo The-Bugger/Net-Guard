@@ -614,6 +614,12 @@ a:hover { text-decoration: underline; }
   transform: translateX(0);
 }
 
+/* ── Security Advisor Badge Colours (Req 10.7) ──────────────────────────── */
+.badge-green  { background: #4ADE80; color: #000; border-radius: 20px; padding: 2px 12px; font-weight: 600; font-size: 13px; }
+.badge-yellow { background: #FACC15; color: #000; border-radius: 20px; padding: 2px 12px; font-weight: 600; font-size: 13px; }
+.badge-orange { background: #FB923C; color: #000; border-radius: 20px; padding: 2px 12px; font-weight: 600; font-size: 13px; }
+.badge-red    { background: #F87171; color: #000; border-radius: 20px; padding: 2px 12px; font-weight: 600; font-size: 13px; }
+
 /* ── Skeleton Shimmer (task 26) ─────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }

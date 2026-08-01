@@ -204,7 +204,7 @@ class SynFloodRule(BaseRule):
         timestamp: str,
     ) -> ThreatEvent:
         """Construct a ThreatEvent from accumulated flow data."""
-        dst_ips = list({dst for _, dst in flow.timestamps})
+        dst_ips = list({dst for _, dst in flow.timestamps})[:10]
         # Up to 5 sample timestamps
         sample_ts = [ts for ts, _ in list(flow.timestamps)[-5:]]
 

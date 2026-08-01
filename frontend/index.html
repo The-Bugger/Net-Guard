@@ -306,7 +306,7 @@
     </div>
 
     <!-- Connected Devices on LAN -->
-    <div class="card card-glass" style="margin-bottom:20px">
+    <div id="devices-panel" class="card card-glass" style="margin-bottom:20px">
       <div class="card-header">
         <span class="card-title">Connected Devices</span>
         <button class="btn btn-ghost btn-sm" onclick="refreshLanDevices()" style="margin-left:auto">🔄 Refresh</button>
@@ -314,6 +314,19 @@
       <div id="lan-devices-list" style="overflow-x:auto">
         <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">Scanning LAN…</p>
       </div>
+    </div>
+
+    <!-- Security Advisor Panel (Req 10.7) -->
+    <div class="card card-glass" id="advisor-panel" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title">Security Advisor</span>
+        <span id="advisor-score-badge"></span>
+      </div>
+      <div style="margin-bottom:8px">
+        <strong id="advisor-title" style="font-size:15px;color:var(--text-primary)"></strong>
+      </div>
+      <p id="advisor-message" style="font-size:13px;color:var(--text-muted);margin-bottom:12px"></p>
+      <ul id="advisor-actions" style="list-style:disc;padding-left:20px;font-size:13px;color:var(--text-primary);display:flex;flex-direction:column;gap:4px"></ul>
     </div>
 
     <!-- Recent Incidents Widget -->

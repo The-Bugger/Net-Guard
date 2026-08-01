@@ -211,6 +211,7 @@ class SynFloodRule(BaseRule):
         confidence = _syn_confidence(count, self.threshold)
 
         evidence = {
+            "source_ip": src_ip,
             "syn_packet_count": count,
             "time_window_seconds": self.window_seconds,
             "threshold": self.threshold,

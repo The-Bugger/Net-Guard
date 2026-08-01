@@ -5,11 +5,15 @@ Detects ARP spoofing (man-in-the-middle) attacks by identifying when two or
 more different MAC addresses claim the same IP address in ARP replies.
 
 Detection logic:
-- Maintain ip_to_macs: dict[ip_str, set[mac_str]] from ARP reply packets
+- Maintain _ip_to_macs: dict[str, set[str]] — maps each IP to observed MAC addresses
 - Emit ThreatEvent when len(macs_for_ip) >= 2
 - Severity: always High (Requirement 8.2)
 - Confidence: 97 for exactly 2 conflicting MACs, 100 for 3+ (Requirement 8.3)
-- Evidence: conflicting IP, all observed MACs, first/last observed timestamps
+- Evidence: conflicting_ip, conflicting_macs (list), first_observed_timestamp,
+  most_recent_timestamp (Requirement 8.4)
+
+The Packet dataclass exposes hw_src (populated by PacketDecoder from
+arp_layer.hwsrc), so no payload re-parsing is needed here.
 
 Requirements: 8.1, 8.2, 8.3, 8.4
 """
@@ -18,7 +22,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -31,51 +34,53 @@ _RECOMMENDATION = (
     "Verify gateway configuration and inspect network devices for unauthorized ARP entries."
 )
 
-# ARP operation codes
-_ARP_OP_REPLY = 2
-_ARP_OP_REQUEST = 1
-
-
-@dataclass
-class _ArpRecord:
-    """Tracks MAC address observations for a single IP."""
-    macs: set = field(default_factory=set)
-    first_seen: str = ""
-    last_seen: str = ""
-    emitted: bool = False  # True once a ThreatEvent has been emitted for this IP
-
 
 class ArpSpoofRule(BaseRule):
     """
     Detects ARP spoofing attacks on the local network.
 
-    An ARP spoof occurs when an attacker sends gratuitous ARP replies
-    advertising a MAC address for an IP that already has a different MAC
-    in the ARP cache, enabling man-in-the-middle attacks.
+    An ARP spoof occurs when an attacker sends gratuitous ARP replies or
+    requests advertising a MAC address for an IP that already has a different
+    MAC recorded, enabling man-in-the-middle attacks.
+
+    Relies on `packet.hw_src` set by PacketDecoder from arp_layer.hwsrc.
     """
 
     rule_name: str = "ARP_SPOOF_001"
     attack_type: str = "ARP Spoofing"
 
     def __init__(self) -> None:
-        self.enabled = True
-        # Maps IP address string → _ArpRecord
-        self._ip_to_macs: dict[str, _ArpRecord] = {}
-        # Pending event queue (process_packet sets, evaluate pops)
-        self._pending_event: Optional[ThreatEvent] = None
+        super().__init__()
+        # Maps IP address string → set of observed MAC address strings
+        self._ip_to_macs: dict[str, set[str]] = {}
+        # Timestamp of the first ARP packet observed per IP
+        self._ip_first_seen: dict[str, str] = {}
+        # Timestamp of the most recent ARP packet per IP
+        self._ip_last_seen: dict[str, str] = {}
+        # Pending events produced in process_packet, consumed by evaluate()
+        self._pending: list[dict] = []
+        # Track which IPs have already had an event emitted to avoid duplicates
+        self._emitted: set[str] = set()
+
+    # ------------------------------------------------------------------
+    # BaseRule interface
+    # ------------------------------------------------------------------
 
     def initialize(self) -> None:
         """Reset all ARP tracking state."""
         self._ip_to_macs.clear()
-        self._pending_event = None
+        self._ip_first_seen.clear()
+        self._ip_last_seen.clear()
+        self._pending.clear()
+        self._emitted.clear()
         logger.debug("ArpSpoofRule initialised.")
 
     def process_packet(self, packet: Packet) -> None:
         """
         Inspect ARP packets for conflicting IP-to-MAC mappings.
 
-        Processes ARP replies and gratuitous ARP packets (request where
-        sender IP == target IP).
+        Uses packet.hw_src (set by PacketDecoder from arp_layer.hwsrc) to
+        track which MAC addresses have claimed each IP address.
 
         Args:
             packet: Normalised packet from PacketDecoder.
@@ -83,11 +88,7 @@ class ArpSpoofRule(BaseRule):
         if packet.protocol != "ARP":
             return
 
-        # We need the raw Scapy ARP layer — stored in packet.payload as bytes
-        # Instead, we re-parse from payload if available; otherwise use the
-        # src_ip + a synthetic MAC from extra context.
-        # PacketDecoder stores payload bytes — we need to extract ARP sender MAC.
-        mac = self._extract_sender_mac(packet)
+        mac = packet.hw_src
         if not mac:
             return
 
@@ -97,36 +98,58 @@ class ArpSpoofRule(BaseRule):
 
         now = _utc_now()
 
+        # Initialise tracking structures for new IP
         if claimed_ip not in self._ip_to_macs:
-            self._ip_to_macs[claimed_ip] = _ArpRecord(first_seen=now, last_seen=now)
+            self._ip_to_macs[claimed_ip] = set()
+            self._ip_first_seen[claimed_ip] = now
 
-        record = self._ip_to_macs[claimed_ip]
-        record.last_seen = now
+        self._ip_last_seen[claimed_ip] = now
+        macs = self._ip_to_macs[claimed_ip]
 
-        if mac not in record.macs:
-            record.macs.add(mac)
+        if mac not in macs:
+            macs.add(mac)
             logger.debug(
-                "ArpSpoofRule: IP %s now has MACs: %s", claimed_ip, record.macs
+                "ArpSpoofRule: IP %s now has MACs: %s", claimed_ip, macs
             )
 
-        # Emit event if we have 2+ MACs and haven't emitted for this IP yet
-        if len(record.macs) >= 2 and not record.emitted:
-            record.emitted = True
-            self._pending_event = self._build_event(claimed_ip, record, now)
+        # Queue or update a pending event when threshold is reached.
+        # If a new MAC arrives for an IP that already has a pending (unevaluated)
+        # event, refresh that pending entry with the current MAC snapshot so that
+        # evaluate() always sees the up-to-date MAC count (enabling the 97 → 100
+        # confidence transition when a 3rd MAC is discovered before evaluate()
+        # is called).
+        if len(macs) >= 2:
+            # Look for an existing pending entry for this IP
+            for entry in self._pending:
+                if entry["ip"] == claimed_ip:
+                    entry["macs"] = set(macs)  # refresh snapshot in place
+                    entry["timestamp"] = now
+                    return
+
+            if claimed_ip not in self._emitted:
+                self._emitted.add(claimed_ip)
+                self._pending.append({
+                    "ip": claimed_ip,
+                    "macs": set(macs),  # snapshot
+                    "timestamp": now,
+                })
 
     def evaluate(self) -> Optional[ThreatEvent]:
         """
-        Return and clear any pending ARP spoof ThreatEvent.
+        Return and clear the next pending ARP spoof ThreatEvent, if any.
 
         Returns:
             ThreatEvent if ARP spoofing was detected, otherwise None.
         """
-        event = self._pending_event
-        self._pending_event = None
-        return event
+        if not self._pending:
+            return None
+
+        item = self._pending.pop(0)
+        return self._build_event(item["ip"], item["macs"], item["timestamp"])
 
     def generate_event(self) -> ThreatEvent:
-        raise NotImplementedError("Use process_packet() + evaluate().")
+        """Not called directly — use process_packet() + evaluate()."""
+        raise NotImplementedError("Use process_packet() + evaluate() instead.")
 
     def explain(self, event: ThreatEvent) -> Explanation:
         """
@@ -163,57 +186,24 @@ class ArpSpoofRule(BaseRule):
     def cleanup(self) -> None:
         """Release all ARP tracking state."""
         self._ip_to_macs.clear()
-        self._pending_event = None
+        self._ip_first_seen.clear()
+        self._ip_last_seen.clear()
+        self._pending.clear()
+        self._emitted.clear()
         logger.debug("ArpSpoofRule cleaned up.")
 
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _extract_sender_mac(self, packet: Packet) -> Optional[str]:
-        """
-        Extract the ARP sender hardware address from the packet payload.
-
-        Falls back to extracting from payload bytes using Scapy if available.
-        """
-        if packet.payload:
-            try:
-                from scapy.layers.l2 import ARP as ScapyARP
-                from scapy.packet import Packet as ScapyPacket
-                from scapy.utils import raw
-
-                # Try to parse ARP from payload bytes
-                arp_pkt = ScapyARP(packet.payload)
-                if hasattr(arp_pkt, "hwsrc") and arp_pkt.hwsrc:
-                    return str(arp_pkt.hwsrc).lower()
-            except Exception:
-                pass
-
-        # Fallback: use extra data stored in packet.payload as string
-        if packet.payload:
-            try:
-                payload_str = packet.payload.decode("ascii", errors="ignore")
-                # Look for MAC pattern (6 groups of 2 hex digits)
-                import re
-                mac_match = re.search(
-                    r"([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}"
-                    r":[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})",
-                    payload_str,
-                )
-                if mac_match:
-                    return mac_match.group(1).lower()
-            except Exception:
-                pass
-
-        return None
-
     def _build_event(
         self,
         conflicting_ip: str,
-        record: _ArpRecord,
+        macs: set[str],
         timestamp: str,
     ) -> ThreatEvent:
-        macs_list = sorted(record.macs)
+        """Construct a ThreatEvent from the observed IP/MAC conflict."""
+        macs_list = sorted(macs)
         mac_count = len(macs_list)
         confidence = 100 if mac_count >= 3 else 97
 
@@ -221,8 +211,8 @@ class ArpSpoofRule(BaseRule):
             "conflicting_ip": conflicting_ip,
             "conflicting_macs": macs_list,
             "mac_count": mac_count,
-            "first_observed_timestamp": record.first_seen,
-            "most_recent_timestamp": record.last_seen,
+            "first_observed_timestamp": self._ip_first_seen.get(conflicting_ip, timestamp),
+            "most_recent_timestamp": self._ip_last_seen.get(conflicting_ip, timestamp),
         }
 
         return ThreatEvent(

@@ -53,7 +53,7 @@ def create_app(config: dict | None = None) -> Flask:
     CORS(app, resources={r"/api/*": {"origins": _origins}})
 
     # Initialise SocketIO — use threading mode in tests (eventlet incompatible with Python 3.14)
-    async_mode = app.config.get("SOCKETIO_ASYNC_MODE", "eventlet")
+    async_mode = app.config.get("SOCKETIO_ASYNC_MODE") or os.environ.get("SOCKETIO_ASYNC_MODE", "eventlet")
     socketio.init_app(
         app,
         async_mode=async_mode,

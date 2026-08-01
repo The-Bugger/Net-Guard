@@ -19,10 +19,28 @@ class LogRepository:
     """CRUD operations for the system_logs table."""
 
     def __init__(self, session_factory) -> None:
+        """
+        Args:
+            session_factory: Callable returning a new SQLAlchemy Session context manager.
+        """
         self._session_factory = session_factory
 
     def insert(self, timestamp: str, level: str, module: str,
                event: str, message: str, metadata: Optional[dict] = None) -> bool:
+        """
+        Insert a system log entry.
+
+        Args:
+            timestamp: UTC ISO-8601 string.
+            level: Log level string (INFO, WARNING, ERROR, CRITICAL).
+            module: Originating module name.
+            event: Short event label (e.g. "MONITOR_START").
+            message: Human-readable description.
+            metadata: Optional dict of extra context; serialised as JSON.
+
+        Returns:
+            True on success, False on failure.
+        """
         try:
             with self._session_factory() as session:
                 record = SystemLog(
@@ -42,6 +60,17 @@ class LogRepository:
 
     def get_all(self, filters: Optional[dict] = None,
                 limit: int = 50, offset: int = 0) -> list[dict]:
+        """
+        Query system log entries with optional filters.
+
+        Args:
+            filters: Dict with optional keys: level, module, date (YYYY-MM-DD), event.
+            limit: Maximum records to return.
+            offset: Pagination offset.
+
+        Returns:
+            List of log entry dicts ordered by timestamp descending.
+        """
         try:
             with self._session_factory() as session:
                 q = session.query(SystemLog)
@@ -66,6 +95,15 @@ class LogRepository:
             return []
 
     def count(self, filters: Optional[dict] = None) -> int:
+        """
+        Return the total number of system log entries matching optional filters.
+
+        Args:
+            filters: Dict with optional key: level.
+
+        Returns:
+            Integer count, or 0 on error.
+        """
         try:
             with self._session_factory() as session:
                 q = session.query(SystemLog)
@@ -78,6 +116,7 @@ class LogRepository:
 
 
 def _log_to_dict(record: SystemLog) -> dict:
+    """Convert a SystemLog ORM object to a plain dict."""
     metadata = None
     if record.meta:
         try:

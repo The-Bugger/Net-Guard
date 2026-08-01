@@ -1,0 +1,373 @@
+# NetGuard Architecture
+
+This document describes the internal design of NetGuard IDPS at the component,
+thread, and data-flow levels.
+
+---
+
+## Table of Contents
+
+1. [Overall Architecture](#overall-architecture)
+2. [Threading Model](#threading-model)
+3. [Packet Flow](#packet-flow)
+4. [Detection Pipeline](#detection-pipeline)
+5. [API Flow](#api-flow)
+6. [Database Flow](#database-flow)
+7. [Service Dependencies](#service-dependencies)
+8. [Key Design Decisions](#key-design-decisions)
+
+---
+
+## Overall Architecture
+
+```mermaid
+graph TB
+    subgraph Capture["Capture Layer"]
+        NIC["Network Interface"]
+        CE["CaptureEngine\n(Packet_Capture_Thread)"]
+        PD["PacketDecoder"]
+    end
+    subgraph Detection["Detection Layer"]
+        PQ["packet_queue\n(maxsize=10 000)"]
+        DE["DetectionEngine\n(Detection_Thread)"]
+        R1["SynFloodRule"]
+        R2["PortScanRule"]
+        R3["SqlInjectionRule"]
+        R4["BruteForceRule"]
+        R5["ArpSpoofRule"]
+    end
+    subgraph Response["Response Layer"]
+        EE["ExplainabilityEngine"]
+        PE["PreventionEngine"]
+        LE["LoggingEngine\n(Logging_Thread)"]
+        ET["ExpiryThread"]
+        EQ["event_queue"]
+    end
+    subgraph Persistence["Persistence Layer"]
+        DB[(SQLite\nnetguard.db)]
+        LF["logs/\nsystem.log\ndetections.log\nerrors.log"]
+    end
+    subgraph API["API Layer"]
+        FLASK["Flask REST API"]
+        SIO["Flask-SocketIO"]
+    end
+    subgraph UI["UI Layer"]
+        DASH["Browser Dashboard\nVanilla JS + Chart.js"]
+    end
+
+    NIC -->|raw packets| CE
+    CE --> PD --> PQ
+    PQ --> DE
+    DE --> R1 & R2 & R3 & R4 & R5
+    R1 & R2 & R3 & R4 & R5 -->|ThreatEvent| DE
+    DE --> EE --> PE
+    EE --> EQ --> LE
+    LE --> DB & LF
+    PE -->|iptables -I| NIC
+    ET -->|iptables -D| NIC
+    ET --> DB
+    DE -->|SocketIO| SIO
+    PE -->|SocketIO| SIO
+    FLASK <--> DB
+    SIO <-->|WebSocket| DASH
+    FLASK <-->|HTTP| DASH
+```
+
+
+---
+
+## Threading Model
+
+NetGuard uses five concurrent threads. All inter-thread communication is via
+`queue.Queue` (packet_queue, event_queue) or `threading.Event` (stop signals).
+
+```mermaid
+graph LR
+    subgraph Main["Main Thread (startup)"]
+        INIT["Initialize all services\nCreate Flask app\nStart background threads"]
+    end
+    subgraph PCT["Packet_Capture_Thread"]
+        SNIFF["Scapy sniff() loop\n0.5s timeout bursts"]
+        DEC["PacketDecoder.decode()"]
+        SNF["packet_queue.put_nowait()"]
+    end
+    subgraph DT["Detection_Thread"]
+        DGET["packet_queue.get(timeout=1s)"]
+        DRULE["Run all 5 rules\nprocess_packet + evaluate"]
+        DCALL["on_event callback"]
+    end
+    subgraph LT["Logging_Thread"]
+        LGET["event_queue.get(timeout=1s)"]
+        LPERS["Persist to SQLite + log files"]
+    end
+    subgraph ET2["Expiry_Thread"]
+        EPOLL["Poll DB every 5s\nget_expired()"]
+        EREM["iptables -D\nset_inactive()"]
+    end
+    subgraph AT["API_Thread (eventlet)"]
+        FLASK2["Flask HTTP + SocketIO"]
+    end
+
+    INIT --> PCT & DT & LT & ET2 & AT
+    SNIFF --> DEC --> SNF
+    SNF -->|packet_queue| DGET
+    DRULE --> DCALL
+    DCALL -->|event_queue| LGET
+    LGET --> LPERS
+    EPOLL --> EREM
+```
+
+### Thread Safety
+
+| Resource | Protection |
+|----------|------------|
+| `packet_queue` | `queue.Queue` (thread-safe by design) |
+| `event_queue` | `queue.Queue` (thread-safe by design) |
+| `WhitelistManager._ip_set` | `threading.RLock` |
+| `MonitoringState` fields | `threading.Lock` (via `increment_packets`) |
+| `StatsService._pkt_timestamps` | `threading.Lock` |
+| `ConfigurationManager._settings` | `threading.Lock` |
+| SQLite connections | `check_same_thread=False` + session-per-operation |
+
+
+---
+
+## Packet Flow
+
+```mermaid
+sequenceDiagram
+    participant NIC as Network Interface
+    participant CE as CaptureEngine
+    participant PD as PacketDecoder
+    participant PQ as packet_queue
+    participant DE as DetectionEngine
+    participant Rule as Detection Rule (×5)
+    participant EE as ExplainabilityEngine
+    participant PE as PreventionEngine
+    participant LE as LoggingEngine
+    participant EQ as event_queue
+    participant DB as SQLite
+    participant SIO as SocketIO
+
+    NIC->>CE: raw Scapy packet
+    CE->>PD: decode(raw_pkt)
+    alt decode success
+        PD-->>CE: Packet dataclass
+        CE->>PQ: put_nowait(Packet)
+    else decode failure
+        PD-->>CE: None
+        CE->>CE: log WARNING to system.log
+    end
+
+    PQ->>DE: get(timeout=1.0)
+    loop for each enabled rule
+        DE->>Rule: process_packet(Packet)
+        DE->>Rule: evaluate()
+        alt threshold exceeded
+            Rule-->>DE: ThreatEvent
+            DE->>DE: _should_emit() cooldown check
+            alt emit allowed
+                DE->>EE: explain(ThreatEvent)
+                EE-->>DE: Explanation
+                DE->>PE: handle_event(ThreatEvent, Explanation)
+                PE->>DB: INSERT blocked_ips
+                PE->>SIO: emit("ip_blocked")
+                DE->>DB: INSERT events
+                DE->>EQ: put((event, explanation))
+                DE->>SIO: emit("new_threat")
+            end
+        else no detection
+            Rule-->>DE: None
+        end
+    end
+
+    EQ->>LE: get(timeout=1.0)
+    LE->>DB: INSERT system_logs
+    LE->>LE: write to detections.log
+```
+
+
+---
+
+## Detection Pipeline
+
+Each detection rule implements the `BaseRule` interface:
+
+```mermaid
+flowchart TD
+    PKT["Packet arrives on Detection_Thread"]
+    CHK{"Rule enabled?\n(rule.enabled AND\nnot in _disabled_rules)"}
+    SKIP["Skip rule"]
+    PP["rule.process_packet(packet)\nUpdate internal counters"]
+    EV["rule.evaluate()\nCheck threshold"]
+    NONE{"Returns None?"}
+    COOL{"_should_emit(event)?\n(cooldown + severity check)"}
+    DROP["Drop event\n(suppressed by cooldown)"]
+    EMIT["on_event callback\n→ explain → prevent → log → SocketIO"]
+    ERR["Exception?\nDisable rule for session\nLog ERROR"]
+
+    PKT --> CHK
+    CHK -- No --> SKIP
+    CHK -- Yes --> PP
+    PP --> EV
+    EV -- Exception --> ERR
+    EV --> NONE
+    NONE -- Yes --> PKT
+    NONE -- No --> COOL
+    COOL -- No --> DROP
+    COOL -- Yes --> EMIT
+```
+
+### Cooldown Logic
+
+The `_should_emit()` method in `DetectionEngine` prevents alert storms:
+
+- Default cooldown: **10 seconds** per `(source_ip, rule_name)` pair
+- Within the cooldown window, a new event is emitted **only if** its severity
+  is strictly higher than the previously emitted severity
+- Example: Medium at t=0 → suppressed at t=3 (same severity) → High at t=7 is
+  emitted (escalation) → suppressed at t=9 (same High) → cooldown expires at t=10
+
+### Rule Exception Isolation
+
+If `process_packet()` or `evaluate()` raises an uncaught exception, the
+DetectionEngine:
+1. Logs the exception at ERROR level with `exc_info=True`
+2. Adds the rule's `rule_name` to `_disabled_rules`
+3. Continues processing all other rules
+4. Exposes the disabled rule name via `disabled_rule_names` property
+5. Restores the rule on the next `reload_rules()` call
+
+---
+
+## API Flow
+
+```mermaid
+flowchart LR
+    CLIENT["HTTP Client\nor Browser"]
+    FLASK3["Flask Route Handler\n(blueprint)"]
+    VAL["Input Validation\nvalidators.py"]
+    DEP["dependencies.get_*()\nService Registry"]
+    SVC["Service Layer"]
+    REPO["Repository Layer"]
+    DB2[(SQLite)]
+    RESP["response.py\nJSON envelope"]
+
+    CLIENT -->|HTTP request| FLASK3
+    FLASK3 --> VAL
+    VAL -- invalid --> RESP
+    VAL -- valid --> DEP
+    DEP --> SVC
+    SVC --> REPO --> DB2
+    DB2 --> REPO --> SVC --> RESP
+    RESP -->|HTTP response| CLIENT
+```
+
+Route handlers are intentionally thin. The pattern is:
+
+1. Parse and validate request input
+2. Retrieve the service via `dependencies.get_*()`
+3. Call one service method
+4. Return `success_response()` or `error_response()` from `response.py`
+
+No business logic lives in route handlers.
+
+---
+
+## Database Flow
+
+```mermaid
+flowchart TD
+    MAIN["main.py startup"]
+    INIT2["initialize_db()\nCreate tables + seed defaults"]
+    SF["session_factory\ncontextmanager"]
+    REPO2["Repository classes\nEventRepository\nBlockRepository\nWhitelistRepository\nLogRepository\nSettingsRepository"]
+    ORM["SQLAlchemy ORM\nSession per operation"]
+    DB3[(SQLite\nWAL mode)]
+
+    MAIN --> INIT2 --> DB3
+    MAIN --> SF
+    SF --> REPO2
+    REPO2 --> ORM --> DB3
+```
+
+Each repository receives `session_factory` (a context manager) as a
+constructor argument. This keeps the session lifecycle inside the repository
+and makes it straightforward to swap the session factory in tests.
+
+---
+
+## Service Dependencies
+
+```mermaid
+graph TD
+    MAIN2["main.py"]
+    CM["ConfigurationManager"]
+    WM["WhitelistManager"]
+    LE2["LoggingEngine"]
+    PE2["PreventionEngine"]
+    DE2["DetectionEngine"]
+    EE2["ExplainabilityEngine"]
+    MS["MonitorService"]
+    ET3["ExpiryThread"]
+    SS["StatsService"]
+    CE2["CaptureEngine"]
+
+    MAIN2 --> CM
+    MAIN2 --> WM
+    MAIN2 --> LE2
+    MAIN2 --> PE2
+    MAIN2 --> DE2
+    MAIN2 --> EE2
+    MAIN2 --> MS
+    MAIN2 --> ET3
+    MAIN2 --> SS
+    MAIN2 --> CE2
+
+    PE2 --> WM
+    PE2 --> LE2
+    EE2 --> WM
+    DE2 --> CM
+    MS --> CE2
+    MS --> DE2
+    MS --> LE2
+    ET3 --> LE2
+    SS --> MS
+```
+
+All dependencies are wired in `main.py` and injected as constructor arguments.
+No service imports another service directly — they communicate via callbacks
+(`on_event`, `socketio_emit`) or injected instances.
+
+---
+
+## Key Design Decisions
+
+### Why eventlet?
+
+Flask-SocketIO requires an async worker to serve WebSocket connections alongside
+HTTP. Eventlet provides cooperative multitasking via green threads and monkey-patches
+the standard library at startup (`main.py` line 1). This is why eventlet's
+`monkey_patch()` must run before any other import.
+
+### Why queue.Queue for inter-thread communication?
+
+Direct calls from CaptureEngine to DetectionEngine would couple the two threads
+and slow packet capture if detection is slow. The queue decouples them: capture
+can run at full speed and detection processes at its own rate. The `maxsize=10000`
+prevents unbounded memory growth under heavy load (packets are dropped with a WARNING
+if the queue is full).
+
+### Why SQLite?
+
+Single-machine deployment, no multi-process writes, hackathon scope. WAL mode
+provides good concurrent read performance for the dashboard queries while
+detection writes happen. Replacing with PostgreSQL would require changing only
+the `DATABASE_URL` and the `create_engine` call.
+
+### Why separate log files per category?
+
+`system.log` is for operations teams monitoring startup/shutdown and interface
+changes. `detections.log` is for security analysts reviewing attack timelines.
+`errors.log` is for developers debugging failures. Keeping them separate avoids
+noisy cross-contamination and allows different log rotation or alerting policies.

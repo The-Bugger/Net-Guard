@@ -61,7 +61,7 @@ hypothesis==6.115.6
 # Drives all 40 correctness properties (Properties 1–40) defined in the spec.
 # Generates random inputs to find edge-case failures automatically.
 
-pytest==8.3.3
+pytest==9.0.3
 # Test runner, fixtures, and assertion helpers.
 # Run: pytest tests/ --ignore=tests/integration -v
 

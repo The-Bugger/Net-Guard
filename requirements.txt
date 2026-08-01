@@ -42,7 +42,7 @@ PyYAML==6.0.2
 # Parses config/config.yaml. Used by ConfigurationManager to load/persist
 # all runtime thresholds (syn_flood_threshold, block_duration, etc.).
 
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 # Loads .env file into os.environ at startup.
 # Used for DATABASE_URL, LOG_LEVEL, SECRET_KEY, FLASK_HOST, FLASK_PORT.
 

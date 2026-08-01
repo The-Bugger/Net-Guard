@@ -19,3 +19,6 @@
 2026-07-30T10:57:54  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
 2026-07-30T10:59:12  INFO      netguard.system  LoggingEngine started.
 2026-07-30T10:59:12  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-07-30T11:01:13  INFO      netguard.system  LoggingEngine started.
+2026-07-30T11:01:13  INFO      netguard.system  main | STARTUP — NetGuard IDPS started successfully.
+2026-07-30T11:10:31  INFO      netguard.system  MonitorService | MONITOR_START — Monitoring started on Ethernet

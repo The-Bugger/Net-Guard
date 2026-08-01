@@ -11,6 +11,7 @@ from __future__ import annotations
 from flask import Blueprint, request, Response
 
 from backend.api.dependencies import get_event_repo
+from backend.services.export_service import ExportService
 from backend.utils.response import error_response
 
 export_bp = Blueprint("export", __name__)
@@ -37,7 +38,6 @@ def export_data():
 
     filters = {k: v for k in _FILTER_PARAMS if (v := request.args.get(k))}
 
-    from backend.services.export_service import ExportService
     svc = ExportService(repo)
 
     try:

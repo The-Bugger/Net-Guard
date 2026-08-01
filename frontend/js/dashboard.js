@@ -41,9 +41,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadDashboard();
   startClock();
   startHealthPolling();
-  startRecentIncidentsRefresh();  // Task 40
+  startRecentIncidentsRefresh();
+  loadLanDevices();
 
-  // Track SocketIO connection state for countUp gating (Req 3.2)
+  // Track SocketIO connection state for countUp gating
   SocketManager.on('connect',    () => { socketConnected = true;  _hideReconnectingBanner(); stopFallbackPolling(); });
   SocketManager.on('disconnect', () => { socketConnected = false; _showReconnectingBanner(); startFallbackPolling(); });
 
@@ -420,9 +421,8 @@ function renderActivityFeed() {
 }
 
 // ── Status Badges (Req 3.8) ────────────────────────────────────────────────
-function updateStatusBadges(monitoringActive, demoActive, aiAvailable) {
+function updateStatusBadges(monitoringActive, aiAvailable) {
   _setBadge('badge-monitoring', monitoringActive, 'Monitoring Active', 'Monitoring Stopped');
-  _setBadge('badge-demo',       demoActive,       'Demo Active',       'Demo Stopped');
   _setBadge('badge-ai',         aiAvailable,      'AI Available',      'AI Unavailable');
 }
 
@@ -459,16 +459,8 @@ async function pollSystemHealth() {
 
     if (d.health_score !== undefined) updateHealthScore(d.health_score);
 
-    // Update status badges from status endpoint
     const monActive = !!(d.monitoring);
-    // Demo / AI status may not be in /status — preserve previous badge state if absent
-    if (d.demo_active !== undefined || d.ai_available !== undefined) {
-      updateStatusBadges(monActive, d.demo_active || false, d.ai_available !== false);
-    } else {
-      updateStatusBadges(monActive,
-        document.getElementById('badge-demo')?.classList.contains('active') || false,
-        document.getElementById('badge-ai')?.classList.contains('active') || false);
-    }
+    updateStatusBadges(monActive, d.ai_available !== false);
   } catch (_) {}
 }
 
@@ -581,16 +573,6 @@ async function loadInterfaces() {
   } catch (_) {}
 }
 
-// ── Attack Simulator (Req 7.3, 7.4) ───────────────────────────────────────
-async function triggerAttack(attackType) {
-  try {
-    const data = await NetGuardAPI.post('/demo/trigger', { attack_type: attackType });
-    showToast(`✅ ${attackType} triggered — event ${data.event_id}`, 'success', 3000);
-  } catch (err) {
-    showToast(`❌ Trigger failed: ${err.message}`, 'error', 5000);
-  }
-}
-
 // ── Utilities ──────────────────────────────────────────────────────────────
 function fmtTime(ts) {
   if (!ts) return '—';
@@ -627,43 +609,61 @@ function showNotification(message, type = 'success') {
   if (timeout) setTimeout(() => el.remove(), timeout);
 }
 
-// ── Quick Actions (Task 40) ────────────────────────────────────────────────
-async function startDemo() {
-  try {
-    await api.post('/demo/start', {});
-    showToast('Demo started.', 'success', 3000);
-    _setBadge('badge-demo', true, 'Demo Active', 'Demo Stopped');
-  } catch (err) {
-    const msg = err.message || '';
-    if (msg.includes('DEMO_ALREADY_RUNNING') || err.code === 409) {
-      showToast('Demo is already running.', 'warning', 3000);
-    } else {
-      showToast(`Failed to start demo: ${msg}`, 'error', 5000);
-    }
-  }
-}
-
-async function stopDemo() {
-  try {
-    await api.post('/demo/stop', {});
-    showToast('Demo stopped.', 'info', 3000);
-    _setBadge('badge-demo', false, 'Demo Active', 'Demo Stopped');
-  } catch (err) {
-    const msg = err.message || '';
-    if (msg.includes('DEMO_NOT_RUNNING') || err.code === 409) {
-      showToast('Demo is not running.', 'warning', 3000);
-    } else {
-      showToast(`Failed to stop demo: ${msg}`, 'error', 5000);
-    }
-  }
-}
-
+// ── Quick Actions ──────────────────────────────────────────────────────────
 function exportJSON() {
   window.location.href = '/api/v1/export?format=json';
 }
 
 function viewAnalytics() {
   window.location.href = '/analytics';
+}
+
+// ── Connected Devices (LAN) ────────────────────────────────────────────────
+async function loadLanDevices() {
+  const container = document.getElementById('lan-devices-list');
+  if (!container) return;
+  try {
+    const data = await api.get('/lan-devices');
+    renderLanDevices(data.devices || []);
+  } catch (_) {
+    const el = document.getElementById('lan-devices-list');
+    if (el) el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">ARP scan requires root on Linux. Start monitoring first.</p>';
+  }
+}
+
+async function refreshLanDevices() {
+  const container = document.getElementById('lan-devices-list');
+  if (container) container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">Scanning…</p>';
+  try {
+    const data = await api.post('/lan-devices/refresh', {});
+    renderLanDevices(data.devices || []);
+    showToast(`Found ${data.count} device(s) on LAN.`, 'success', 3000);
+  } catch (err) {
+    showToast(`LAN scan failed: ${err.message}`, 'warning', 4000);
+    loadLanDevices();
+  }
+}
+
+function renderLanDevices(devices) {
+  const container = document.getElementById('lan-devices-list');
+  if (!container) return;
+  if (!devices.length) {
+    container.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">No devices found. Start monitoring and click Scan LAN.</p>';
+    return;
+  }
+  container.innerHTML = `<table class="data-table" style="margin:0">
+    <thead><tr><th>IP Address</th><th>MAC Address</th><th>Hostname</th><th>Vendor</th><th>Status</th><th>Last Seen</th></tr></thead>
+    <tbody>${devices.map(d => `
+      <tr>
+        <td><code>${escHtml(d.ip)}</code></td>
+        <td><code style="font-size:11px">${escHtml(d.mac || '—')}</code></td>
+        <td>${escHtml(d.hostname || '—')}</td>
+        <td>${escHtml(d.vendor || '—')}</td>
+        <td><span style="color:${d.status === 'up' ? 'var(--success)' : 'var(--text-muted)'}">${escHtml(d.status)}</span></td>
+        <td style="font-size:12px;color:var(--text-muted)">${escHtml(d.last_seen ? new Date(d.last_seen).toLocaleTimeString() : '—')}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
 }
 
 // ── AI Assistant Panel (Task 37) ───────────────────────────────────────────

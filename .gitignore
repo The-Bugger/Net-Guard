@@ -1,0 +1,58 @@
+# Python -- build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Secrets -- uncomment when real keys are added
+# .env
+
+# Database -- commit dev DB; ignore WAL/journal
+database/netguard.db-shm
+database/netguard.db-wal
+
+# Logs -- tracked for debugging; ignore rotated backups
+logs/*.log.1
+logs/*.log.2
+logs/*.log.3
+logs/*.log.4
+logs/*.log.5
+
+# Test / hypothesis artifacts
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+coverage.xml
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Known bad artifacts
+docs.zip
+m.zip
+build_test.txt
+ip_test.txt
+scapy_check.txt
+scapy_test2.txt
+test_output.txt
+test_run_result.txt

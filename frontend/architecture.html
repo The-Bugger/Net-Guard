@@ -246,7 +246,7 @@
             </div>
             <h3>Prevention Engine</h3>
           </div>
-          <p>Applies iptables DROP rules for blocking malicious IPs. Checks the whitelist before any block. Auto-expires blocks after a configurable duration via a background expiry thread. Demo-mode TEST-NET IPs are whitelisted automatically and never blocked.</p>
+          <p>Applies iptables DROP rules for blocking malicious IPs. Checks the whitelist before any block. Auto-expires blocks after a configurable duration via a background expiry thread.</p>
           <span class="layer-tag">backend/engines/prevention/</span>
         </div>
 
@@ -273,7 +273,7 @@
             </div>
             <h3>Frontend Dashboard</h3>
           </div>
-          <p>Vanilla JS ES6 + Chart.js dashboard. Real-time KPI cards (threats, blocked IPs, health score, detection accuracy), live traffic graph, severity doughnut, attack simulator panel, activity feed, and management pages for blocks, whitelist, logs, rules, analytics, and settings. Zero build step — no bundler required.</p>
+          <p>Vanilla JS ES6 + Chart.js dashboard. Real-time KPI cards (threats, blocked IPs, health score, detection accuracy), live traffic graph, severity doughnut, activity feed, and management pages for blocks, whitelist, logs, rules, analytics, and settings. Zero build step — no bundler required.</p>
           <span class="layer-tag">frontend/</span>
         </div>
 
@@ -309,7 +309,7 @@
           <div class="step-num">4</div>
           <div class="step-body">
             <h4>Automated Prevention</h4>
-            <p>The <strong>Prevention Engine</strong> receives the enriched event and, for high/critical severity threats, inserts an iptables DROP rule for the source IP. Whitelisted IPs and demo TEST-NET addresses (RFC 5737) are never blocked. All blocks are timestamped and auto-expire after the configured duration.</p>
+            <p>The <strong>Prevention Engine</strong> receives the enriched event and, for high/critical severity threats, inserts an iptables DROP rule for the source IP. Whitelisted IPs are never blocked. All blocks are timestamped and auto-expire after the configured duration.</p>
           </div>
         </li>
         <li>
@@ -323,7 +323,7 @@
           <div class="step-num">6</div>
           <div class="step-body">
             <h4>Dashboard &amp; Analytics</h4>
-            <p>The <strong>Frontend</strong> receives the live push and updates KPI cards with an animated count-up, prepends an entry to the activity feed, and refreshes severity counts. Analysts can also drill into the full detection list with search and pagination, view per-event timelines (<code>/timeline?event_id=…</code>), export data as JSON/CSV/Markdown, and use the Attack Simulator to trigger synthetic threats for demo purposes.</p>
+            <p>The <strong>Frontend</strong> receives the live push and updates KPI cards with an animated count-up, prepends an entry to the activity feed, and refreshes severity counts. Analysts can also drill into the full detection list with search and pagination, view per-event timelines (<code>/timeline?event_id=…</code>), and export data as JSON/CSV/Markdown.</p>
           </div>
         </li>
       </ol>

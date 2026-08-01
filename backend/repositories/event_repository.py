@@ -16,6 +16,7 @@ import threading
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from database.schema import Event
@@ -189,7 +190,6 @@ class EventRepository:
         """Return aggregate counts per attack_type."""
         try:
             with self._session_factory() as session:
-                from sqlalchemy import func
                 rows = (
                     session.query(Event.attack_type, func.count(Event.id))
                     .group_by(Event.attack_type)
@@ -199,6 +199,22 @@ class EventRepository:
         except Exception as exc:
             logger.error("EventRepository.get_attack_type_counts failed: %s", exc)
             return []
+
+    def get_distinct_attack_types_today(self) -> set[str]:
+        """Return set of distinct attack_type values for the current UTC calendar day."""
+        try:
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            with self._session_factory() as session:
+                rows = (
+                    session.query(Event.attack_type)
+                    .filter(Event.timestamp.like(f"{today}%"))
+                    .distinct()
+                    .all()
+                )
+                return {r[0] for r in rows if r[0]}
+        except Exception as exc:
+            logger.error("EventRepository.get_distinct_attack_types_today failed: %s", exc)
+            raise
 
     def flush_retry_queue(self) -> int:
         """
@@ -236,7 +252,6 @@ def _apply_filters(q, filters: Optional[dict]):
         q = q.filter(Event.timestamp.like(f"{filters['date']}%"))
     if filters.get("search"):
         # Req 8.1: case-insensitive OR match across three fields
-        from sqlalchemy import or_, func
         term = f"%{filters['search']}%"
         q = q.filter(or_(
             func.lower(Event.source_ip).like(func.lower(term)),

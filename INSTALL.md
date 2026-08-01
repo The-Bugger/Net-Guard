@@ -49,7 +49,7 @@ sudo apt install -y hping3 nmap hydra dsniff curl
 The fastest path — runs the automated setup script:
 
 ```bash
-git clone https://github.com/Midvaley/midvalleyproject.git netguard
+git clone https://github.com/The-Bugger/Net-Guard.git netguard
 cd netguard
 sudo bash scripts/setup.sh
 ```
@@ -75,7 +75,7 @@ sudo python backend/main.py
 ### Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/Midvaley/midvalleyproject.git netguard
+git clone https://github.com/The-Bugger/Net-Guard.git netguard
 cd netguard
 ```
 

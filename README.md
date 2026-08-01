@@ -1,7 +1,7 @@
 # NetGuard — Explainable Intrusion Detection & Prevention System
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-653%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-678%20passing-brightgreen.svg)](#testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Flask](https://img.shields.io/badge/flask-3.0.3-lightgrey.svg)](https://flask.palletsprojects.com)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-orange.svg)](https://sqlalchemy.org)
@@ -20,24 +20,21 @@ machine. No cloud, no proprietary hardware, no agents.
 
 1. [Features](#features)
 2. [Quick Start](#quick-start)
-3. [New Features (Hackathon Upgrade)](#new-features-hackathon-upgrade)
-4. [Architecture](#architecture)
-5. [Directory Structure](#directory-structure)
-6. [Prerequisites](#prerequisites)
-7. [Installation](#installation)
-8. [Configuration](#configuration)
-9. [Environment Variables](#environment-variables)
-10. [Running NetGuard](#running-netguard)
-11. [API Reference](#api-reference)
-12. [API Reference — New Endpoints](#api-reference--new-endpoints)
-13. [Detection Rules](#detection-rules)
-14. [Service Layer](#service-layer)
-15. [Database Schema](#database-schema)
-16. [Testing](#testing)
-17. [Demo Attack Scripts](#demo-attack-scripts)
-18. [Screenshots](#screenshots)
-19. [Technology Stack](#technology-stack)
-20. [Judges Mode](#judges-mode)
+3. [Architecture](#architecture)
+4. [Directory Structure](#directory-structure)
+5. [Prerequisites](#prerequisites)
+6. [Installation](#installation)
+7. [Configuration](#configuration)
+8. [Environment Variables](#environment-variables)
+9. [Running NetGuard](#running-netguard)
+10. [API Reference](#api-reference)
+11. [Detection Rules](#detection-rules)
+12. [Service Layer](#service-layer)
+13. [Database Schema](#database-schema)
+14. [Testing](#testing)
+15. [Demo Attack Scripts](#demo-attack-scripts)
+16. [Technology Stack](#technology-stack)
+17. [Judges Mode](#judges-mode)
 
 ---
 
@@ -51,12 +48,30 @@ machine. No cloud, no proprietary hardware, no agents.
 | Auto-blocking | iptables DROP rule applied within seconds of detection |
 | Auto-expiry | Background thread removes expired blocks every 5 seconds |
 | Whitelist | Trusted IPs bypass blocking; O(1) in-memory set lookup |
-| REST API | 21 endpoints — monitor, detect, block, whitelist, stats, logs, settings |
-| Live dashboard | WebSocket KPIs, traffic chart, severity chart, threat timeline |
+| API key auth | `X-API-Key` header enforcement on all mutating endpoints; constant-time comparison |
+| Rate limiting | 120 req/60s per client IP with `Retry-After` header |
+| Security headers | CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy |
+| REST API | 28+ endpoints — monitor, detect, block, whitelist, stats, logs, analytics, export, AI assistant |
+| Live dashboard | WebSocket KPIs, traffic chart, severity chart, threat timeline, analytics, AI chat |
 | SQLite persistence | Events, blocks, whitelist, settings, logs via SQLAlchemy ORM |
-| 653 tests | Unit + property-based (Hypothesis) + integration |
+| 678 tests | Unit + property-based (Hypothesis) + integration |
 | Rotating log files | system.log, detections.log, errors.log — max 10 MB each, 5 backups |
+| Export | JSON, CSV, Markdown, and PDF (optional) detection export |
+| Analytics | Hourly / daily / weekly detection charts with attack breakdown |
+| AI assistant | Per-event Markdown report and chat panel (stub / Gemini / OpenAI) |
+| Demo mode | Continuous synthetic attack generation using RFC 5737 TEST-NET IPs |
 
+---
+
+## Quick Start
+
+```bash
+pip install -r requirements.txt
+python -c "from database.init_db import initialize_db; initialize_db()"
+sudo python backend/main.py
+```
+
+Open **http://localhost:5000**. Add `?judges=1` for presentation mode.
 
 ---
 
@@ -71,11 +86,9 @@ graph TB
     PD["PacketDecoder\npacket_decoder.py"]
     PQ["packet_queue\nqueue.Queue maxsize=10000"]
     DE["DetectionEngine\ndetection_service.py\nDetection_Thread"]
-    R1["SynFloodRule"]
-    R2["PortScanRule"]
-    R3["SqlInjectionRule"]
-    R4["BruteForceRule"]
-    R5["ArpSpoofRule"]
+    R1["SynFloodRule"] R2["PortScanRule"] R3["SqlInjectionRule"]
+    R4["BruteForceRule"] R5["ArpSpoofRule"]
+    R6["IcmpFloodRule"] R7["SlowHttpRule"] R8["DnsTunnelRule"]
     EE["ExplainabilityEngine\nexplain_service.py"]
     PE["PreventionEngine\nprevention_service.py"]
     LE["LoggingEngine\nlog_service.py\nLogging_Thread"]
@@ -88,7 +101,7 @@ graph TB
     CE -->|decode| PD
     PD -->|Packet objects| PQ
     PQ -->|consume| DE
-    DE --> R1 & R2 & R3 & R4 & R5
+    DE --> R1 & R2 & R3 & R4 & R5 & R6 & R7 & R8
     DE -->|ThreatEvent| EE
     EE -->|Explanation| PE
     EE -->|Explanation| LE
@@ -102,7 +115,6 @@ graph TB
     DB <-->|SQLAlchemy| API
 ```
 
-
 ### Threading Model
 
 | Thread | Module | Role |
@@ -114,42 +126,8 @@ graph TB
 | `API_Thread` | Flask + eventlet | Serves HTTP REST + WebSocket |
 
 > **Python 3.14 note:** eventlet is incompatible with Python 3.14 threading changes.
-> When running under Python 3.14 (or in the test suite), set
-> `SOCKETIO_ASYNC_MODE=threading` in your environment. The app factory reads this
-> variable and falls back to threading mode automatically.
-
-### Packet Flow
-
-```mermaid
-sequenceDiagram
-    participant NIC as Network Interface
-    participant CE as CaptureEngine
-    participant PD as PacketDecoder
-    participant Q as packet_queue
-    participant DE as DetectionEngine
-    participant Rule as Detection Rule
-    participant EE as ExplainabilityEngine
-    participant PE as PreventionEngine
-    participant DB as SQLite
-    participant WS as WebSocket
-
-    NIC->>CE: raw Scapy packet
-    CE->>PD: decode(raw_pkt)
-    PD-->>CE: Packet or None
-    CE->>Q: put_nowait(Packet)
-    Q->>DE: get(timeout=1.0)
-    DE->>Rule: process_packet(packet)
-    DE->>Rule: evaluate()
-    Rule-->>DE: ThreatEvent or None
-    DE->>EE: explain(event)
-    EE-->>DE: Explanation
-    DE->>PE: handle_event(event, explanation)
-    PE->>DB: INSERT blocked_ips
-    PE->>WS: emit("ip_blocked", {...})
-    DE->>DB: INSERT events
-    DE->>WS: emit("new_threat", {...})
-```
-
+> Set `SOCKETIO_ASYNC_MODE=threading` in your `.env` when running under Python 3.14.
+> The app factory reads this variable and falls back to threading mode automatically.
 
 ---
 
@@ -161,94 +139,111 @@ NetGuard/
 │   ├── api/
 │   │   ├── __init__.py          # Flask app factory + SocketIO init
 │   │   └── dependencies.py      # Service registry (populated by main.py)
+│   ├── middleware/
+│   │   ├── auth.py              # X-API-Key authentication hook
+│   │   ├── rate_limiter.py      # Sliding-window rate limiter
+│   │   └── security_headers.py  # CSP / HSTS / Permissions-Policy headers
 │   ├── repositories/
-│   │   ├── event_repository.py  # CRUD for events table
-│   │   ├── block_repository.py  # CRUD for blocked_ips table
+│   │   ├── event_repository.py
+│   │   ├── block_repository.py
 │   │   ├── whitelist_repository.py
 │   │   ├── log_repository.py
 │   │   └── settings_repository.py
 │   ├── routes/
-│   │   ├── health_routes.py     # GET /health, GET /status
-│   │   ├── monitor_routes.py    # POST /monitor/start|stop, GET /monitor/interfaces
-│   │   ├── detection_routes.py  # GET /detections, GET /detections/{id}, POST /detect
-│   │   ├── block_routes.py      # POST /block|/unblock, GET /blocked
-│   │   ├── whitelist_routes.py  # GET|POST /whitelist, DELETE /whitelist/{ip}
-│   │   ├── dashboard_routes.py  # GET /dashboard, GET /dashboard/live
-│   │   ├── stats_routes.py      # GET /statistics, GET /statistics/rules
-│   │   ├── evidence_routes.py   # GET /evidence/{id}
-│   │   ├── logs_routes.py       # GET /logs
-│   │   └── settings_routes.py   # GET|PUT /settings
+│   │   ├── health_routes.py        # GET /health, GET /status
+│   │   ├── monitor_routes.py       # POST /monitor/start|stop, GET /interfaces
+│   │   ├── detection_routes.py     # GET /detections, GET /detections/{id}, POST /detect
+│   │   ├── block_routes.py         # POST /block|/unblock, GET /blocked
+│   │   ├── whitelist_routes.py     # GET|POST /whitelist, DELETE /whitelist/{ip}
+│   │   ├── dashboard_routes.py     # GET /dashboard, GET /dashboard/live
+│   │   ├── stats_routes.py         # GET /statistics, GET /statistics/rules
+│   │   ├── evidence_routes.py      # GET /evidence/{id}
+│   │   ├── logs_routes.py          # GET /logs
+│   │   ├── settings_routes.py      # GET|PUT /settings
+│   │   ├── analytics_routes.py     # GET /analytics
+│   │   ├── export_routes.py        # GET /export
+│   │   ├── timeline_routes.py      # GET /timeline/{event_id}
+│   │   ├── ai_assistant_routes.py  # POST /ai-assistant
+│   │   ├── advisor_routes.py       # GET /advisor
+│   │   ├── lan_devices_routes.py   # GET /lan-devices, POST /lan-devices/refresh
+│   │   └── reset_routes.py         # POST /reset (dev only)
 │   ├── services/
-│   │   ├── config_service.py    # ConfigurationManager — loads/validates config.yaml
-│   │   ├── detection_service.py # DetectionEngine — packet→rule→event pipeline
-│   │   ├── explain_service.py   # ExplainabilityEngine — ThreatEvent→Explanation
-│   │   ├── prevention_service.py# PreventionEngine — iptables block/unblock
-│   │   ├── expiry_service.py    # ExpiryThread — auto-removes expired blocks
-│   │   ├── whitelist_service.py # WhitelistManager — O(1) in-memory lookup
-│   │   ├── monitor_service.py   # MonitorService — start/stop/interface management
-│   │   ├── log_service.py       # LoggingEngine — async DB + file logging
-│   │   └── stats_service.py     # StatsService — aggregation for dashboard
+│   │   ├── config_service.py       # ConfigurationManager — loads/validates config.yaml
+│   │   ├── detection_service.py    # DetectionEngine — packet→rule→event pipeline
+│   │   ├── explain_service.py      # ExplainabilityEngine — ThreatEvent→Explanation
+│   │   ├── ai_explain_service.py   # AIExplainService — Gemini/OpenAI/stub enrichment
+│   │   ├── prevention_service.py   # PreventionEngine — iptables block/unblock
+│   │   ├── expiry_service.py       # ExpiryThread — auto-removes expired blocks
+│   │   ├── whitelist_service.py    # WhitelistManager — O(1) in-memory lookup
+│   │   ├── monitor_service.py      # MonitorService — start/stop/interface management
+│   │   ├── log_service.py          # LoggingEngine — async DB + file logging
+│   │   ├── stats_service.py        # StatsService — aggregation for dashboard
+│   │   ├── lan_scan_service.py     # LanScanService — ARP-based LAN device discovery
+│   │   └── security_advisor.py     # SecurityAdvisor — health score and advice
 │   ├── utils/
-│   │   ├── validators.py        # IP + numeric range validation
-│   │   └── response.py          # Standard JSON envelope helpers
-│   └── main.py                  # Application entry point + startup sequence
+│   │   ├── validators.py           # IP + numeric range validation
+│   │   └── response.py             # Standard JSON envelope helpers
+│   └── main.py                     # Application entry point + startup sequence
 ├── database/
-│   ├── schema.py                # SQLAlchemy ORM models (6 tables)
-│   └── init_db.py               # initialize_db() — creates tables + seeds defaults
+│   ├── schema.py                   # SQLAlchemy ORM models (6 tables)
+│   └── init_db.py                  # initialize_db() — creates tables + seeds defaults
 ├── detection/
 │   ├── capture/
-│   │   └── sniffer.py           # CaptureEngine — Scapy sniff() wrapper
+│   │   └── sniffer.py              # CaptureEngine — Scapy sniff() wrapper
 │   ├── parsers/
-│   │   └── packet_decoder.py    # PacketDecoder — raw Scapy → normalized Packet
+│   │   └── packet_decoder.py       # PacketDecoder — raw Scapy → normalized Packet
 │   └── rules/
-│       ├── base_rule.py         # BaseRule ABC + ThreatEvent + Explanation dataclasses
-│       ├── syn_flood.py         # SynFloodRule
-│       ├── port_scan.py         # PortScanRule
-│       ├── sql_injection.py     # SqlInjectionRule
-│       ├── brute_force.py       # BruteForceRule
-│       ├── arp_spoof.py         # ArpSpoofRule
-│       ├── icmp_flood.py        # IcmpFloodRule
-│       ├── slow_http.py         # SlowHttpRule
-│       └── dns_tunnel.py        # DnsTunnelRule
+│       ├── base_rule.py            # BaseRule ABC + ThreatEvent + Explanation dataclasses
+│       ├── syn_flood.py            # SynFloodRule      (SYN_FLOOD_001)
+│       ├── port_scan.py            # PortScanRule      (PORT_SCAN_001)
+│       ├── sql_injection.py        # SqlInjectionRule  (SQL_INJECT_001)
+│       ├── brute_force.py          # BruteForceRule    (BRUTE_FORCE_001)
+│       ├── arp_spoof.py            # ArpSpoofRule      (ARP_SPOOF_001)
+│       ├── icmp_flood.py           # IcmpFloodRule     (ICMP_FLOOD_001)
+│       ├── slow_http.py            # SlowHttpRule      (SLOW_HTTP_001)
+│       └── dns_tunnel.py           # DnsTunnelRule     (DNS_TUNNEL_001)
 ├── frontend/
 │   ├── css/dark-theme.css
-│   ├── js/                      # socket.js, api.js, dashboard.js, charts.js, ...
-│   ├── index.html               # Main dashboard (KPIs, charts, threat timeline)
-│   ├── blocked.html             # Active blocks management
-│   ├── whitelist.html           # Whitelist management
-│   ├── threats.html             # Full threat list with filters
-│   ├── logs.html                # Log viewer
-│   ├── rules.html               # Detection rule configuration
-│   ├── settings.html            # System settings form
-│   └── about.html               # Architecture overview
+│   ├── js/                         # socket.js, api.js, dashboard.js, charts.js, shell.js, …
+│   ├── index.html                  # Main dashboard (KPIs, charts, threat timeline)
+│   ├── blocked.html                # Active blocks management
+│   ├── whitelist.html              # Whitelist management
+│   ├── threats.html                # Full threat list with filters
+│   ├── logs.html                   # Log viewer
+│   ├── rules.html                  # Detection rule configuration
+│   ├── settings.html               # System settings form
+│   ├── analytics.html              # Charts and attack distribution
+│   ├── timeline.html               # Per-event incident timeline
+│   ├── about.html / architecture.html
+│   └── 404.html / 500.html
 ├── config/
-│   └── config.yaml              # Runtime configuration (thresholds, interface, etc.)
+│   └── config.yaml                 # Runtime configuration (thresholds, interface, etc.)
 ├── demo/
-│   ├── attack_syn.sh            # hping3 SYN flood demo
-│   ├── attack_scan.sh           # nmap port scan demo
-│   ├── attack_sql.sh            # curl SQL injection demo
-│   ├── attack_bruteforce.sh     # hydra brute force demo
-│   └── attack_arp.sh            # arpspoof ARP spoofing demo
+│   ├── attack_syn.sh               # hping3 SYN flood demo
+│   ├── attack_scan.sh              # nmap port scan demo
+│   ├── attack_sql.sh               # curl SQL injection demo
+│   ├── attack_bruteforce.sh        # hydra brute force demo
+│   └── attack_arp.sh               # arpspoof ARP spoofing demo
 ├── docs/
-│   ├── API.md                   # Full REST API reference
-│   ├── ARCHITECTURE.md          # Detailed architecture with Mermaid diagrams
-│   ├── DATABASE.md              # Database schema reference
-│   ├── DEPLOYMENT.md            # Production deployment guide
-│   ├── TROUBLESHOOTING.md       # Common problems and solutions
-│   └── ROADMAP.md               # Feature roadmap
-├── logs/                        # Rotating log files (auto-created)
+│   ├── API.md                      # Full REST API reference
+│   ├── ARCHITECTURE.md             # Detailed architecture with Mermaid diagrams
+│   ├── DATABASE.md                 # Database schema reference
+│   ├── DEPLOYMENT.md               # Production deployment guide
+│   ├── TROUBLESHOOTING.md          # Common problems and solutions
+│   └── ROADMAP.md                  # Feature roadmap
+├── logs/                           # Rotating log files (auto-created)
 ├── scripts/
-│   ├── setup.sh                 # One-shot setup script
-│   └── start_demo.sh            # Full demo launcher
-├── tests/                       # 653+ unit + property-based + integration tests
-├── .env                         # Environment variables
-├── .env.example                 # Environment variable documentation
-├── requirements.txt             # Pinned Python dependencies
-├── CHANGELOG.md                 # Version history
-├── CONTRIBUTING.md              # Contributor guide
-└── SECURITY.md                  # Security policy and threat model
+│   └── setup.sh                    # One-shot setup script
+├── tests/                          # 678+ unit + property-based + integration tests
+├── .env                            # Environment variables (not committed)
+├── .env.example                    # Environment variable documentation
+├── requirements.txt                # Pinned Python dependencies
+├── CHANGELOG.md                    # Version history
+├── CONTRIBUTING.md                 # Contributor guide
+├── SECURITY.md                     # Security policy and threat model
+├── INSTALL.md                      # Installation guide
+└── DEPLOYMENT.md                   # Proxy trust model and deployment notes
 ```
-
 
 ---
 
@@ -275,10 +270,10 @@ NetGuard/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Midvaley/midvalleyproject.git
-cd midvalleyproject
+git clone https://github.com/The-Bugger/Net-Guard.git
+cd Net-Guard
 
-# 2. Create a virtual environment (recommended)
+# 2. Create a virtual environment
 python -m venv .venv
 source .venv/bin/activate        # Linux/macOS
 # .venv\Scripts\activate         # Windows
@@ -292,8 +287,10 @@ python -c "from database.init_db import initialize_db; initialize_db()"
 
 # 4. Copy and edit environment variables
 cp .env.example .env
-# Edit .env as needed
+# Edit .env — at minimum set SECRET_KEY and optionally NETGUARD_API_KEY
 ```
+
+See [INSTALL.md](INSTALL.md) for full platform-specific installation instructions.
 
 ---
 
@@ -308,18 +305,24 @@ thresholds without touching source code. Changes submitted via
 
 network_interface: ""           # Interface to capture on (e.g. eth0, wlan0)
 
-syn_flood_threshold: 100        # SYN packets per source IP to trigger detection
-syn_flood_window: 3             # Sliding window in seconds (1–60)
+syn_flood_threshold: 150        # SYN packets per source IP to trigger detection
+syn_flood_window: 3             # Sliding window in seconds
 
 port_scan_threshold: 20         # Unique ports per source IP to trigger detection
-port_scan_window: 10            # Sliding window in seconds (1–60)
+port_scan_window: 10
 
 brute_force_threshold: 10       # Auth failures per source IP to trigger detection
-brute_force_window: 60          # Sliding window in seconds (1–300)
+brute_force_window: 60
 
-block_duration: 120             # Auto-block duration in seconds (1–3600)
+icmp_flood_threshold: 100       # ICMP echo requests per source IP to trigger detection
+icmp_flood_window: 3
 
-dashboard_refresh_interval: 1   # Dashboard polling interval in seconds (1–60)
+slow_http_threshold: 10         # Concurrent slow connections to trigger detection
+slow_http_window: 10
+
+block_duration: 120             # Auto-block duration in seconds
+
+dashboard_refresh_interval: 1   # Dashboard polling interval in seconds
 
 rules_enabled:
   syn_flood: true
@@ -327,26 +330,35 @@ rules_enabled:
   sql_injection: true
   brute_force: true
   arp_spoof: true
+  icmp_flood: true
+  slow_http: true
+  dns_tunnel: true
 
 debug: false
 ```
 
-### Environment Variables
+---
 
-See [`.env.example`](.env.example) for full documentation. Key variables:
+## Environment Variables
+
+See [`.env.example`](.env.example) for full documentation of every variable.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `SECRET_KEY` | `change-me-before-production` | Flask session secret — **must be set in production** or app refuses to start |
 | `DATABASE_URL` | `sqlite:///database/netguard.db` | SQLAlchemy DB URL |
-| `LOG_LEVEL` | `INFO` | Python logging level (DEBUG, INFO, WARNING, ERROR) |
-| `SECRET_KEY` | `change-me-before-production` | Flask session secret — must be set in production or app refuses to start |
-| `FLASK_HOST` | `0.0.0.0` | Bind address |
+| `LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `FLASK_HOST` | `0.0.0.0` | Bind address; use `127.0.0.1` behind a reverse proxy |
 | `FLASK_PORT` | `5000` | Listen port |
-| `FLASK_ENV` | `development` | Flask environment |
-| `NETGUARD_API_KEY` | _(unset)_ | API key required in `X-API-Key` header for mutating endpoints; when unset, app operates in dev no-auth mode |
-| `TRUST_PROXY_HEADERS` | `false` | When `true`, reads client IP from `X-Forwarded-For` for rate limiting; only enable behind a trusted proxy |
-| `REQUIRE_AUTH_FOR_READS` | `false` | When `true`, `X-API-Key` is also enforced on `GET` endpoints (SocketIO always exempt) |
-
+| `FLASK_ENV` | `development` | Flask environment; set to `production` for production |
+| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins; restrict in production |
+| `NETGUARD_API_KEY` | _(unset)_ | Shared API key required in `X-API-Key` header for mutating endpoints; when unset, app runs in dev no-auth mode |
+| `TRUST_PROXY_HEADERS` | `false` | When `true`, rate limiter reads client IP from `X-Forwarded-For`; only enable behind a trusted reverse proxy |
+| `REQUIRE_AUTH_FOR_READS` | `false` | When `true`, `X-API-Key` is also enforced on `GET` endpoints; SocketIO paths are always exempt |
+| `AI_PROVIDER` | `stub` | AI explanation provider: `stub`, `gemini`, or `openai` |
+| `GEMINI_API_KEY` | _(unset)_ | Required when `AI_PROVIDER=gemini` |
+| `OPENAI_API_KEY` | _(unset)_ | Required when `AI_PROVIDER=openai` |
+| `SOCKETIO_ASYNC_MODE` | _(auto)_ | Force `threading` on Python 3.14+ (set automatically) |
 
 ---
 
@@ -369,12 +381,13 @@ sudo python backend/main.py
 5. Build repositories (EventRepository, BlockRepository, etc.)
 6. Build services (LoggingEngine, WhitelistManager, PreventionEngine, etc.)
 7. Verify iptables privileges (`PreventionEngine.verify_privileges()`)
-8. Create Flask app + register all 10 route blueprints
-9. Start `LoggingEngine` thread
-10. Start `ExpiryThread`
-11. Start `DetectionEngine` thread
-12. Start live-stats SocketIO background task
-13. `socketio.run()` — serves HTTP + WebSocket on `0.0.0.0:5000`
+8. Register all services in the dependency container
+9. Create Flask app + register all route blueprints
+10. Start `LoggingEngine` thread
+11. Start `ExpiryThread`
+12. Start `DetectionEngine` thread
+13. Start live-stats SocketIO background task
+14. `socketio.run()` — serves HTTP + WebSocket on configured host:port
 
 ---
 
@@ -384,445 +397,67 @@ All endpoints are under `http://localhost:5000/api/v1`.
 
 **Response envelope** (every response):
 ```json
-// Success
 { "success": true, "message": "OK", "data": { ... } }
-
-// Error
-{ "success": false, "error": "Description", "code": 422, "error_code": "VALIDATION_ERROR" }
+{ "success": false, "error": "Description", "error_code": "VALIDATION_ERROR" }
 ```
 
-### Endpoint Summary
+**Authentication:** When `NETGUARD_API_KEY` is set, all `POST`, `PUT`, `DELETE`, and `PATCH`
+requests must include an `X-API-Key: <key>` header. `GET` requests are open by default
+(set `REQUIRE_AUTH_FOR_READS=true` to protect them). SocketIO paths are always exempt.
+
+### Core Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/health` | Liveness check — `{"status":"healthy","version":"1.0.0","uptime":"HH:MM:SS"}` |
-| `GET` | `/status` | Monitoring status, uptime, thread states, packet/block counts |
-| `POST` | `/monitor/start` | Start packet capture: `{"interface":"eth0"}` |
-| `POST` | `/monitor/stop` | Stop packet capture |
-| `GET` | `/monitor/interfaces` | List all available network interfaces from the OS |
-| `GET` | `/dashboard` | Full snapshot: KPIs + recent 20 events + active blocks + attack counts |
-| `GET` | `/dashboard/live` | Lightweight: `packets_per_second`, `active_threats`, `alerts_today`, `monitoring` |
-| `GET` | `/detections` | Paginated list; query params: `severity`, `attack_type`, `source_ip`, `date`, `limit`, `offset` |
+| `GET` | `/health` | Liveness check |
+| `GET` | `/status` | Monitoring state, thread states, packet/block counts |
+| `POST` | `/monitor/start` | Start capture: `{"interface":"eth0"}` |
+| `POST` | `/monitor/stop` | Stop capture |
+| `GET` | `/monitor/interfaces` | List available network interfaces |
+| `GET` | `/dashboard` | Full snapshot: KPIs + recent events + active blocks |
+| `GET` | `/dashboard/live` | Lightweight: `packets_per_second`, `active_threats`, `alerts_today` |
+| `GET` | `/detections` | Paginated list; filter by `severity`, `attack_type`, `source_ip`, `date` |
 | `GET` | `/detections/<event_id>` | Single detection by UUID |
 | `POST` | `/detect` | Submit detection event manually |
 | `GET` | `/evidence/<event_id>` | Full `Explanation` object for a detection |
 | `POST` | `/block` | Block an IP: `{"ip":"10.0.0.1","reason":"manual","duration":120}` |
 | `POST` | `/unblock` | Unblock: `{"ip":"10.0.0.1"}` |
-| `GET` | `/blocked` | All active blocks with `expires_in` countdown in seconds |
+| `GET` | `/blocked` | All active blocks with `expires_in` countdown |
 | `GET` | `/whitelist` | List all trusted IPs |
 | `POST` | `/whitelist` | Add trusted IP: `{"ip":"192.168.1.1","description":"gateway"}` |
 | `DELETE` | `/whitelist/<ip>` | Remove IP from whitelist |
 | `GET` | `/statistics` | Aggregate counts by attack type and severity |
-| `GET` | `/statistics/rules` | Per-rule detection counts |
-| `GET` | `/logs` | Paginated system logs; filter by `severity`, `date`, `module`, `source_ip` |
-| `GET` | `/settings` | Return current configuration as JSON |
-| `PUT` | `/settings` | Update thresholds; out-of-range values → 422 VALIDATION_ERROR |
-
-Full API documentation: [`docs/API.md`](docs/API.md)
-
-
----
-
-## Detection Rules
-
-### SynFloodRule (`detection/rules/syn_flood.py`)
-
-Detects TCP SYN flood attacks by counting pure SYN packets (flag `S`, no `A`) per
-source IP within a sliding window.
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `initialize()` | `() → None` | Clears `_flows` dict and `_cooldown` dict |
-| `process_packet(packet)` | `(Packet) → None` | If TCP SYN (not SYN-ACK), appends `(timestamp, dst_ip)` to per-IP deque |
-| `evaluate()` | `() → Optional[ThreatEvent]` | Evicts entries older than `window_seconds`; returns first IP exceeding threshold |
-| `explain(event)` | `(ThreatEvent) → Explanation` | `"Detected {count} SYN packets from {ip} within {window}s…"` |
-| `cleanup()` | `() → None` | Clears all state |
-
-**Severity tiers:** 100–199 → Medium · 200–399 → High · ≥400 → Critical  
-**Confidence formula:** `round(min(count/threshold, 2.0) / 2.0 * 100)` capped at 100  
-**Evidence fields:** `source_ip`, `syn_packet_count`, `time_window_seconds`, `threshold`, `destination_ips`, `sample_timestamps` (≤5)
-
----
-
-### PortScanRule (`detection/rules/port_scan.py`)
-
-Detects port scanning by tracking unique `(dst_ip, dst_port)` pairs per source IP.
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `initialize()` | `() → None` | Clears `_flows` and `_cooldown` |
-| `process_packet(packet)` | `(Packet) → None` | Records `(epoch, dst_ip, dst_port)` for TCP/UDP packets |
-| `evaluate()` | `() → Optional[ThreatEvent]` | Evicts stale entries; fires when unique port count ≥ threshold |
-| `explain(event)` | `(ThreatEvent) → Explanation` | `"Detected connection attempts to {count} unique ports from {ip} within {window}s…"` |
-
-**Severity tiers:** 20–39 → Medium · 40–79 → High · ≥80 → Critical  
-**Evidence fields:** `source_ip`, `scanned_ports` (capped at 20), `unique_port_count`, `time_window_seconds`, `confidence_score`
-
----
-
-### SqlInjectionRule (`detection/rules/sql_injection.py`)
-
-Detects SQL injection payloads in HTTP traffic (ports 80, 443, 8080, 8443).
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `initialize()` | `() → None` | Clears `_seen_ips` set and `_pending` list |
-| `process_packet(packet)` | `(Packet) → None` | Decodes TCP payload as UTF-8; searches for any SQL pattern; first hit from IP → High; repeat → Critical |
-| `evaluate()` | `() → Optional[ThreatEvent]` | Pops and returns first pending ThreatEvent |
-| `explain(event)` | `(ThreatEvent) → Explanation` | `"Detected SQL injection pattern '{pattern}' in HTTP request from {src} to {dst}…"` |
-
-**Patterns detected:** `' OR`, `UNION SELECT`, `DROP TABLE`, `--`, `xp_cmdshell`  
-**Confidence:** always 100 (single match = definitive evidence)  
-**Evidence fields:** `source_ip`, `destination_ip`, `http_method`, `request_url`, `matched_pattern`
-
----
-
-### BruteForceRule (`detection/rules/brute_force.py`)
-
-Detects brute-force login attempts by tracking TCP connections to auth ports.
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `initialize()` | `() → None` | Clears `_flows` and `_cooldown` |
-| `process_packet(packet)` | `(Packet) → None` | Records `(epoch, dst_port)` for TCP to ports 21, 22, 80, 443 |
-| `evaluate()` | `() → Optional[ThreatEvent]` | Evicts stale entries; fires when count ≥ threshold |
-| `explain(event)` | `(ThreatEvent) → Explanation` | `"Detected {count} authentication failures from {ip} within {window}s targeting {service}…"` |
-
-**Service mapping:** 22 → `SSH` · 21 → `FTP` · 80/443 → `HTTP` · other → `Unknown`  
-**Severity tiers:** 10–19 → Medium · 20–39 → High · ≥40 → Critical  
-**Evidence fields:** `source_ip`, `failure_count`, `time_window_seconds`, `threshold`, `target_service`
-
----
-
-### ArpSpoofRule (`detection/rules/arp_spoof.py`)
-
-Detects ARP spoofing by identifying conflicting MAC addresses for the same IP.
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `initialize()` | `() → None` | Clears all tracking dicts and pending list |
-| `process_packet(packet)` | `(Packet) → None` | For ARP only: records `packet.hw_src` in per-IP MAC set; queues event when `len(macs) >= 2` |
-| `evaluate()` | `() → Optional[ThreatEvent]` | Pops and returns next pending ThreatEvent |
-| `explain(event)` | `(ThreatEvent) → Explanation` | `"Detected conflicting ARP responses for IP {ip}: MAC addresses {macs}…"` |
-
-**Severity:** always `High`  
-**Confidence:** 97 for exactly 2 conflicting MACs · 100 for ≥3 MACs  
-**Evidence fields:** `conflicting_ip`, `conflicting_macs`, `mac_count`, `first_observed_timestamp`, `most_recent_timestamp`
-
----
-
-### IcmpFloodRule (`detection/rules/icmp_flood.py`)
-
-Detects ICMP Echo Request (ping) floods and Smurf attacks by counting ICMP type-8 packets per
-source IP within a sliding window.
-
-**Rule ID:** `ICMP_FLOOD_001` · **Attack type:** `ICMP Flood`  
-**Severity tiers (non-Smurf):** `count < 2×threshold` → Medium · `< 4×threshold` → High · `≥ 4×threshold` → Critical  
-**Smurf detection:** broadcast destination (`*.255` or `255.255.255.255`) always forces `Critical`.  
-**Evidence fields:** `icmp_packet_count`, `time_window_seconds`, `threshold`, `smurf_pattern`, `sample_dst_ips`
-
----
-
-### SlowHttpRule (`detection/rules/slow_http.py`)
-
-Detects Slowloris-style slow HTTP connection exhaustion by tracking TCP connections to ports 80/443
-that stay open without completing an HTTP request header block (`\r\n\r\n`).
-
-**Rule ID:** `SLOW_HTTP_001` · **Attack type:** `Slow HTTP`  
-**Severity tiers:** concurrent slow connections `≥ threshold` → Medium · `≥ 2×threshold` → High.  
-**Note:** tracks connection longevity and low data rate — not a duplicate of `SynFloodRule`, which counts raw SYN volume.  
-**Evidence fields:** `concurrent_connections`, `threshold`, `connection_timeout_seconds`, `target_ports`
-
----
-
-### DnsTunnelRule (`detection/rules/dns_tunnel.py`)
-
-Heuristic detection of DNS tunneling via three independent indicators: abnormally long DNS labels
-(>50 chars), elevated TXT/NULL query rate, and high Shannon entropy in query names.
-
-**Rule ID:** `DNS_TUNNEL_001` · **Attack type:** `DNS Tunneling`  
-**Confidence:** always capped at 80 (heuristic rule — legitimate high-volume DNS resolvers may trigger).  
-**Severity:** only TXT-rate indicator → Low · single label/entropy indicator → Medium · two or more indicators → High.  
-**Evidence fields:** `triggered_indicators`, `max_label_length`, `txt_query_count`, `avg_entropy`, `sample_queries`
-
-
----
-
-## Service Layer
-
-### DetectionEngine (`backend/services/detection_service.py`)
-
-| Method / Property | Description |
-|-------------------|-------------|
-| `start()` | Builds rule instances, calls `rule.initialize()` on each, starts `Detection_Thread` |
-| `stop()` | Puts stop sentinel on queue, joins thread (5 s timeout), calls `rule.cleanup()` |
-| `reload_rules()` | Rebuilds all rule instances from current config; clears `_disabled_rules` |
-| `_dispatch(packet)` | Runs `process_packet()` + `evaluate()` per rule; disables faulty rules on exception |
-| `_should_emit(event)` | Returns True if: no prior cooldown entry, OR cooldown expired (≥10 s), OR severity escalated |
-| `is_running` | `bool` — True if Detection_Thread is alive |
-| `active_rule_names` | `list[str]` — enabled rules not disabled by exception |
-| `disabled_rule_names` | `list[str]` — rules disabled due to runtime exceptions this session |
-
----
-
-### ExplainabilityEngine (`backend/services/explain_service.py`)
-
-Converts `ThreatEvent → Explanation` within 50 ms. Never raises to caller.
-
-| Method | Description |
-|--------|-------------|
-| `explain(event)` | Entry point; returns fallback `Explanation` on any internal error |
-| `_build_text(event)` | Selects attack-type template; fills from `event.evidence`; generic fallback for unknown types |
-| `_get_recommendation(attack_type)` | Returns exact per-type recommendation string |
-| `_check_whitelist(ip)` | Returns `True` if IP is whitelisted; returns `False` on any error |
-| `_fallback_explanation(event)` | Returns `"A security event was detected. Details unavailable due to an internal error."` |
-
----
-
-### PreventionEngine (`backend/services/prevention_service.py`)
-
-| Method | Description |
-|--------|-------------|
-| `verify_privileges()` | Runs `iptables -L INPUT -n`; raises `RuntimeError` if return code ≠ 0 |
-| `handle_event(event, explanation)` | Checks whitelist; if not whitelisted, calls `block_ip()` |
-| `block_ip(ip, reason, event_id)` | Extends expiry if already blocked; otherwise issues `iptables -I INPUT -s {ip} -j DROP`; inserts DB record; emits `ip_blocked` SocketIO |
-| `unblock_ip(ip)` | Issues `iptables -D INPUT -s {ip} -j DROP`; sets DB record inactive; emits `ip_unblocked` |
-| `set_block_duration(duration)` | Clamps to `[1, 3600]` and updates `_block_duration` |
-
----
-
-### WhitelistManager (`backend/services/whitelist_service.py`)
-
-| Method | Description |
-|--------|-------------|
-| `is_whitelisted(ip)` | O(1) lookup in `_ip_set` (never queries DB) |
-| `add(ip, description, created_by)` | Validates IP; inserts to DB; updates in-memory set; raises `ValueError` on bad IP |
-| `remove(ip)` | Deletes from DB; discards from in-memory set; returns `False` if not found |
-| `get_all()` | Returns all entries from DB with all fields |
-| `sync_from_db()` | Rebuilds `_ip_set` from DB; safe to call on any failure |
-
----
-
-### LoggingEngine (`backend/services/log_service.py`)
-
-Async logging. `log_event()` is non-blocking (enqueues for `Logging_Thread`).
-
-| Method | Description |
-|--------|-------------|
-| `start()` | Starts `Logging_Thread`; writes STARTUP to system.log |
-| `stop()` | Sends stop sentinel; joins thread (5 s); writes SHUTDOWN |
-| `log_event(event, explanation)` | Writes to `detections.log` synchronously; enqueues for async DB insert |
-| `log_block(ip, reason, duration)` | Writes BLOCK to `detections.log`; persists to `system_logs` |
-| `log_unblock(ip, reason)` | Writes UNBLOCK to `detections.log`; persists to `system_logs` |
-| `log_system(level, module, event, message, metadata)` | Writes to `system.log`; mirrors WARNING+ to `errors.log`; strips sensitive metadata keys |
-
-**Three rotating log files** (max 10 MB each, 5 backups):  
-`logs/system.log` · `logs/detections.log` · `logs/errors.log`
-
----
-
-### ExpiryThread (`backend/services/expiry_service.py`)
-
-| Method | Description |
-|--------|-------------|
-| `start()` | Spawns `Expiry_Thread` daemon; idempotent |
-| `stop()` | Sets stop event; joins thread (10 s timeout) |
-| `_process_expired_blocks()` | Queries `block_repo.get_expired()`; for each: iptables -D, set_inactive(), log_unblock(), emit `ip_unblocked` |
-
-Poll interval: 5 seconds (`POLL_INTERVAL = 5`).
-
----
-
-### ConfigurationManager (`backend/services/config_service.py`)
-
-| Method | Description |
-|--------|-------------|
-| `load()` | Reads `config/config.yaml`; on parse error falls back to built-in defaults and logs CRITICAL |
-| `get(key)` | Thread-safe read of a single setting by field name |
-| `update(updates)` | Validates ranges; applies in-memory; persists to `config.yaml` |
-| `validate_settings(updates)` | Returns list of invalid field names; empty list = all valid |
-
-Valid ranges: `syn_flood_threshold` ≥1 · `syn_flood_window` 1–60 · `port_scan_threshold` ≥1 · `port_scan_window` 1–60 · `brute_force_threshold` ≥1 · `brute_force_window` 1–300 · `block_duration` 1–3600 · `dashboard_refresh_interval` 1–60
-
-
----
-
-## Database Schema
-
-Six SQLAlchemy ORM tables in `database/schema.py`:
-
-| Table | Purpose |
-|-------|---------|
-| `events` | Every detected threat event with evidence, explanation, and recommendation |
-| `blocked_ips` | Active and historical firewall blocks with expiration timestamps |
-| `whitelist` | Trusted IPs that bypass automatic blocking |
-| `detection_rules` | Configurable rules with thresholds, severity, and enabled status |
-| `settings` | Key-value configuration store (mirrors `config.yaml`) |
-| `system_logs` | Operational log entries for the dashboard log viewer |
-
-See [`docs/DATABASE.md`](docs/DATABASE.md) for full column documentation.
-
----
-
-## Testing
-
-```bash
-# Run all 653 tests with coverage
-pytest --cov=backend --cov=detection --cov=database --cov-report=term-missing
-
-# Run only unit tests (fast, no network)
-pytest tests/ -k "not integration"
-
-# Run property-based tests
-pytest tests/ -k "hypothesis"
-```
-
-The test suite includes:
-- **Unit tests** — each service and detection rule tested in isolation
-- **Property-based tests** — Hypothesis strategies for IP validation, severity tiers, confidence formulas
-- **Integration tests** — full API endpoint tests with a real Flask test client and in-memory SQLite
-- **Router tests** — every route blueprint tested with mocked services
-
----
-
-## Demo Attack Scripts
-
-Run these from a second terminal while NetGuard is active to see live detections:
-
-```bash
-# SYN Flood (requires hping3)
-sudo bash demo/attack_syn.sh
-
-# Port Scan (requires nmap)
-bash demo/attack_scan.sh
-
-# SQL Injection (requires curl — pre-installed)
-bash demo/attack_sql.sh
-
-# Brute Force (requires hydra)
-bash demo/attack_bruteforce.sh
-
-# ARP Spoofing (requires arpspoof from dsniff)
-sudo bash demo/attack_arp.sh
-```
-
-Or launch all at once:
-```bash
-sudo bash scripts/start_demo.sh
-```
-
----
-
-## Technology Stack
-
-| Component | Technology | Version |
-|-----------|------------|---------|
-| REST API | Flask | 3.0.3 |
-| WebSocket | Flask-SocketIO + eventlet | 5.3.6 + 0.36.1 |
-| Packet capture | Scapy | 2.5.0 |
-| Database ORM | SQLAlchemy | 2.0.51 |
-| Database | SQLite | (stdlib) |
-| Config | PyYAML | 6.0.2 |
-| Environment | python-dotenv | 1.0.1 |
-| System info | psutil | 6.1.0 |
-| Testing | pytest + Hypothesis | 8.3.3 + 6.115.6 |
-| Frontend | Vanilla JS ES6 + Chart.js + Socket.IO client | — |
-
----
-
-## License
-
-MIT License — see [LICENSE](LICENSE)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and PR process.
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for the threat model and vulnerability reporting policy.
-
----
-
-## Quick Start
-
-```bash
-pip install -r requirements.txt
-python -m backend.main
-```
-
-Open your browser at **http://localhost:5000**.  
-Click **"Start Demo"** to begin continuous synthetic attack generation, or visit **`/?judges=1`** for presentation mode.
-
----
-
-## New Features (Hackathon Upgrade)
-
-- **Demo Mode** — continuous synthetic attack generation with 9 attack types using RFC 5737 TEST-NET IPs
-- **AI Threat Explanation** — per-event Markdown report with MITRE ATT&CK, CVE refs, and remediation (stub/Gemini/OpenAI)
-- **Analytics Dashboard** — hourly/daily/weekly charts, severity doughnut, attack radar, world attack map
-- **Export (JSON/CSV/Markdown)** — `GET /api/v1/export?format=json|csv|markdown`
-- **Incident Timeline** — per-event step-by-step timeline at `/timeline?event_id=<uuid>`
-- **Rate Limiting** — 120 req/60s per IP with `Retry-After` header
-- **Security Headers** — X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy
-- **Incident Replay** — re-emit any past event through the full detection pipeline
-- **AI Security Assistant** — chat panel powered by AIExplainService stub
-- **Onboarding Tour** — first-time 5-step guided tour (localStorage-gated)
-- **Judges/Presentation Mode** — `?judges=1` URL param activates demo banner and "Next Feature" cycling
-
----
-
-## Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `AI_PROVIDER` | `stub` | AI provider: `stub`, `gemini`, or `openai` |
-| `GEMINI_API_KEY` | — | Required when `AI_PROVIDER=gemini` |
-| `OPENAI_API_KEY` | — | Required when `AI_PROVIDER=openai` |
-| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins (restrict in production) |
-| `SECRET_KEY` | dev default | Flask secret key — **must be set in production** or app refuses to start |
-| `NETGUARD_API_KEY` | _(unset)_ | API key required in `X-API-Key` header for all mutating endpoints; when unset, app runs in dev no-auth mode |
-| `TRUST_PROXY_HEADERS` | `false` | When `true`, rate limiter reads client IP from `X-Forwarded-For`; leave `false` unless behind a trusted reverse proxy |
-| `REQUIRE_AUTH_FOR_READS` | `false` | When `true`, `X-API-Key` is also required for `GET` requests (SocketIO paths are always exempt) |
-
----
-
-## API Reference — New Endpoints
+| `GET` | `/statistics/rules` | Per-rule detection counts (all 8 rules) |
+| `GET` | `/logs` | Paginated system logs; filter by `severity`, `date`, `module` |
+| `GET` | `/settings` | Return current configuration |
+| `PUT` | `/settings` | Update thresholds; out-of-range → 422 VALIDATION_ERROR |
+| `GET` | `/timeline/<event_id>` | Step-by-step incident timeline |
+| `GET` | `/analytics` | Hourly/daily/weekly chart data, severity and attack distribution |
+| `GET` | `/export` | Export events: `?format=json\|csv\|markdown\|pdf` |
+| `GET` | `/lan-devices` | LAN devices from most recent ARP scan |
+| `POST` | `/lan-devices/refresh` | Trigger a fresh ARP scan |
+| `GET` | `/advisor` | Security advice and health score |
+| `POST` | `/ai-assistant` | Chat with AI security assistant: `{"question":"..."}` |
+
+### Demo Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/v1/demo/start` | Start continuous synthetic attack generation |
-| `POST` | `/api/v1/demo/stop` | Stop the demo emit loop |
-| `POST` | `/api/v1/demo/trigger` | Emit one synthetic event immediately: `{"attack_type":"SQL Injection"}` |
-| `GET` | `/api/v1/demo/status` | Return current demo session state |
-| `GET` | `/api/v1/ai-explanation/<event_id>` | Fetch AI-enriched Markdown report for a detection event |
-| `POST` | `/api/v1/ai-assistant` | Chat with the AI security assistant: `{"message":"..."}` |
-| `GET` | `/api/v1/analytics` | Hourly/daily/weekly chart data, severity and attack distribution |
-| `GET` | `/api/v1/export` | Export events: `?format=json\|csv\|markdown` |
-| `GET` | `/api/v1/timeline/<event_id>` | Step-by-step incident timeline for an event |
-| `GET` | `/api/v1/events/<event_id>/replay` | Re-emit a past event through the full detection pipeline |
+| `POST` | `/demo/start` | Start continuous synthetic attack generation |
+| `POST` | `/demo/stop` | Stop the demo emit loop |
+| `POST` | `/demo/trigger` | Emit one synthetic event: `{"attack_type":"SQL Injection"}` |
+| `GET` | `/demo/status` | Current demo session state |
+
+Full API documentation with request/response schemas: [`docs/API.md`](docs/API.md)
+
+### Socket.IO Events
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `new_threat` | `{event_id, attack_type, source_ip, severity, confidence, timestamp, blocked}` | New threat detected |
+| `ip_blocked` | `{ip, reason, expires_at}` | IP blocked |
+| `ip_unblocked` | `{ip}` | IP unblocked (manual or expired) |
+| `live_stats` | `{packets_per_second, active_threats, alerts_today}` | Emitted every second during monitoring |
+| `monitoring_status` | `{active: bool, interface: string}` | Monitoring started or stopped |
 
 ---
-
-## Screenshots
-
-> _Screenshots coming soon. Run `python -m backend.main` and open `http://localhost:5000` to see the live dashboard._
-
-| Page | Description |
-|------|-------------|
-| SOC Dashboard | KPI cards, live traffic graph, activity feed, attack simulator |
-| Analytics | Hourly/daily/weekly charts, threat radar, severity doughnut, world attack map |
-| Incident Timeline | Step-by-step timeline for a detection event |
-| AI Explanation | Per-event Markdown report with MITRE ATT&CK context |
-| Judges Mode | Full-screen demo banner with guided feature tour |
-
----
-
-## Judges Mode
-
-Add **`?judges=1`** to any URL to activate presentation mode:
-
-- A purple/cyan banner appears at the top of the dashboard.
-- Demo mode auto-starts, generating live synthetic attack traffic.
-- The sidebar collapses to a focused demo flow.
-- A **"Next Feature →"** button cycles through the demo script in order: Demo Mode → AI Explanation → Analytics → Export → Timeline.

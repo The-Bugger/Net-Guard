@@ -21,8 +21,8 @@ Requires Python 3.11+, a virtual environment, and any OS (Linux preferred for
 full blocking capability).
 
 ```bash
-git clone https://github.com/Midvaley/midvalleyproject.git
-cd midvalleyproject
+git clone https://github.com/The-Bugger/Net-Guard.git
+cd Net-Guard
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -59,7 +59,7 @@ sudo iptables -L INPUT -n
 sudo useradd -r -s /bin/false -d /opt/netguard netguard
 
 # Clone to /opt/netguard
-sudo git clone https://github.com/Midvaley/midvalleyproject.git /opt/netguard
+sudo git clone https://github.com/The-Bugger/Net-Guard.git /opt/netguard
 cd /opt/netguard
 
 # Create virtual environment

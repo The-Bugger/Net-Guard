@@ -29,8 +29,8 @@ and submit a pull request.
 
 ```bash
 # 1. Fork and clone
-git clone https://github.com/<your-fork>/midvalleyproject.git
-cd midvalleyproject
+git clone https://github.com/<your-fork>/Net-Guard.git
+cd Net-Guard
 
 # 2. Create a virtual environment
 python -m venv .venv

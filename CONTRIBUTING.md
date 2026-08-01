@@ -195,7 +195,9 @@ def test_syn_severity_critical(count):
 3. **Run the full test suite** locally and confirm it passes.
 4. **Update documentation**: if you change a public API, update the relevant
    docstring, README section, and docs/ file.
-5. **Open the PR** against `main`. Fill in the PR template:
+5. **Open the PR** against `main` at
+   [github.com/The-Bugger/Net-Guard](https://github.com/The-Bugger/Net-Guard).
+   Fill in the PR template:
    - Summary of what changed and why
    - What was tested
    - Any known limitations or follow-up work

@@ -4,6 +4,7 @@
 
 | Version | Security fixes |
 |---------|----------------|
+| 1.1.x   | Yes            |
 | 1.0.x   | Yes            |
 
 ---
@@ -12,7 +13,9 @@
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
-Email the maintainers at the address in the repository profile with:
+Open a **private security advisory** at
+[github.com/The-Bugger/Net-Guard/security/advisories](https://github.com/The-Bugger/Net-Guard/security/advisories),
+or email the maintainers via the contact on the [The Bugger](https://github.com/The-Bugger) profile with:
 - A description of the vulnerability and the affected component
 - Steps to reproduce (proof-of-concept if possible)
 - Potential impact in your assessment

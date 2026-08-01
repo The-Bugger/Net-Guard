@@ -5,14 +5,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Flask](https://img.shields.io/badge/flask-3.0.3-lightgrey.svg)](https://flask.palletsprojects.com)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-orange.svg)](https://sqlalchemy.org)
+[![GitHub](https://img.shields.io/badge/github-The--Bugger-181717.svg?logo=github)](https://github.com/The-Bugger)
 
 NetGuard is a real-time, explainable Intrusion Detection and Prevention System (IDPS) that
 captures live network traffic, detects eight attack categories, generates plain-English
 explanations for every alert, and automatically blocks attackers via iptables — all visible
 through a live SOC-style dashboard.
 
-Built for the **MVIC Build Nepal Hackathon 2026**. Runs entirely offline on a single Linux
-machine. No cloud, no proprietary hardware, no agents.
+Built by **[The Bugger](https://github.com/The-Bugger)** for the MVIC Build Nepal Hackathon 2026.
+Runs entirely offline on a single Linux machine. No cloud, no proprietary hardware, no agents.
 
 ---
 
@@ -461,3 +462,133 @@ Full API documentation with request/response schemas: [`docs/API.md`](docs/API.m
 | `monitoring_status` | `{active: bool, interface: string}` | Monitoring started or stopped |
 
 ---
+
+## Detection Rules
+
+| Rule | Rule ID | Attack Type | Phase |
+|------|---------|-------------|-------|
+| `SynFloodRule` | `SYN_FLOOD_001` | TCP SYN Flood | Baseline |
+| `PortScanRule` | `PORT_SCAN_001` | Port Reconnaissance | Baseline |
+| `SqlInjectionRule` | `SQL_INJECT_001` | SQL Injection (HTTP) | Baseline |
+| `BruteForceRule` | `BRUTE_FORCE_001` | Brute Force Login | Baseline |
+| `ArpSpoofRule` | `ARP_SPOOF_001` | ARP Spoofing / MitM | Baseline |
+| `IcmpFloodRule` | `ICMP_FLOOD_001` | ICMP Flood / Smurf Attack | v1.1 |
+| `SlowHttpRule` | `SLOW_HTTP_001` | Slow HTTP / Slowloris | v1.1 |
+| `DnsTunnelRule` | `DNS_TUNNEL_001` | DNS Tunneling (heuristic) | v1.1 |
+
+All rules implement the `BaseRule` interface: `initialize / process_packet / evaluate / explain / cleanup`.
+Each fires through a 10-second per-`(source_ip, rule_name)` cooldown to prevent alert storms.
+Faulty rules are disabled in-session (not globally) on uncaught exception and can be restored via `reload_rules()`.
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for full pipeline details.
+
+---
+
+## Service Layer
+
+| Service | Module | Responsibility |
+|---------|--------|----------------|
+| `DetectionEngine` | `detection_service.py` | Multi-rule pipeline; cooldown; per-rule exception isolation |
+| `ExplainabilityEngine` | `explain_service.py` | `ThreatEvent → Explanation`; attack-type templates; <50 ms |
+| `AIExplainService` | `ai_explain_service.py` | Gemini/OpenAI/stub enrichment with MITRE ATT&CK context |
+| `PreventionEngine` | `prevention_service.py` | iptables block/unblock; private-IP guard; privilege check |
+| `ExpiryThread` | `expiry_service.py` | Auto-removes expired blocks every 5 s |
+| `WhitelistManager` | `whitelist_service.py` | O(1) in-memory set backed by SQLite; thread-safe RLock |
+| `LoggingEngine` | `log_service.py` | Async log thread; three rotating files; sensitive key redaction |
+| `ConfigurationManager` | `config_service.py` | YAML config with built-in defaults; range validation; thread-safe |
+| `MonitorService` | `monitor_service.py` | Interface validation via psutil; start/stop coordination |
+| `StatsService` | `stats_service.py` | Rolling PPS counter; dashboard stats aggregation; health score |
+| `LanScanService` | `lan_scan_service.py` | ARP-based LAN device discovery with cache |
+| `SecurityAdvisor` | `security_advisor.py` | Contextual advice based on health score and attack types |
+
+---
+
+## Database Schema
+
+Six SQLAlchemy ORM tables in `database/schema.py`:
+
+| Table | Purpose |
+|-------|---------|
+| `events` | Every detected threat event with evidence, explanation, and recommendation |
+| `blocked_ips` | Active and historical firewall blocks with expiration timestamps |
+| `whitelist` | Trusted IPs that bypass automatic blocking |
+| `detection_rules` | Configurable rules seeded with thresholds and enabled status |
+| `settings` | Key-value configuration store (mirrors `config.yaml`) |
+| `system_logs` | Operational log entries for the dashboard log viewer |
+
+See [`docs/DATABASE.md`](docs/DATABASE.md) for full column-level documentation.
+
+---
+
+## Testing
+
+```bash
+# Run all 678 tests with coverage
+pytest --cov=backend --cov=detection --cov=database --cov-report=term-missing
+
+# Unit tests only (fast, no network)
+pytest tests/ -k "not integration"
+
+# Property-based tests only
+pytest tests/ -k "hypothesis"
+```
+
+The suite includes unit, property-based (Hypothesis), and full API integration tests.
+All route blueprints are covered with mocked services.
+
+---
+
+## Demo Attack Scripts
+
+Run from a second terminal while NetGuard is active:
+
+```bash
+sudo bash demo/attack_syn.sh       # SYN flood  (requires hping3)
+bash demo/attack_scan.sh           # Port scan  (requires nmap)
+bash demo/attack_sql.sh            # SQL inject (requires curl)
+bash demo/attack_bruteforce.sh     # Brute force (requires hydra)
+sudo bash demo/attack_arp.sh       # ARP spoof  (requires dsniff)
+```
+
+---
+
+## Technology Stack
+
+| Component | Technology | Version |
+|-----------|------------|---------|
+| REST API | Flask | 3.0.3 |
+| WebSocket | Flask-SocketIO + eventlet | 5.3.6 + 0.36.1 |
+| Packet capture | Scapy | 2.5.0 |
+| Database ORM | SQLAlchemy | 2.0.51 |
+| Database | SQLite | (stdlib) |
+| Config | PyYAML | 6.0.2 |
+| Environment | python-dotenv | 1.0.1 |
+| System info | psutil | 6.1.0 |
+| Testing | pytest + Hypothesis | 8.3.3 + 6.115.6 |
+| Frontend | Vanilla JS ES6 + Chart.js + Socket.IO client | — |
+
+---
+
+## Judges Mode
+
+Add **`?judges=1`** to any URL to activate presentation mode:
+
+- A purple/cyan banner appears at the top of the dashboard.
+- Demo mode auto-starts, generating live synthetic attack traffic.
+- A **"Next Feature →"** button cycles through the demo script: Demo Mode → AI Explanation → Analytics → Export → Timeline.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE)
+
+© 2026 [The Bugger](https://github.com/The-Bugger)
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, coding standards, and PR process.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for the threat model and vulnerability reporting policy.

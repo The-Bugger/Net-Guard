@@ -44,8 +44,10 @@ an individual is officially representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the project maintainers at the repository's issue tracker. All
-complaints will be reviewed and investigated promptly and fairly.
+reported by opening an issue at
+[github.com/The-Bugger/Net-Guard/issues](https://github.com/The-Bugger/Net-Guard/issues)
+or contacting the project maintainers via the [The Bugger](https://github.com/The-Bugger) GitHub profile.
+All complaints will be reviewed and investigated promptly and fairly.
 
 ## Attribution
 

@@ -55,6 +55,7 @@ def make_test_app() -> tuple:
     mocks["whitelist_manager"].is_whitelisted.return_value = False
     mocks["event_repo"].get_all.return_value = []
     mocks["event_repo"].get_by_id.return_value = None
+    mocks["event_repo"].count_filtered.return_value = 0
     mocks["block_repo"].get_all_active.return_value = []
     mocks["block_repo"].get_active.return_value = None
     mocks["block_repo"].is_blocked.return_value = False
@@ -64,6 +65,13 @@ def make_test_app() -> tuple:
     mocks["config"].validate_settings.return_value = []
     mocks["config"].update.return_value = None
     mocks["config"].get.return_value = None
+    mocks["stats_service"].get_health_score.return_value = 100
+    mocks["stats_service"].get_dashboard_data.return_value = {
+        "total_events": 0, "alerts_today": 0, "active_blocks": 0,
+        "packets_processed": 0, "packets_per_second": 0,
+        "blocked_ips_total": 0, "detection_accuracy": 0, "health_score": 100,
+    }
+    mocks["stats_service"].invalidate_cache.return_value = None
 
     # Register all mocks
     for name, mock in mocks.items():

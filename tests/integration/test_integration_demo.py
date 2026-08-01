@@ -32,7 +32,7 @@ pytestmark = [
         reason="Demo integration tests require Linux",
     ),
     pytest.mark.skipif(
-        __import__("os").geteuid() != 0,
+        not hasattr(__import__("os"), "geteuid") or __import__("os").geteuid() != 0,
         reason="Demo integration tests require root privileges",
     ),
 ]
@@ -42,8 +42,8 @@ DETECTION_TIMEOUT = 15  # seconds to wait for a ThreatEvent
 
 def _tool_available(name: str) -> bool:
     """Check if an external tool is available in PATH."""
-    result = subprocess.run(["which", name], capture_output=True)
-    return result.returncode == 0
+    import shutil
+    return shutil.which(name) is not None
 
 
 def _make_detection_engine(pq: queue.Queue, collected: list):

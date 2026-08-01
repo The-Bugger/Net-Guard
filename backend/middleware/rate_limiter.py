@@ -17,7 +17,7 @@ import time
 import threading
 from collections import defaultdict, deque
 
-from flask import request, jsonify
+from flask import Response, request, jsonify
 
 logger = logging.getLogger("netguard.rate_limiter")
 
@@ -30,10 +30,11 @@ class RateLimiter:
     _EXEMPT = {"/api/v1/health", "/api/v1/dashboard/live", "/api/v1/status"}
 
     def __init__(self) -> None:
+        """Initialize the sliding-window rate limiter with an empty per-IP request store."""
         self._windows: dict[str, deque] = defaultdict(deque)
         self._lock = threading.Lock()
 
-    def check(self):
+    def check(self) -> "Response | None":
         """
         Flask before_request handler.
 

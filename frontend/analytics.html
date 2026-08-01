@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <label for="period-select" style="font-size:13px;color:var(--text-muted)">Period:</label>
+    <select id="period-select" class="input" style="width:130px">
+      <option value="hourly">Hourly</option>
+      <option value="daily" selected>Daily</option>
+      <option value="weekly">Weekly</option>
+    </select>
+  </div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/threats.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Threats
+    </a>
+    <a href="/blocked.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Blocked IPs
+    </a>
+    <a href="/whitelist.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Whitelist
+    </a>
+    <a href="/logs.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </a>
+    <a href="/analytics" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </a>
+    <a href="/settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Page Title -->
+    <div style="margin-bottom:20px">
+      <h1 style="font-size:22px;font-weight:700;color:var(--text-primary)">Analytics</h1>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:4px">Attack trends and traffic analysis</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" style="margin-bottom:20px">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Events</div>
+        <div class="kpi-value" id="kpi-total" style="color:var(--accent)">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Blocked</div>
+        <div class="kpi-value" id="kpi-blocked" style="color:var(--danger)">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Detected</div>
+        <div class="kpi-value" id="kpi-detected" style="color:var(--warning)">—</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-grid" style="margin-bottom:20px">
+      <!-- Bar chart: events per bucket -->
+      <div class="card card-glass">
+        <div class="card-header"><span class="card-title">Events Over Time</span></div>
+        <div class="chart-container">
+          <canvas id="bar-chart" aria-label="Events over time bar chart" role="img"></canvas>
+        </div>
+      </div>
+
+      <!-- Doughnut chart: severity distribution -->
+      <div class="card card-glass">
+        <div class="card-header"><span class="card-title">Severity Distribution</span></div>
+        <div class="chart-container" style="display:flex;align-items:center;justify-content:center">
+          <canvas id="doughnut-chart" aria-label="Severity distribution doughnut chart" role="img"
+                  style="max-height:240px;max-width:240px"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Second Charts Row: Attack Map + Radar Chart -->
+    <div class="charts-grid" style="margin-bottom:20px">
+
+      <!-- World Attack Map -->
+      <div class="card card-glass">
+        <div class="card-header"><span class="card-title">World Attack Origins</span></div>
+        <!-- ponytail: static equirectangular SVG, JS-positioned circles; no Leaflet/Mapbox;
+             ceiling: not geo-accurate, upgrade path is Leaflet + IP geolocation API -->
+        <div id="attack-map" style="position:relative;width:100%;background:rgba(0,0,0,0.2);border-radius:6px;overflow:hidden">
+          <svg id="attack-map-svg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg"
+               aria-label="World attack origins map" role="img"
+               style="width:100%;display:block">
+            <!-- Simplified continent outlines — basic polygon approximations -->
+            <!-- North America -->
+            <polygon points="60,60 200,55 215,80 220,130 200,160 180,190 160,200 130,195 110,180 80,170 55,140 45,110 50,80"
+                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
+            <!-- South America -->
+            <polygon points="150,210 195,205 210,220 215,260 205,310 185,340 165,345 150,330 140,300 138,260 142,230"
+                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
+            <!-- Europe -->
+            <polygon points="350,45 410,40 430,55 425,80 410,95 390,100 370,95 355,80 348,65"
+                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
+            <!-- Africa -->
+            <polygon points="355,110 415,105 435,120 440,160 430,210 415,245 395,260 375,255 360,235 350,195 348,155 350,130"
+                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
+            <!-- Russia / Northern Asia -->
+            <polygon points="430,30 620,25 660,45 650,80 610,90 560,85 500,90 460,80 435,65 428,45"
+                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
+            <!-- Asia (excluding Russia) -->
+            <polygon points="460,90 620,85 665,100 680,130 670,170 645,200 610,210 570,205 530,195 500,175 475,155 460,130 455,105"
+                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
+            <!-- Australia / Oceania -->
+            <polygon points="620,230 690,225 720,240 730,270 715,295 690,300 660,295 635,275 620,255 615,240"
+                     fill="#1E3A5F" stroke="#334155" stroke-width="1"/>
+            <!-- Dot overlay group — JS populates these -->
+            <g id="map-dots"></g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Threat Radar Chart -->
+      <div class="card card-glass">
+        <div class="card-header"><span class="card-title">Threat Type Radar</span></div>
+        <div class="chart-container" style="display:flex;align-items:center;justify-content:center">
+          <canvas id="threat-radar" aria-label="Threat type radar chart" role="img"
+                  style="max-height:300px;max-width:300px"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Top Attacker IPs -->
+    <div class="card card-glass">
+      <div class="card-header"><span class="card-title">Top Attacker IPs</span></div>
+      <div style="overflow-x:auto">
+        <table class="data-table">
+          <thead>
+            <tr><th>#</th><th>Source IP</th><th>Event Count</th></tr>
+          </thead>
+          <tbody id="top-ips-tbody">
+            <tr><td colspan="3" class="empty-state"><p>Loading…</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" style="
+  position:fixed;bottom:24px;right:24px;
+  display:flex;flex-direction:column;gap:8px;
+  z-index:300;pointer-events:none
+"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/analytics.js"></script>
+</body>
+</html>

@@ -61,8 +61,12 @@
 </div>
 <div id="notifications"></div>
 
+<!-- Toast container -->
+<div id="toast-container"></div>
+
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
 <script src="/js/socket.js"></script>
 
 <script>
@@ -75,6 +79,14 @@ document.addEventListener('DOMContentLoaded', () => {
   SocketManager.on('new_threat', () => loadThreats());
   SocketManager.connect();
 });
+
+function showSkeletons() {
+  const tbody = document.getElementById('threats-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = Array.from({ length: 8 }, () =>
+    `<tr><td colspan="7" style="padding:4px 0"><div class="skeleton-row"></div></td></tr>`
+  ).join('');
+}
 
 async function loadThreats() {
   const params = {};
@@ -89,6 +101,8 @@ async function loadThreats() {
   params.limit  = PAGE_SIZE;
   params.offset = currentOffset;
 
+  showSkeletons();
+
   try {
     const data = await NetGuardAPI.getDetections(params);
     renderTable(data.events || []);
@@ -100,7 +114,13 @@ async function loadThreats() {
 
 function renderTable(events) {
   const tbody = document.getElementById('threats-tbody');
-  if (!events.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><p>No threats found.</p></td></tr>'; return; }
+  if (!events.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <p>No detections found</p>
+    </td></tr>`;
+    return;
+  }
   tbody.innerHTML = events.map(e => `
     <tr>
       <td>${new Date(e.timestamp).toLocaleString()}</td>

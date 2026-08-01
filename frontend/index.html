@@ -7,6 +7,31 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/dark-theme.css">
+  <style>
+    /* Task 39 — onboarding tour */
+    .tour-highlight {
+      position: relative;
+      z-index: 600;
+      box-shadow: 0 0 0 4px var(--accent), 0 0 0 9999px rgba(0,0,0,0.55);
+      border-radius: var(--radius);
+      pointer-events: none;
+    }
+    .tour-tooltip {
+      position: fixed;
+      z-index: 601;
+      background: var(--bg-card);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      max-width: 300px;
+      box-shadow: 0 8px 32px rgba(0,229,255,0.2);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .tour-tooltip strong { color: var(--accent); display: block; margin-bottom: 6px; font-size: 14px; }
+    .tour-tooltip-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .tour-step-count { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  </style>
 </head>
 <body>
 
@@ -78,6 +103,44 @@
       <button class="btn btn-ghost" onclick="loadInterfaces()">🔄 Refresh Interfaces</button>
     </div>
 
+    <!-- Quick Actions Bar (Task 40) -->
+    <div class="quick-actions" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)">
+      <button class="btn btn-primary btn-sm" onclick="startDemo()" title="Start Demo Mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Start Demo
+      </button>
+      <button class="btn btn-danger btn-sm" onclick="stopDemo()" title="Stop Demo Mode">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        Stop Demo
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="exportJSON()" title="Export to JSON">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export JSON
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="viewAnalytics()" title="View Analytics Page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        View Analytics
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAIAssistant()" title="Open AI Assistant">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        AI Assistant
+      </button>
+    </div>
+
+    <!-- Live Status Badges (Req 3.8) -->
+    <div id="status-badges-bar" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:center">
+      <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">System Status</span>
+      <div id="badge-monitoring" class="status-badge inactive">
+        <span class="status-dot"></span> Monitoring Stopped
+      </div>
+      <div id="badge-demo" class="status-badge inactive">
+        <span class="status-dot"></span> Demo Stopped
+      </div>
+      <div id="badge-ai" class="status-badge inactive">
+        <span class="status-dot"></span> AI Unavailable
+      </div>
+    </div>
+
     <!-- KPI Cards -->
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -96,6 +159,49 @@
         <div class="kpi-label">Packets / sec</div>
         <div class="kpi-value" id="kpi-pps" style="color:var(--info)">0.0</div>
       </div>
+      <!-- New KPI cards (Req 3.1) -->
+      <div class="kpi-card">
+        <div class="kpi-label">Blocked IPs Total</div>
+        <div class="kpi-value" id="kpi-blocked-total" style="color:var(--danger)">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Detection Accuracy</div>
+        <div class="kpi-value" id="kpi-accuracy" style="color:var(--accent)">0%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Security Health Score</div>
+        <div class="kpi-value" id="kpi-health">—</div>
+      </div>
+    </div>
+
+    <!-- Security Gauges (Req 3.6) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+      <!-- Severity Gauge — canvas arc, green→yellow→red by health_score -->
+      <div class="card card-glass" style="display:flex;flex-direction:column;align-items:center;padding:20px">
+        <div class="card-title" style="margin-bottom:12px">Security Health Score</div>
+        <canvas id="severity-gauge" width="200" height="120"
+                style="max-width:200px"
+                aria-label="Security health score gauge" role="img"></canvas>
+        <div id="gauge-label" style="font-size:28px;font-weight:700;margin-top:6px;letter-spacing:-.5px">—</div>
+        <div id="gauge-sublabel" style="font-size:12px;color:var(--text-muted);margin-top:2px">Health Score</div>
+      </div>
+
+      <!-- Detection Accuracy Ring — SVG stroke-dashoffset -->
+      <div class="card card-glass" style="display:flex;flex-direction:column;align-items:center;padding:20px">
+        <div class="card-title" style="margin-bottom:12px">Detection Accuracy</div>
+        <div class="progress-ring-wrap" aria-label="Detection accuracy ring" role="img">
+          <svg class="progress-ring" viewBox="0 0 120 120" width="120" height="120">
+            <circle class="progress-ring-track" cx="60" cy="60" r="50"/>
+            <circle id="accuracy-ring" class="progress-ring-fill" cx="60" cy="60" r="50"/>
+          </svg>
+          <div class="progress-ring-text">
+            <span id="ring-value">0%</span>
+            <small>Accuracy</small>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- Charts -->
@@ -121,7 +227,7 @@
           <thead>
             <tr>
               <th>Time</th><th>Attack</th><th>Source IP</th>
-              <th>Severity</th><th>Confidence</th><th>Status</th>
+              <th>Severity</th><th>Confidence</th><th>Status</th><th></th>
             </tr>
           </thead>
           <tbody id="threat-tbody">
@@ -153,8 +259,110 @@
       </div>
     </div>
 
+    <!-- Network Topology (Task 32) -->
+    <div class="card card-glass" style="margin-bottom:20px">
+      <div class="card-header"><span class="card-title">Network Topology</span><small style="color:var(--text-muted)">Live attack paths</small></div>
+      <canvas id="network-topology" style="width:100%;height:260px;display:block"
+              aria-label="Network topology diagram" role="img"></canvas>
+    </div>
+
+    <!-- System Health + Activity Feed (Req 3.3, 3.4) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+
+      <!-- System Health Panel (Req 3.4) -->
+      <div class="card card-glass">
+        <div class="card-header">
+          <span class="card-title">System Health</span>
+          <span id="health-refresh-ts" style="font-size:11px;color:var(--text-muted)"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">CPU Usage</div>
+            <div class="kpi-value" id="sys-cpu" style="font-size:22px;color:var(--accent)">—</div>
+          </div>
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">Memory Usage</div>
+            <div class="kpi-value" id="sys-mem" style="font-size:22px;color:var(--warning)">—</div>
+          </div>
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">Uptime</div>
+            <div class="kpi-value" id="sys-uptime" style="font-size:18px">—</div>
+          </div>
+          <div class="kpi-card" style="padding:14px">
+            <div class="kpi-label">Monitoring</div>
+            <div class="kpi-value" id="sys-monitoring" style="font-size:15px">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Feed (Req 3.3) -->
+      <div class="card card-glass">
+        <div class="card-header">
+          <span class="card-title">Activity Feed</span>
+          <span style="font-size:11px;color:var(--text-muted)">Last 10 events</span>
+        </div>
+        <div id="activity-feed" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto">
+          <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0">Waiting for events…</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Attack Simulator (Req 7.3, 7.4) -->
+    <div class="card card-glass" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title">Attack Simulator</span>
+        <span style="font-size:12px;color:var(--text-muted)">Trigger individual synthetic attacks on demand</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <button class="btn btn-ghost" onclick="triggerAttack('SQL Injection')">💉 SQL Injection</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('Brute Force')">🔑 Brute Force</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('Port Scan')">🔍 Port Scan</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('DDoS/SYN Flood')">🌊 DDoS/SYN Flood</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('XSS')">📜 XSS</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('SSH Login')">🔓 SSH Login</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('Suspicious DNS')">🌐 Suspicious DNS</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('Malware Download')">🦠 Malware Download</button>
+        <button class="btn btn-ghost" onclick="triggerAttack('Privilege Escalation')">⬆ Privilege Escalation</button>
+      </div>
+    </div>
+
+    <!-- Recent Incidents Widget (Task 40) -->
+    <div class="card card-glass" id="recent-incidents-widget" style="margin-bottom:20px">
+      <div class="card-header">
+        <span class="card-title">Recent Incidents</span>
+        <span style="font-size:11px;color:var(--text-muted)">Auto-refreshes every 30s</span>
+      </div>
+      <div id="recent-incidents-list">
+        <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">Loading…</p>
+      </div>
+    </div>
+
   </main>
 </div>
+
+<!-- Judges / Presentation Mode (Req 13) -->
+<div id="judges-banner" style="
+  display:none;position:fixed;top:0;left:0;right:0;
+  background:linear-gradient(90deg,#7C3AED,#00E5FF);
+  color:#fff;font-weight:700;font-size:14px;text-align:center;
+  padding:8px 16px;z-index:1000;letter-spacing:.04em
+">🏆 JUDGES MODE — MVIC Build Nepal Hackathon 2026</div>
+
+<button id="next-feature-btn" style="
+  display:none;position:fixed;bottom:24px;left:24px;
+  background:linear-gradient(135deg,#7C3AED,#00E5FF);
+  color:#fff;border:none;border-radius:var(--radius);
+  padding:12px 20px;font-size:14px;font-weight:700;
+  cursor:pointer;z-index:1000;box-shadow:0 4px 16px rgba(0,229,255,0.3)
+" onclick="judgesNextFeature()">Next Feature →</button>
+
+<!-- Toast container (Req 7.3, 7.4) -->
+<div id="toast-container" style="
+  position:fixed;bottom:24px;right:24px;
+  display:flex;flex-direction:column;gap:8px;
+  z-index:300;pointer-events:none
+"></div>
 
 <!-- Reconnecting banner -->
 <div id="reconnecting-banner">⚠ Reconnecting to server…</div>
@@ -162,13 +370,211 @@
 <!-- Notifications -->
 <div id="notifications"></div>
 
+<!-- Keyboard Shortcuts Modal (Task 29) -->
+<div id="shortcuts-modal" style="
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+  z-index:500;align-items:center;justify-content:center
+" onclick="if(event.target===this)this.style.display='none'">
+  <div class="card card-glass" style="min-width:340px;max-width:480px;width:90%;padding:28px;position:relative">
+    <button onclick="document.getElementById('shortcuts-modal').style.display='none'"
+            style="position:absolute;top:14px;right:14px;background:none;border:none;
+                   color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1"
+            aria-label="Close shortcuts modal">×</button>
+    <div class="card-title" style="margin-bottom:16px;font-size:16px">⌨ Keyboard Shortcuts</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">Shortcut</th>
+          <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">D</kbd></td>
+          <td style="padding:8px">Focus detections search</td>
+        </tr>
+        <tr>
+          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Ctrl+/</kbd></td>
+          <td style="padding:8px">Toggle this help modal</td>
+        </tr>
+        <tr>
+          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Ctrl+Shift+P</kbd></td>
+          <td style="padding:8px">Toggle fullscreen</td>
+        </tr>
+        <tr>
+          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Esc</kbd></td>
+          <td style="padding:8px">Close this modal</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- AI Assistant Panel (Task 37) -->
+<div id="ai-assistant-panel" style="
+  position:fixed;bottom:0;right:0;width:360px;max-width:100vw;
+  background:var(--bg-card);border-left:1px solid var(--border);border-top:1px solid var(--border);
+  border-radius:var(--radius) 0 0 0;box-shadow:-4px -4px 24px rgba(0,0,0,0.4);
+  z-index:400;display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .3s ease
+">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+    <span style="font-weight:600;font-size:14px">💬 AI Security Assistant</span>
+    <button onclick="toggleAIAssistant()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;line-height:1" aria-label="Close AI assistant">×</button>
+  </div>
+  <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;max-height:260px;min-height:80px">
+    <p style="color:var(--text-muted);font-size:13px;text-align:center;margin:0">Ask me anything about current threats…</p>
+  </div>
+  <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)">
+    <input id="ai-question-input" class="input" placeholder="Ask a security question…" style="flex:1;font-size:13px"
+           onkeydown="if(event.key==='Enter')submitAIQuestion()">
+    <button class="btn btn-primary btn-sm" onclick="submitAIQuestion()">Ask</button>
+  </div>
+</div>
+
+<!-- AI Assistant FAB (Task 37) -->
+<button id="ai-fab" onclick="toggleAIAssistant()" aria-label="Open AI assistant"
+  style="position:fixed;bottom:80px;right:24px;width:52px;height:52px;border-radius:50%;
+         background:linear-gradient(135deg,var(--accent),#7C3AED);border:none;
+         color:#000;font-size:22px;cursor:pointer;z-index:401;
+         box-shadow:0 4px 16px rgba(0,229,255,0.4);display:flex;align-items:center;justify-content:center">
+  💬
+</button>
+
 <!-- Scripts -->
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
 <script src="/js/socket.js"></script>
 <script src="/js/charts.js"></script>
+<script src="/js/topology.js"></script>
 <script src="/js/dashboard.js"></script>
 <script>loadInterfaces();</script>
-</body>
+
+<!-- Judges / Presentation Mode — Req 13 -->
+<script>
+(function () {
+  const p = new URLSearchParams(location.search);
+  if (!p.has('judges') && !p.has('presentation')) return;
+
+  // Show banner (push body down so header isn't obscured)
+  const banner = document.getElementById('judges-banner');
+  banner.style.display = 'block';
+  document.body.style.paddingTop = '36px';
+
+  // Hide nav links not relevant to demo flow
+  const keepHrefs = new Set(['/', '/analytics', '/timeline']);
+  document.querySelectorAll('.sidebar .nav-item').forEach(a => {
+    if (!keepHrefs.has(new URL(a.href, location.origin).pathname)) {
+      a.style.display = 'none';
+    }
+  });
+
+  // Auto-start demo (ignore 409 — already running is fine)
+  fetch('/api/v1/demo/start', { method: 'POST' }).catch(() => {});
+
+  // "Next Feature →" cycling button
+  // ponytail: simple index counter; no state persistence needed for a demo session
+  const DEMO_SCRIPT = [
+    { label: 'Demo Mode',      url: '/?judges=1' },
+    { label: 'AI Explanation', url: '/threats.html?judges=1' },
+    { label: 'Analytics',      url: '/analytics?judges=1' },
+    { label: 'Export',         url: '/analytics?judges=1&export=1' },
+    { label: 'Timeline',       url: '/timeline?judges=1' },
+  ];
+  let demoIdx = 0;
+  const btn = document.getElementById('next-feature-btn');
+  btn.style.display = 'block';
+
+  window.judgesNextFeature = function () {
+    demoIdx = (demoIdx + 1) % DEMO_SCRIPT.length;
+    const next = DEMO_SCRIPT[demoIdx];
+    btn.textContent = next.label + ' →';
+    location.href = next.url;
+  };
+  btn.textContent = (DEMO_SCRIPT[1].label) + ' →';  // prime label for first click
+}());
+</script>
+
+<!-- Task 39 — First-time onboarding tour (vanilla JS, ~80 lines, no Shepherd/Intro.js) -->
+<script>
+(function () {
+  if (localStorage.getItem('ng_toured')) return;
+
+  const STEPS = [
+    { sel: '.kpi-grid',         title: 'Live Metrics',       text: 'These KPI cards update in real time with packet counts, alerts, blocked IPs, and your overall security health score.' },
+    { sel: '#activity-feed',    title: 'Activity Feed',      text: 'Every new threat, block, and unblock event appears here instantly via SocketIO — keep an eye on the last 10 events.' },
+    { sel: '.card-glass:has(button[onclick*="triggerAttack"])', title: 'Attack Simulator', text: 'Trigger any of 9 synthetic attack types on demand to test your detection rules without real risk.' },
+    { sel: '.quick-actions',    title: 'Demo Mode',          text: 'Use the Quick Actions bar to Start or Stop the continuous demo, export data, and open the AI assistant in one click.' },
+    { sel: 'a[href="/analytics"]', title: 'Analytics',       text: 'Head to the Analytics page for historical charts, severity breakdowns, top attackers, and a threat radar — all in one view.' },
+  ];
+
+  // Fallback selector for step 2 (has() not supported in all browsers)
+  function resolveEl(sel) {
+    try {
+      const el = document.querySelector(sel);
+      if (el) return el;
+    } catch (_) {}
+    // fallback for Attack Simulator step
+    if (sel.includes('triggerAttack')) return document.querySelector('.card-glass canvas') || document.querySelector('.card-glass');
+    return null;
+  }
+
+  let current = 0;
+  let highlightEl = null;
+  const tooltip = document.createElement('div');
+  tooltip.className = 'tour-tooltip';
+  document.body.appendChild(tooltip);
+
+  function finish() {
+    localStorage.setItem('ng_toured', '1');
+    if (highlightEl) highlightEl.classList.remove('tour-highlight');
+    tooltip.remove();
+  }
+
+  function show(idx) {
+    if (highlightEl) highlightEl.classList.remove('tour-highlight');
+    const step = STEPS[idx];
+    const target = resolveEl(step.sel);
+
+    tooltip.innerHTML = `
+      <div class="tour-step-count">Step ${idx + 1} of ${STEPS.length}</div>
+      <strong>${step.title}</strong>
+      <p style="margin:0">${step.text}</p>
+      <div class="tour-tooltip-actions">
+        <button class="btn btn-primary btn-sm" id="tour-next">${idx === STEPS.length - 1 ? 'Finish' : 'Next →'}</button>
+        <button class="btn btn-ghost btn-sm" id="tour-skip">Skip tour</button>
+      </div>`;
+
+    document.getElementById('tour-next').onclick = () => {
+      if (idx === STEPS.length - 1) { finish(); return; }
+      current++; show(current);
+    };
+    document.getElementById('tour-skip').onclick = finish;
+
+    // Position tooltip near target, fallback to centre
+    if (target) {
+      target.classList.add('tour-highlight');
+      highlightEl = target;
+      const r = target.getBoundingClientRect();
+      const tH = 180; // approx tooltip height
+      // Try to place below; if not enough room, place above
+      const top = (r.bottom + 12 + tH < window.innerHeight) ? r.bottom + 12 : Math.max(8, r.top - tH - 12);
+      const left = Math.min(Math.max(8, r.left), window.innerWidth - 316);
+      tooltip.style.top = top + 'px';
+      tooltip.style.left = left + 'px';
+    } else {
+      // Centre fallback
+      tooltip.style.top = '50%';
+      tooltip.style.left = '50%';
+      tooltip.style.transform = 'translate(-50%, -50%)';
+    }
+  }
+
+  // Start after a short delay so the page finishes rendering
+  setTimeout(() => show(0), 800);
+}());
+</script>
 </html>

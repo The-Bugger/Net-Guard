@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+  <style>
+    /* ── Architecture diagram ──────────────────────────────────────────── */
+    .arch-diagram-wrap {
+      background: rgba(15,23,42,0.7);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 16px;
+      margin-bottom: 28px;
+      overflow-x: auto;
+    }
+    .arch-diagram-wrap svg { display: block; margin: 0 auto; max-width: 100%; }
+
+    /* ── Component cards ───────────────────────────────────────────────── */
+    .layer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .layer-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      transition: border-color var(--transition);
+    }
+    .layer-card:hover { border-color: var(--accent); }
+    .layer-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .layer-icon {
+      width: 40px; height: 40px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .layer-icon svg { width: 22px; height: 22px; }
+    .layer-card h3 { font-size: 15px; font-weight: 600; color: var(--text-primary); margin: 0; }
+    .layer-card p  { font-size: 13px; color: var(--text-muted); line-height: 1.65; margin: 0; }
+    .layer-tag {
+      display: inline-block; margin-top: 10px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+      padding: 2px 8px; border-radius: 4px;
+      background: rgba(0,229,255,0.1); color: var(--accent);
+      border: 1px solid rgba(0,229,255,0.25);
+    }
+
+    /* ── How It Works ──────────────────────────────────────────────────── */
+    .walkthrough { list-style: none; padding: 0; margin: 0; }
+    .walkthrough li {
+      display: flex;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .walkthrough li:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(0,229,255,0.12);
+      border: 1.5px solid var(--accent);
+      color: var(--accent);
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-body h4 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+    .step-body p  { font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.6; }
+
+    .section-title {
+      font-size: 17px; font-weight: 600; color: var(--text-primary);
+      margin: 0 0 16px;
+    }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="app-layout">
+  <nav class="sidebar">
+    <a href="/" class="nav-item">Dashboard</a>
+    <a href="/threats.html" class="nav-item">Threats</a>
+    <a href="/blocked.html" class="nav-item">Blocked IPs</a>
+    <a href="/whitelist.html" class="nav-item">Whitelist</a>
+    <a href="/logs.html" class="nav-item">Logs</a>
+    <a href="/rules.html" class="nav-item">Rules</a>
+    <a href="/settings.html" class="nav-item">Settings</a>
+    <a href="/about" class="nav-item">About</a>
+    <a href="/architecture" class="nav-item active">Architecture</a>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-title">System Architecture</div>
+
+    <!-- ── Inline SVG pipeline diagram ─────────────────────────────── -->
+    <div class="card arch-diagram-wrap">
+      <!--
+        Pipeline: CaptureEngine → DetectionEngine → ExplainabilityEngine
+                → PreventionEngine → Flask API → Frontend
+        Hand-crafted SVG — no CDN, no Mermaid.
+      -->
+      <svg viewBox="0 0 860 160" width="860" height="160" xmlns="http://www.w3.org/2000/svg"
+           aria-label="NetGuard system architecture pipeline diagram" role="img">
+        <defs>
+          <!-- Arrow marker -->
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#00E5FF" opacity="0.8"/>
+          </marker>
+          <!-- Box gradient -->
+          <linearGradient id="box-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#1E293B"/>
+            <stop offset="100%" stop-color="#0F172A"/>
+          </linearGradient>
+        </defs>
+
+        <!-- ── Boxes ── -->
+        <!-- Each box: x, y, 120w × 60h, rx8 -->
+        <!-- 1. CaptureEngine x=10 -->
+        <rect x="10"  y="50" width="120" height="60" rx="8" fill="url(#box-grad)" stroke="#334155" stroke-width="1.5"/>
+        <text x="70"  y="76" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Capture</text>
+        <text x="70"  y="91" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Engine</text>
+        <text x="70"  y="106" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9.5" fill="#94A3B8">Scapy / packets</text>
+
+        <!-- arrow 1→2 -->
+        <line x1="131" y1="80" x2="148" y2="80" stroke="#00E5FF" stroke-width="1.5" opacity="0.7" marker-end="url(#arr)"/>
+
+        <!-- 2. DetectionEngine x=150 -->
+        <rect x="150" y="50" width="120" height="60" rx="8" fill="url(#box-grad)" stroke="#334155" stroke-width="1.5"/>
+        <text x="210" y="76" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Detection</text>
+        <text x="210" y="91" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Engine</text>
+        <text x="210" y="106" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9.5" fill="#94A3B8">Rules / scoring</text>
+
+        <!-- arrow 2→3 -->
+        <line x1="271" y1="80" x2="288" y2="80" stroke="#00E5FF" stroke-width="1.5" opacity="0.7" marker-end="url(#arr)"/>
+
+        <!-- 3. ExplainabilityEngine x=290 -->
+        <rect x="290" y="50" width="140" height="60" rx="8" fill="url(#box-grad)" stroke="#334155" stroke-width="1.5"/>
+        <text x="360" y="73" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Explainability</text>
+        <text x="360" y="88" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Engine</text>
+        <text x="360" y="103" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9.5" fill="#94A3B8">AI / stub / LRU cache</text>
+
+        <!-- arrow 3→4 -->
+        <line x1="431" y1="80" x2="448" y2="80" stroke="#00E5FF" stroke-width="1.5" opacity="0.7" marker-end="url(#arr)"/>
+
+        <!-- 4. PreventionEngine x=450 -->
+        <rect x="450" y="50" width="120" height="60" rx="8" fill="url(#box-grad)" stroke="#334155" stroke-width="1.5"/>
+        <text x="510" y="76" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Prevention</text>
+        <text x="510" y="91" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Engine</text>
+        <text x="510" y="106" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9.5" fill="#94A3B8">iptables / blocks</text>
+
+        <!-- arrow 4→5 -->
+        <line x1="571" y1="80" x2="588" y2="80" stroke="#00E5FF" stroke-width="1.5" opacity="0.7" marker-end="url(#arr)"/>
+
+        <!-- 5. Flask API x=590 -->
+        <rect x="590" y="50" width="120" height="60" rx="8" fill="url(#box-grad)" stroke="#00E5FF" stroke-width="1.5" opacity="0.9"/>
+        <text x="650" y="76" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#00E5FF">Flask API</text>
+        <text x="650" y="91" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#00E5FF">+ SocketIO</text>
+        <text x="650" y="106" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9.5" fill="#94A3B8">REST / realtime</text>
+
+        <!-- arrow 5→6 -->
+        <line x1="711" y1="80" x2="728" y2="80" stroke="#00E5FF" stroke-width="1.5" opacity="0.7" marker-end="url(#arr)"/>
+
+        <!-- 6. Frontend x=730 -->
+        <rect x="730" y="50" width="120" height="60" rx="8" fill="url(#box-grad)" stroke="#334155" stroke-width="1.5"/>
+        <text x="790" y="76" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Frontend</text>
+        <text x="790" y="91" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="11" font-weight="600" fill="#F1F5F9">Dashboard</text>
+        <text x="790" y="106" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9.5" fill="#94A3B8">Vanilla JS / Chart.js</text>
+
+        <!-- SQLite label — below DetectionEngine with dashed drop line -->
+        <line x1="210" y1="110" x2="210" y2="138" stroke="#334155" stroke-width="1" stroke-dasharray="3,3"/>
+        <rect x="172" y="138" width="76" height="20" rx="4" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="210" y="152" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="9.5" fill="#94A3B8">SQLite / ORM</text>
+      </svg>
+    </div>
+
+    <!-- ── Component Descriptions ───────────────────────────────────── -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="section-title">Component Descriptions</div>
+      <div class="layer-grid">
+
+        <div class="layer-card">
+          <div class="layer-card-header">
+            <div class="layer-icon" style="background:rgba(0,229,255,0.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2">
+                <path d="M12 2a10 10 0 0 1 0 20A10 10 0 0 1 12 2"/>
+                <path d="M12 8v4l3 3"/>
+              </svg>
+            </div>
+            <h3>Capture Engine</h3>
+          </div>
+          <p>Lives on the wire via Scapy. Decodes TCP, UDP, ICMP, and ARP packets into a normalised internal format and hands them off to the Detection Engine. Runs in a daemon thread with clean start/stop semantics.</p>
+          <span class="layer-tag">backend/capture/</span>
+        </div>
+
+        <div class="layer-card">
+          <div class="layer-card-header">
+            <div class="layer-icon" style="background:rgba(250,204,21,0.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#FACC15" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+              </svg>
+            </div>
+            <h3>Detection Engine</h3>
+          </div>
+          <p>Feeds decoded packets through parallel detection rules — SYN Flood, Port Scan, SQL Injection, Brute Force, XSS, SSH Login, Suspicious DNS, Malware Download, and Privilege Escalation. Enforces per-IP cooldowns and sliding time windows. Persists <code>ThreatEvent</code> records to SQLite.</p>
+          <span class="layer-tag">backend/engines/detection/</span>
+        </div>
+
+        <div class="layer-card">
+          <div class="layer-card-header">
+            <div class="layer-icon" style="background:rgba(74,222,128,0.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <h3>Explainability Engine</h3>
+          </div>
+          <p>Converts every <code>ThreatEvent</code> into non-expert-friendly text: what happened, why it matters, and what to do. Supports stub (offline), Gemini, and OpenAI providers selectable via <code>AI_PROVIDER</code> env var. Includes a 100-entry LRU cache to avoid duplicate API calls.</p>
+          <span class="layer-tag">backend/services/ai_explain_service.py</span>
+        </div>
+
+        <div class="layer-card">
+          <div class="layer-card-header">
+            <div class="layer-icon" style="background:rgba(248,113,113,0.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <h3>Prevention Engine</h3>
+          </div>
+          <p>Applies iptables DROP rules for blocking malicious IPs. Checks the whitelist before any block. Auto-expires blocks after a configurable duration via a background expiry thread. Demo-mode TEST-NET IPs are whitelisted automatically and never blocked.</p>
+          <span class="layer-tag">backend/engines/prevention/</span>
+        </div>
+
+        <div class="layer-card">
+          <div class="layer-card-header">
+            <div class="layer-icon" style="background:rgba(0,229,255,0.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2">
+                <path d="M18 20V10M12 20V4M6 20v-6"/>
+              </svg>
+            </div>
+            <h3>Flask API</h3>
+          </div>
+          <p>20+ REST endpoints for monitoring, detections, blocks, whitelist, statistics, logs, settings, analytics, export (JSON/CSV/Markdown), and AI explanations. Flask-SocketIO pushes <code>new_threat</code>, <code>ip_blocked</code>, and <code>ip_unblocked</code> events to connected clients in real time. Rate-limited (120 req/60 s) with security headers on every response.</p>
+          <span class="layer-tag">backend/routes/ · backend/api/</span>
+        </div>
+
+        <div class="layer-card">
+          <div class="layer-card-header">
+            <div class="layer-icon" style="background:rgba(59,130,246,0.1)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M3 9h18M9 21V9"/>
+              </svg>
+            </div>
+            <h3>Frontend Dashboard</h3>
+          </div>
+          <p>Vanilla JS ES6 + Chart.js dashboard. Real-time KPI cards (threats, blocked IPs, health score, detection accuracy), live traffic graph, severity doughnut, attack simulator panel, activity feed, and management pages for blocks, whitelist, logs, rules, analytics, and settings. Zero build step — no bundler required.</p>
+          <span class="layer-tag">frontend/</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── How It Works ──────────────────────────────────────────────── -->
+    <div class="card">
+      <div class="section-title">How It Works</div>
+      <ol class="walkthrough">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Packet Capture</h4>
+            <p>The <strong>Capture Engine</strong> uses Scapy to listen promiscuously on the network interface. Each raw frame is parsed into a normalised dict containing source/destination IP and port, protocol, flags, and raw payload — then placed on an internal queue.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Threat Detection</h4>
+            <p>The <strong>Detection Engine</strong> dequeues packets and evaluates them against nine rule modules. Each rule maintains a per-IP sliding window or state table. When a threshold is crossed, the rule emits a <code>ThreatEvent</code> with an assigned severity (Low → Critical) and confidence score (0–100).</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <h4>AI-Powered Explanation</h4>
+            <p>Every <code>ThreatEvent</code> is passed to the <strong>Explainability Engine</strong>. In stub mode it generates a detailed Markdown report instantly from a template. When <code>AI_PROVIDER=gemini</code> or <code>openai</code> is set, the live model enriches the report with MITRE ATT&amp;CK mappings, CVE references, business impact analysis, and remediation steps. Responses are cached in a 100-entry LRU to avoid duplicate API calls.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <h4>Automated Prevention</h4>
+            <p>The <strong>Prevention Engine</strong> receives the enriched event and, for high/critical severity threats, inserts an iptables DROP rule for the source IP. Whitelisted IPs and demo TEST-NET addresses (RFC 5737) are never blocked. All blocks are timestamped and auto-expire after the configured duration.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <h4>Persistence &amp; Real-time Push</h4>
+            <p>The event is persisted to SQLite via SQLAlchemy. Simultaneously the <strong>Flask API</strong> emits a <code>new_threat</code> SocketIO event to all connected browser clients, giving sub-second dashboard updates without polling.</p>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <h4>Dashboard &amp; Analytics</h4>
+            <p>The <strong>Frontend</strong> receives the live push and updates KPI cards with an animated count-up, prepends an entry to the activity feed, and refreshes severity counts. Analysts can also drill into the full detection list with search and pagination, view per-event timelines (<code>/timeline?event_id=…</code>), export data as JSON/CSV/Markdown, and use the Attack Simulator to trigger synthetic threats for demo purposes.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div style="margin-top:20px; font-size:13px; color:var(--text-muted)">
+      <a href="/" style="color:var(--accent)">← Back to Dashboard</a>
+      &nbsp;·&nbsp;
+      <a href="/about" style="color:var(--text-muted)">About NetGuard</a>
+    </div>
+  </main>
+</div>
+
+<div id="toast-container"></div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  setInterval(() => { const el = document.getElementById('system-time'); if (el) el.textContent = new Date().toLocaleTimeString(); }, 1000);
+});
+</script>
+</body>
+</html>

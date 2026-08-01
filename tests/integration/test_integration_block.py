@@ -33,7 +33,7 @@ pytestmark = [
         reason="Block integration tests require Linux",
     ),
     pytest.mark.skipif(
-        __import__("os").geteuid() != 0,
+        not hasattr(__import__("os"), "geteuid") or __import__("os").geteuid() != 0,
         reason="Block integration tests require root privileges (iptables)",
     ),
 ]

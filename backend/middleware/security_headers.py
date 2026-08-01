@@ -13,14 +13,14 @@ from __future__ import annotations
 
 import logging
 
-from flask import request, jsonify
+from flask import Response, request, jsonify
 
 logger = logging.getLogger("netguard.middleware")
 
 _MAX_FIELD_LEN = 1024
 
 
-def add_security_headers(response):
+def add_security_headers(response: Response) -> Response:
     """Attach 4 security headers to every response. Req 11.1."""
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
@@ -29,7 +29,7 @@ def add_security_headers(response):
     return response
 
 
-def sanitise_and_validate():
+def sanitise_and_validate() -> "Response | None":
     """
     Strip whitespace from all string fields in JSON body; reject any field
     whose post-strip length exceeds 1024 chars with 422 INPUT_TOO_LONG. Req 11.2, 11.3.

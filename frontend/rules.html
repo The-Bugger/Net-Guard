@@ -45,10 +45,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const countMap={};rules.forEach(r=>{countMap[r.attack_type]=r.count;});
     tbody.innerHTML=RULES.map(r=>`
       <tr>
-        <td><code>${r.rule}</code></td>
-        <td>${r.attack}</td>
-        <td>${r.threshold}</td>
-        <td>${r.block}</td>
+        <td><code>${escHtml(r.rule)}</code></td>
+        <td>${escHtml(r.attack)}</td>
+        <td>${escHtml(r.threshold)}</td>
+        <td>${escHtml(r.block)}</td>
         <td>${countMap[r.attack]||0}</td>
         <td><span style="color:var(--success);font-weight:600">✓ Enabled</span></td>
       </tr>

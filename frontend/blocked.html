@@ -74,12 +74,12 @@ function renderBlocked(blocks) {
   if (!blocks.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><p>No active blocks.</p></td></tr>'; return; }
   tbody.innerHTML = blocks.map(b => `
     <tr>
-      <td><code>${b.ip_address}</code></td>
-      <td>${b.reason}</td>
+      <td><code>${escHtml(b.ip_address)}</code></td>
+      <td>${escHtml(b.reason)}</td>
       <td>${new Date(b.blocked_at).toLocaleString()}</td>
       <td>${new Date(b.expires_at).toLocaleString()}</td>
       <td>${b.expires_in !== undefined ? b.expires_in + 's' : '—'}</td>
-      <td><button class="btn btn-danger btn-sm" onclick="unblock('${b.ip_address}')">Unblock</button></td>
+      <td><button class="btn btn-danger btn-sm" data-ip="${escHtml(b.ip_address)}" onclick="unblock(this.dataset.ip)">Unblock</button></td>
     </tr>
   `).join('');
 }

@@ -104,15 +104,15 @@ function renderTable(events) {
   tbody.innerHTML = events.map(e => `
     <tr>
       <td>${new Date(e.timestamp).toLocaleString()}</td>
-      <td>${e.attack_type}</td>
-      <td><code>${e.source_ip}</code></td>
-      <td><span class="severity-badge severity-${(e.severity||'').toLowerCase()}">${e.severity}</span></td>
+      <td>${escHtml(e.attack_type)}</td>
+      <td><code>${escHtml(e.source_ip)}</code></td>
+      <td><span class="severity-badge severity-${(e.severity||'').toLowerCase()}">${escHtml(e.severity)}</span></td>
       <td>${e.confidence}%</td>
       <td>${e.blocked ? '🔴 Yes' : '—'}</td>
-      <td><a href="#" onclick="viewEvidence('${e.event_id}'); return false">View</a></td>
+      <td><a href="#" data-evid="${escHtml(e.event_id)}" onclick="viewEvidence(this.dataset.evid); return false">View</a></td>
     </tr>
-    <tr id="ev-row-${e.event_id}" style="display:none">
-      <td colspan="7"><div class="evidence-panel" id="ev-${e.event_id}">Loading…</div></td>
+    <tr id="ev-row-${escHtml(e.event_id)}" style="display:none">
+      <td colspan="7"><div class="evidence-panel" id="ev-${escHtml(e.event_id)}">Loading…</div></td>
     </tr>
   `).join('');
 }

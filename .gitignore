@@ -16,8 +16,8 @@ venv/
 env/
 ENV/
 
-# Secrets -- uncomment when real keys are added
-# .env
+# Secrets
+.env
 
 # Database -- commit dev DB; ignore WAL/journal
 database/netguard.db-shm

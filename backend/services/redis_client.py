@@ -1,6 +1,9 @@
 """
 redis_client.py — Shared lazy Redis connection with graceful fallback.
 
+**OPTIONAL DEPENDENCY:** This service requires redis-py, which is NOT in requirements.txt.
+To use Redis caching, install: pip install redis
+
 A single module-level function get_redis() returns a connected Redis client
 or None when Redis is unavailable. All callers must treat None as "Redis
 offline — fall back to direct computation".

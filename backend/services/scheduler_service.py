@@ -1,6 +1,9 @@
 """
 scheduler_service.py — Attack scheduling with APScheduler + SQLite job store.
 
+**OPTIONAL DEPENDENCY:** This service requires APScheduler, which is NOT in requirements.txt.
+To use this service, install: pip install apscheduler
+
 Requirements: 2.1-2.10
 """
 

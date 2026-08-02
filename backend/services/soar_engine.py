@@ -1,6 +1,9 @@
 """
 soar_engine.py — SOAR automation: multi-channel alerting and SIEM forwarding.
 
+**NOTE:** This service is currently only used in tests (test_properties_enterprise.py).
+It is not wired into the main application. Uses stdlib only (smtplib, socket, urllib).
+
 Channels: Email (smtplib), Slack, Discord, Telegram, generic webhook, Syslog.
 SIEMs: ECS/HTTPS, Splunk HEC, Wazuh TCP, OpenSearch Bulk.
 

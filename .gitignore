@@ -23,12 +23,8 @@ ENV/
 database/netguard.db-shm
 database/netguard.db-wal
 
-# Logs -- tracked for debugging; ignore rotated backups
-logs/*.log.1
-logs/*.log.2
-logs/*.log.3
-logs/*.log.4
-logs/*.log.5
+# Logs -- ignore all log files
+logs/*.log
 
 # Test / hypothesis artifacts
 .pytest_cache/

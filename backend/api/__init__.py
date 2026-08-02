@@ -57,7 +57,7 @@ def create_app(config: dict | None = None) -> Flask:
     socketio.init_app(
         app,
         async_mode=async_mode,
-        cors_allowed_origins=_origins,
+        cors_allowed_origins=_origins if _origins != ["*"] else "*",  # SocketIO needs explicit "*" not list
         logger=False,
         engineio_logger=False,
     )

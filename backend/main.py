@@ -329,11 +329,10 @@ def on_request_live_stats():
 
 def _background_live_stats():
     """Emit live_stats to all clients every second while monitoring."""
-    import time as _time
     refresh = settings.dashboard_refresh_interval or 1
     _last_health_score = None  # track last emitted value for Req 9.4
     while True:
-        _time.sleep(refresh)
+        _socketio.sleep(refresh)  # Use socketio.sleep instead of time.sleep for threading mode
         try:
             data = stats_service.get_live_stats()
             # Include health_score on first emit or when it changes by >=5 (Req 9.4)
@@ -344,6 +343,8 @@ def _background_live_stats():
             ):
                 data["health_score"] = current_score
                 _last_health_score = current_score
+            # ponytail: Use sleep_and_emit wrapper in threading mode to avoid emit from background thread issues
+            _socketio.sleep(0)  # Yield to socketio thread
             _socketio.emit("live_stats", data)
         except Exception as exc:
             logger.debug("live_stats emit error: %s", exc)

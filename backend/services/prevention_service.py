@@ -1,12 +1,4 @@
-"""
-prevention_service.py — Prevention_Engine for NetGuard IDPS.
-
-Automatically blocks confirmed attackers via the platform firewall.
-Checks the whitelist before issuing any block. Handles duplicate blocks
-by extending expiry. Verifies firewall privileges at startup.
-
-Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 11.1, 11.2, 11.4, 11.5, 11.6, 11.7, 11.8
-"""
+"""Prevention engine — blocks confirmed attackers via the platform firewall."""
 
 from __future__ import annotations
 
@@ -22,7 +14,7 @@ from .firewall import fw_block, fw_unblock, fw_check
 
 logger = logging.getLogger("netguard.prevention_engine")
 
-# Private, loopback, link-local, and multicast ranges that must never be blocked.
+# Private, loopback, link-local, and multicast ranges — never blocked.
 # ponytail: stdlib ipaddress only — no new dependency needed.
 _PRIVATE_NETS: list = [
     ipaddress.ip_network("10.0.0.0/8"),
@@ -38,7 +30,7 @@ _PRIVATE_NETS: list = [
 
 
 def _is_private(ip: str) -> tuple:
-    """Return (True, range_name) if ip falls in a protected range, else (False, '')."""
+    """Return (True, range_name) if ip is in a protected range, else (False, '')."""
     try:
         addr = ipaddress.ip_address(ip)
     except ValueError:
@@ -50,7 +42,7 @@ def _is_private(ip: str) -> tuple:
 
 
 def _is_own_address(ip: str) -> bool:
-    """Return True if ip matches any address assigned to this host's network interfaces."""
+    """Return True if ip matches any address on this host's interfaces."""
     try:
         addr = ipaddress.ip_address(ip)
     except ValueError:
@@ -70,16 +62,11 @@ def _is_own_address(ip: str) -> bool:
 
 class PreventionEngine:
     """
-    Blocks and unblocks IP addresses via the platform firewall
+    Blocks and unblocks IPs via the platform firewall
     (iptables on Linux, netsh advfirewall on Windows).
 
-    Must be started with elevated privileges for firewall operations.
-
-    Usage::
-
-        engine = PreventionEngine(block_repo, whitelist_manager, log_engine)
-        engine.verify_privileges()   # call at startup
-        engine.handle_event(threat_event, explanation)
+    Requires elevated privileges. Duplicate blocks extend expiry rather than
+    creating a second rule.
     """
 
     def __init__(
@@ -96,17 +83,8 @@ class PreventionEngine:
         self._block_duration = block_duration
         self._socketio_emit = socketio_emit
 
-    # ------------------------------------------------------------------
-    # Startup check
-    # ------------------------------------------------------------------
-
     def verify_privileges(self) -> None:
-        """
-        Verify that the platform firewall tool can be executed.
-
-        Raises:
-            RuntimeError: If the process lacks firewall privileges.
-        """
+        """Raise RuntimeError if the process cannot execute firewall commands."""
         if not fw_check():
             msg = (
                 "PreventionEngine: insufficient privileges to execute firewall commands. "
@@ -117,106 +95,68 @@ class PreventionEngine:
             raise RuntimeError(msg)
         logger.info("PreventionEngine: firewall privilege check passed.")
 
-    # ------------------------------------------------------------------
-    # Event handling
-    # ------------------------------------------------------------------
-
     def handle_event(self, event: ThreatEvent, explanation: Explanation) -> None:
-        """
-        Process a confirmed ThreatEvent and block the attacker if not whitelisted.
-        """
+        """Block the attacker IP unless it is whitelisted."""
         ip = event.source_ip
-
-        # Check whitelist first (Requirement 11.1, 12.7)
         if self._whitelist_manager and self._whitelist_manager.is_whitelisted(ip):
             logger.info("PreventionEngine: %s is whitelisted — no block applied.", ip)
             return
-
         self.block_ip(ip, event.attack_type, event.event_id)
 
     def block_ip(self, ip: str, reason: str, event_id: str, *, allow_private_block: bool = False) -> bool:
         """
-        Block an IP address and record the block in the database.
+        Block an IP and record it in the database.
 
-        Handles duplicate blocks by extending expiry (Requirement 11.6).
-
-        Returns:
-            True if block was applied (new or extended), False on failure.
+        Extends expiry if an active block already exists.
+        Returns True if block was applied (new or extended), False on failure.
         """
-        # Private-IP safety guard — Requirement 3.1–3.5
         if not allow_private_block:
             private, range_name = _is_private(ip)
             if private:
-                logger.warning(
-                    "PreventionEngine: refusing to block private/special IP %s — reason: %s",
-                    ip, range_name,
-                )
+                logger.warning("PreventionEngine: refusing to block private/special IP %s — reason: %s", ip, range_name)
                 return False
             if _is_own_address(ip):
-                logger.warning(
-                    "PreventionEngine: refusing to block own interface address %s", ip
-                )
+                logger.warning("PreventionEngine: refusing to block own interface address %s", ip)
                 return False
 
         now = _utc_now()
         expires_at = _utc_future(self._block_duration)
 
-        # Check for existing active block (Requirement 11.6)
         existing = self._block_repo.get_active(ip)
         if existing:
-            logger.info(
-                "PreventionEngine: extending existing block for %s (was %s).",
-                ip, existing["expires_at"],
-            )
+            logger.info("PreventionEngine: extending existing block for %s (was %s).", ip, existing["expires_at"])
             self._block_repo.extend_expiry(ip, expires_at)
             self._log_block(ip, reason, self._block_duration)
             return True
 
-        # Issue firewall rule
         if not fw_block(ip):
             logger.error("PreventionEngine: firewall block FAILED for %s — continuing.", ip)
             return False
 
-        # Record in database
         self._block_repo.insert({
-            "event_id": event_id,
+            "event_id":   event_id,
             "ip_address": ip,
             "blocked_at": now,
             "expires_at": expires_at,
-            "reason": reason,
+            "reason":     reason,
         })
         self._log_block(ip, reason, self._block_duration)
 
-        # SocketIO notification
         if self._socketio_emit:
             try:
-                self._socketio_emit("ip_blocked", {
-                    "ip": ip,
-                    "reason": reason,
-                    "blocked_at": now,
-                    "expires_at": expires_at,
-                })
+                self._socketio_emit("ip_blocked", {"ip": ip, "reason": reason, "blocked_at": now, "expires_at": expires_at})
             except Exception as exc:
                 logger.warning("PreventionEngine: SocketIO emit failed: %s", exc)
 
-        logger.info(
-            "PreventionEngine: blocked %s for %ds — reason: %s",
-            ip, self._block_duration, reason,
-        )
+        logger.info("PreventionEngine: blocked %s for %ds — reason: %s", ip, self._block_duration, reason)
         return True
 
     def unblock_ip(self, ip: str) -> bool:
-        """
-        Remove the firewall DROP rule for an IP and mark the block inactive.
-
-        Returns:
-            True if unblocked successfully.
-        """
+        """Remove the firewall rule for an IP and mark the block inactive."""
         success = fw_unblock(ip)
 
         if not success:
             logger.error("PreventionEngine: firewall unblock FAILED for %s.", ip)
-            # Still mark DB inactive so UI reflects change
             self._block_repo.set_inactive(ip)
             return False
 
@@ -241,10 +181,6 @@ class PreventionEngine:
         """Update the block duration from configuration."""
         self._block_duration = max(1, min(3600, duration))
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
-
     def _log_block(self, ip: str, reason: str, duration: int) -> None:
         if self._log_engine:
             try:
@@ -253,14 +189,9 @@ class PreventionEngine:
                 pass
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _utc_future(seconds: int) -> str:
-    dt = datetime.now(timezone.utc) + timedelta(seconds=seconds)
-    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return (datetime.now(timezone.utc) + timedelta(seconds=seconds)).strftime("%Y-%m-%dT%H:%M:%SZ")

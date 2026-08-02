@@ -1,12 +1,4 @@
-"""
-monitor_service.py — MonitorService for NetGuard IDPS.
-
-Coordinates starting and stopping packet capture. Validates interface names.
-Manages shared MonitoringState. Emits monitoring_status SocketIO events.
-On unexpected capture failure, sets active=False and emits monitoring_error.
-
-Requirements: 2.1, 2.2, 2.4, 2.6, 2.7, 2.8, 2.9, 15.1, 15.2, 15.4
-"""
+"""Monitor service — coordinates packet capture start/stop and interface validation."""
 
 from __future__ import annotations
 
@@ -44,15 +36,7 @@ class MonitoringState:
 
 
 class MonitorService:
-    """
-    Coordinates packet capture start/stop and interface validation.
-
-    Usage::
-
-        svc = MonitorService(capture_engine, detection_engine, state)
-        svc.start_monitoring("eth0")
-        svc.stop_monitoring()
-    """
+    """Coordinates packet capture start/stop and interface validation."""
 
     def __init__(
         self,
@@ -72,11 +56,8 @@ class MonitorService:
         """
         Start packet capture on the given interface.
 
-        If *interface* is None or empty, auto-selects the first active
-        non-loopback interface via ``_pick_default_interface()``.
-
-        Args:
-            interface: Network interface name, or None/empty for auto-select.
+        Auto-selects the first active non-loopback interface when interface is
+        None or empty.
 
         Raises:
             RuntimeError: If already monitoring (ALREADY_MONITORING).
@@ -103,20 +84,14 @@ class MonitorService:
         self._state.interface = interface
         self._state.started_at = _utc_now()
 
-        # Watchdog: detect unexpected capture thread death and update state
-        # Requirements: 15.2, 15.4
-        watchdog = threading.Thread(
+        threading.Thread(
             target=self._capture_watchdog,
             name="Capture_Watchdog_Thread",
             daemon=True,
-        )
-        watchdog.start()
+        ).start()
 
         if self._log_engine:
-            self._log_engine.log_system(
-                "INFO", "MonitorService", "MONITOR_START",
-                f"Monitoring started on {interface}",
-            )
+            self._log_engine.log_system("INFO", "MonitorService", "MONITOR_START", f"Monitoring started on {interface}")
         if self._socketio_emit:
             self._socketio_emit("monitoring_status", {"active": True, "interface": interface})
 
@@ -136,10 +111,7 @@ class MonitorService:
         self._state.active = False
 
         if self._log_engine:
-            self._log_engine.log_system(
-                "INFO", "MonitorService", "MONITOR_STOP",
-                f"Monitoring stopped on {self._state.interface}",
-            )
+            self._log_engine.log_system("INFO", "MonitorService", "MONITOR_STOP", f"Monitoring stopped on {self._state.interface}")
         if self._socketio_emit:
             self._socketio_emit("monitoring_status", {"active": False})
 
@@ -147,54 +119,32 @@ class MonitorService:
 
     def _capture_watchdog(self) -> None:
         """
-        Polls the capture thread; on unexpected death marks state inactive and
-        emits ``monitoring_error`` to connected clients.
+        Poll the capture thread; on unexpected death mark state inactive and
+        emit monitoring_error to connected clients.
 
-        "Unexpected" means the capture stopped while ``_state.active`` is still
-        True (i.e. nobody called ``stop_monitoring()``).
-
-        ponytail: 0.5 s poll is coarse but sufficient — finer resolution adds
-        thread churn for no measurable user benefit.
-
-        Requirements: 15.2, 15.4
+        ponytail: 0.5 s poll — finer resolution adds thread churn for no benefit.
         """
         import time
 
         capture = self._capture
-        # Wait for the capture thread to actually start before watching it
         time.sleep(0.5)
 
         while self._state.active and capture.is_running:
             time.sleep(0.5)
 
-        # If we exit because active was set False externally (stop_monitoring),
-        # nothing to do.  If we exit because the thread died unexpectedly, act.
         if self._state.active and not capture.is_running:
             interface = self._state.interface
-            logger.error(
-                "MonitorService: capture thread died unexpectedly on '%s'.", interface
-            )
+            logger.error("MonitorService: capture thread died unexpectedly on '%s'.", interface)
             self._state.active = False
             if self._socketio_emit:
                 try:
-                    self._socketio_emit(
-                        "monitoring_error",
-                        {
-                            "interface": interface,
-                            "reason": "Capture thread stopped unexpectedly",
-                        },
-                    )
+                    self._socketio_emit("monitoring_error", {"interface": interface, "reason": "Capture thread stopped unexpectedly"})
                     self._socketio_emit("monitoring_status", {"active": False})
                 except Exception:  # noqa: BLE001
                     pass
 
     def get_interfaces(self) -> list[str]:
-        """
-        Return all available network interfaces from the OS.
-
-        Returns:
-            List of interface name strings.
-        """
+        """Return all available network interfaces from the OS."""
         try:
             import psutil
             return list(psutil.net_if_stats().keys())
@@ -207,26 +157,18 @@ def _pick_default_interface() -> str:
     """
     Return the first non-loopback is_up interface from psutil.
 
-    Excludes loopback interfaces on both Linux ("lo") and Windows
-    ("Loopback Pseudo-Interface ..."). Falls back to any up interface
-    if no non-loopback up interface is found (e.g. only Wi-Fi is up).
-
-    ponytail: linear scan is fine — typical host has < 10 interfaces.
-
-    Requirements: 2.3
+    Falls back to any up interface if no non-loopback is found.
+    ponytail: linear scan — typical host has < 10 interfaces.
     """
     def _is_loopback(name: str) -> bool:
-        n = name.lower()
-        return n.startswith("lo")  # covers lo, loopback, loopback pseudo-interface
+        return name.lower().startswith("lo")
 
     try:
         import psutil
         stats = psutil.net_if_stats()
-        # First preference: up and non-loopback
         for name, info in stats.items():
             if info.isup and not _is_loopback(name):
                 return name
-        # Fallback: any up interface (includes loopback — better than nothing)
         for name, info in stats.items():
             if info.isup:
                 return name

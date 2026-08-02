@@ -1,11 +1,4 @@
-"""
-event_repository.py — Repository for the events table.
-
-Provides all CRUD operations for detection event records.
-Uses SQLAlchemy ORM — no raw SQL string concatenation.
-
-Requirements: 14.2, 14.5, 14.6, 14.7
-"""
+"""Repository for the events table."""
 
 from __future__ import annotations
 
@@ -25,32 +18,15 @@ logger = logging.getLogger("netguard.event_repository")
 
 
 class EventRepository:
-    """
-    CRUD operations for the events table.
-
-    Uses a thread-safe retry queue for database-unavailability scenarios
-    (Requirement 14.7).
-    """
+    """CRUD operations for the events table with a thread-safe retry queue."""
 
     def __init__(self, session_factory) -> None:
-        """
-        Args:
-            session_factory: Callable returning a new SQLAlchemy Session context manager.
-        """
         self._session_factory = session_factory
         self._retry_queue: queue.Queue = queue.Queue(maxsize=1000)
         self._lock = threading.Lock()
 
     def insert(self, event_data: dict) -> bool:
-        """
-        Insert a detection event into the events table.
-
-        Args:
-            event_data: Dict with all required Event fields.
-
-        Returns:
-            True on success, False on failure (event queued for retry).
-        """
+        """Insert a detection event. Returns True on success; queues for retry on failure."""
         try:
             with self._session_factory() as session:
                 record = Event(
@@ -76,7 +52,6 @@ class EventRepository:
                 return True
         except Exception as exc:
             logger.error("EventRepository.insert failed: %s", exc, exc_info=True)
-            # Queue for retry (Requirement 14.7)
             try:
                 self._retry_queue.put_nowait(event_data)
             except queue.Full:
@@ -84,65 +59,28 @@ class EventRepository:
             return False
 
     def get_by_id(self, event_id: str) -> Optional[dict]:
-        """
-        Retrieve a single event by event_id.
-
-        Args:
-            event_id: UUID4 string.
-
-        Returns:
-            Dict representation of the Event, or None if not found.
-        """
+        """Return a single event by event_id, or None if not found."""
         try:
             with self._session_factory() as session:
-                record = (
-                    session.query(Event).filter_by(event_id=event_id).first()
-                )
-                if record is None:
-                    return None
-                return _event_to_dict(record)
+                record = session.query(Event).filter_by(event_id=event_id).first()
+                return _event_to_dict(record) if record else None
         except Exception as exc:
             logger.error("EventRepository.get_by_id(%s) failed: %s", event_id, exc)
             return None
 
     def get_all(self, filters: Optional[dict] = None, limit: int = 100, offset: int = 0) -> list[dict]:
-        """
-        Query events with optional filters.
-
-        Args:
-            filters: Dict with optional keys: severity, attack_type, source_ip, date, search.
-                     search: case-insensitive substring match on source_ip, destination_ip,
-                             or attack_type (OR logic). Req 8.1.
-            limit: Maximum records to return.
-            offset: Pagination offset.
-
-        Returns:
-            List of event dicts, ordered by timestamp descending.
-        """
+        """Query events with optional filters, ordered by timestamp descending."""
         try:
             with self._session_factory() as session:
                 q = _apply_filters(session.query(Event), filters)
-                records = (
-                    q.order_by(Event.timestamp.desc())
-                    .limit(limit)
-                    .offset(offset)
-                    .all()
-                )
+                records = q.order_by(Event.timestamp.desc()).limit(limit).offset(offset).all()
                 return [_event_to_dict(r) for r in records]
         except Exception as exc:
             logger.error("EventRepository.get_all failed: %s", exc)
             return []
 
     def count_filtered(self, filters: Optional[dict] = None) -> int:
-        """
-        COUNT(*) with the same filter logic as get_all(). Req 8.5.
-
-        Args:
-            filters: Same optional filter dict as get_all().
-
-        Returns:
-            Integer count of matching records, or 0 on error.
-        """
+        """COUNT(*) with the same filter logic as get_all()."""
         try:
             with self._session_factory() as session:
                 return _apply_filters(session.query(Event), filters).count()
@@ -154,9 +92,7 @@ class EventRepository:
         """Update the blocked flag on an event."""
         try:
             with self._session_factory() as session:
-                record = (
-                    session.query(Event).filter_by(event_id=event_id).first()
-                )
+                record = session.query(Event).filter_by(event_id=event_id).first()
                 if record:
                     record.blocked = 1 if blocked else 0
                     session.commit()
@@ -178,11 +114,7 @@ class EventRepository:
         try:
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             with self._session_factory() as session:
-                return (
-                    session.query(Event)
-                    .filter(Event.timestamp.like(f"{today}%"))
-                    .count()
-                )
+                return session.query(Event).filter(Event.timestamp.like(f"{today}%")).count()
         except Exception:
             return 0
 
@@ -201,7 +133,7 @@ class EventRepository:
             return []
 
     def get_distinct_attack_types_today(self) -> set[str]:
-        """Return set of distinct attack_type values for the current UTC calendar day."""
+        """Return distinct attack_type values for the current UTC calendar day."""
         try:
             today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
             with self._session_factory() as session:
@@ -217,12 +149,7 @@ class EventRepository:
             raise
 
     def flush_retry_queue(self) -> int:
-        """
-        Attempt to insert all queued retry events.
-
-        Returns:
-            Number of events successfully flushed.
-        """
+        """Attempt to insert all queued retry events. Returns count flushed."""
         flushed = 0
         while not self._retry_queue.empty():
             try:
@@ -234,12 +161,8 @@ class EventRepository:
         return flushed
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _apply_filters(q, filters: Optional[dict]):
-    """Apply shared filter logic to a SQLAlchemy query. Req 8.1, 8.3."""
+    """Apply filter logic to a SQLAlchemy query."""
     if not filters:
         return q
     if filters.get("severity"):
@@ -251,7 +174,6 @@ def _apply_filters(q, filters: Optional[dict]):
     if filters.get("date"):
         q = q.filter(Event.timestamp.like(f"{filters['date']}%"))
     if filters.get("search"):
-        # Req 8.1: case-insensitive OR match across three fields
         term = f"%{filters['search']}%"
         q = q.filter(or_(
             func.lower(Event.source_ip).like(func.lower(term)),
@@ -262,7 +184,6 @@ def _apply_filters(q, filters: Optional[dict]):
 
 
 def _event_to_dict(record: Event) -> dict:
-    """Convert an Event ORM object to a plain dict."""
     evidence = {}
     if record.evidence:
         try:

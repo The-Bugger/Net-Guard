@@ -1,10 +1,4 @@
-"""
-whitelist_repository.py — Repository for the whitelist table.
-
-All operations use single database transactions as required.
-
-Requirements: 12.2, 12.3
-"""
+"""Repository for the whitelist table."""
 
 from __future__ import annotations
 
@@ -20,26 +14,11 @@ class WhitelistRepository:
     """CRUD operations for the whitelist table."""
 
     def __init__(self, session_factory) -> None:
-        """
-        Args:
-            session_factory: Callable returning a new SQLAlchemy Session context manager.
-        """
         self._session_factory = session_factory
 
     def insert(self, ip_address: str, description: Optional[str], created_at: str,
                created_by: str = "admin") -> bool:
-        """
-        Insert a new whitelist entry.
-
-        Args:
-            ip_address: Valid IPv4 or IPv6 address string.
-            description: Optional human-readable label for the entry.
-            created_at: UTC ISO-8601 timestamp string.
-            created_by: Identifier of the creator (default "admin").
-
-        Returns:
-            True on success, False on failure.
-        """
+        """Insert a new whitelist entry. Returns True on success."""
         try:
             with self._session_factory() as session:
                 entry = WhitelistEntry(
@@ -56,22 +35,10 @@ class WhitelistRepository:
             return False
 
     def delete(self, ip_address: str) -> bool:
-        """
-        Remove a whitelist entry by IP address.
-
-        Args:
-            ip_address: The IP address to remove.
-
-        Returns:
-            True if deleted, False if not found.
-        """
+        """Remove a whitelist entry. Returns True if deleted, False if not found."""
         try:
             with self._session_factory() as session:
-                record = (
-                    session.query(WhitelistEntry)
-                    .filter_by(ip_address=ip_address)
-                    .first()
-                )
+                record = session.query(WhitelistEntry).filter_by(ip_address=ip_address).first()
                 if record is None:
                     return False
                 session.delete(record)
@@ -82,12 +49,7 @@ class WhitelistRepository:
             return False
 
     def get_all(self) -> list[dict]:
-        """
-        Return all whitelist entries ordered by created_at descending.
-
-        Returns:
-            List of dicts with id, ip_address, description, created_at, created_by.
-        """
+        """Return all whitelist entries ordered by created_at descending."""
         try:
             with self._session_factory() as session:
                 records = (
@@ -101,28 +63,15 @@ class WhitelistRepository:
             return []
 
     def exists(self, ip_address: str) -> bool:
-        """
-        Check whether an IP address has a whitelist entry.
-
-        Args:
-            ip_address: The IP address to look up.
-
-        Returns:
-            True if the IP is whitelisted, False otherwise.
-        """
+        """Return True if the IP has a whitelist entry."""
         try:
             with self._session_factory() as session:
-                return (
-                    session.query(WhitelistEntry)
-                    .filter_by(ip_address=ip_address)
-                    .count()
-                ) > 0
+                return session.query(WhitelistEntry).filter_by(ip_address=ip_address).count() > 0
         except Exception:
             return False
 
 
 def _entry_to_dict(record: WhitelistEntry) -> dict:
-    """Convert a WhitelistEntry ORM object to a plain dict."""
     return {
         "id": record.id,
         "ip_address": record.ip_address,

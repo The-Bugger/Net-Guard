@@ -1,10 +1,4 @@
-"""
-block_repository.py — Repository for the blocked_ips table.
-
-CRUD operations for active and historical firewall block records.
-
-Requirements: 11.2, 11.3, 11.6
-"""
+"""Repository for the blocked_ips table."""
 
 from __future__ import annotations
 
@@ -24,15 +18,7 @@ class BlockRepository:
         self._session_factory = session_factory
 
     def insert(self, record_data: dict) -> bool:
-        """
-        Insert a new block record.
-
-        Args:
-            record_data: Dict with ip_address, event_id, blocked_at, expires_at, reason.
-
-        Returns:
-            True on success.
-        """
+        """Insert a new block record. Returns True on success."""
         try:
             with self._session_factory() as session:
                 record = BlockedIP(
@@ -51,15 +37,7 @@ class BlockRepository:
             return False
 
     def get_active(self, ip_address: str) -> Optional[dict]:
-        """
-        Return the active block record for an IP, or None.
-
-        Args:
-            ip_address: The IP address to check.
-
-        Returns:
-            Dict representation of BlockedIP, or None.
-        """
+        """Return the active block record for an IP, or None."""
         try:
             with self._session_factory() as session:
                 record = (
@@ -88,15 +66,7 @@ class BlockRepository:
             return []
 
     def set_inactive(self, ip_address: str) -> bool:
-        """
-        Mark all active blocks for an IP as inactive.
-
-        Args:
-            ip_address: The IP address to unblock.
-
-        Returns:
-            True on success.
-        """
+        """Mark all active blocks for an IP as inactive. Returns True on success."""
         try:
             with self._session_factory() as session:
                 records = (
@@ -115,16 +85,7 @@ class BlockRepository:
             return False
 
     def extend_expiry(self, ip_address: str, new_expires_at: str) -> bool:
-        """
-        Extend the expiry time of the active block for an IP.
-
-        Args:
-            ip_address: The IP address.
-            new_expires_at: New expires_at ISO-8601 string.
-
-        Returns:
-            True on success.
-        """
+        """Extend the expiry time of the active block for an IP."""
         try:
             with self._session_factory() as session:
                 record = (
@@ -137,18 +98,11 @@ class BlockRepository:
                     session.commit()
                 return True
         except Exception as exc:
-            logger.error(
-                "BlockRepository.extend_expiry(%s) failed: %s", ip_address, exc
-            )
+            logger.error("BlockRepository.extend_expiry(%s) failed: %s", ip_address, exc)
             return False
 
     def get_expired(self) -> list[dict]:
-        """
-        Return all active blocks whose expires_at has passed.
-
-        Returns:
-            List of expired BlockedIP dicts.
-        """
+        """Return all active blocks whose expires_at has passed."""
         try:
             now = _utc_now()
             with self._session_factory() as session:
@@ -165,10 +119,6 @@ class BlockRepository:
     def is_blocked(self, ip_address: str) -> bool:
         """Return True if the IP has an active block."""
         return self.get_active(ip_address) is not None
-
-    # ------------------------------------------------------------------
-    # Enterprise extensions (Task 3.1)
-    # ------------------------------------------------------------------
 
     def get_by_id(self, block_id: int) -> Optional[dict]:
         """Return a single block record by primary key."""
@@ -208,10 +158,7 @@ class BlockRepository:
                     .limit(per_page)
                     .all()
                 )
-                return {
-                    "items": [_block_to_dict(r) for r in records],
-                    "total": total, "page": page, "per_page": per_page,
-                }
+                return {"items": [_block_to_dict(r) for r in records], "total": total, "page": page, "per_page": per_page}
         except Exception as exc:
             logger.error("BlockRepository.get_history(%s) failed: %s", ip, exc)
             return {"items": [], "total": 0, "page": page, "per_page": per_page}
@@ -231,24 +178,15 @@ class BlockRepository:
             logger.error("BlockRepository.get_by_type(%s) failed: %s", block_type, exc)
             return []
 
-    def get_paginated(
-        self,
-        page: int = 1,
-        per_page: int = 20,
-        filters: Optional[dict] = None,
-    ) -> dict:
+    def get_paginated(self, page: int = 1, per_page: int = 20, filters: Optional[dict] = None) -> dict:
         """
         Return paginated block records with optional filtering.
 
-        filters keys:
-            ip         – partial match (LIKE %ip%)
-            block_type – exact match
-            status     – "active" → active=1, "inactive" → active=0
-            date_from  – ISO string, created_at >=
-            date_to    – ISO string, created_at <=
+        Filter keys: ip (LIKE), block_type (exact), status (active/inactive),
+        date_from (>=), date_to (<=).
         """
         try:
-            per_page = min(per_page, 100)  # cap at 100 (Req 1.10)
+            per_page = min(per_page, 100)
             offset = (page - 1) * per_page
             filters = filters or {}
             with self._session_factory() as session:
@@ -268,16 +206,13 @@ class BlockRepository:
                     q = q.filter(BlockedIP.blocked_at <= filters["date_to"])
                 total = q.count()
                 records = q.order_by(BlockedIP.blocked_at.desc()).offset(offset).limit(per_page).all()
-                return {
-                    "items": [_block_to_dict(r) for r in records],
-                    "total": total, "page": page, "per_page": per_page,
-                }
+                return {"items": [_block_to_dict(r) for r in records], "total": total, "page": page, "per_page": per_page}
         except Exception as exc:
             logger.error("BlockRepository.get_paginated failed: %s", exc)
             return {"items": [], "total": 0, "page": page, "per_page": per_page}
 
     def count_hits(self, ip_address: str) -> int:
-        """Return total number of block records (all time) for an IP — used for threat score."""
+        """Return total block count (all time) for an IP — used for threat score."""
         try:
             with self._session_factory() as session:
                 return session.query(BlockedIP).filter_by(ip_address=ip_address).count()
@@ -286,10 +221,7 @@ class BlockRepository:
             return 0
 
     def insert_enterprise(self, record_data: dict) -> Optional[int]:
-        """
-        Insert a new block record with enterprise fields.
-        Returns the new record's id, or None on failure.
-        """
+        """Insert a block record with enterprise fields. Returns new record id, or None on failure."""
         try:
             with self._session_factory() as session:
                 record = BlockedIP(
@@ -311,10 +243,6 @@ class BlockRepository:
             logger.error("BlockRepository.insert_enterprise failed: %s", exc, exc_info=True)
             return None
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _block_to_dict(record: BlockedIP) -> dict:
     return {

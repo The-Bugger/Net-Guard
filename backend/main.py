@@ -1,25 +1,10 @@
-"""
-main.py — NetGuard IDPS application entry point.
-
-Startup sequence:
-1. Eventlet monkey-patch (MUST be first)
-2. Load configuration
-3. Set up logging
-4. Initialize database
-5. Verify iptables privileges
-6. Build all services
-7. Start background threads
-8. Start Flask + SocketIO
-
-Requirements: 1.7, 11.8
-"""
+"""NetGuard IDPS application entry point."""
 
 from __future__ import annotations
 
-# ── Step 1: Async mode selection ────────────────────────────────────────────
-# eventlet monkey-patches select/socket which corrupts Scapy's pcap fd
-# handling on Windows, causing monitor/start to hang indefinitely.
-# Use threading mode on Windows; keep eventlet on Linux where it works fine.
+# Eventlet monkey-patches select/socket, which corrupts Scapy's pcap fd handling
+# on Windows and causes monitor/start to hang. Use threading mode on Windows;
+# keep eventlet on Linux where it works correctly.
 import sys as _sys
 import os as _os
 if _sys.platform == "win32":
@@ -37,37 +22,36 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
-# ── Ensure project root is on sys.path ──────────────────────────────────────
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-# ── Step 2: Load configuration ──────────────────────────────────────────────
+# Configuration
 from backend.services.config_service import ConfigurationManager
 from backend.services.log_service import setup_logging, LoggingEngine
 
 config_manager = ConfigurationManager()
 settings = config_manager.load()
 
-# ── Step 3: Set up logging ───────────────────────────────────────────────────
+# Logging
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 setup_logging()
 logger = logging.getLogger("netguard.main")
 logger.setLevel(log_level)
 logger.info("NetGuard IDPS starting up...")
 
-# ── Step 4: Database ─────────────────────────────────────────────────────────
+# Database
 from database.init_db import initialize_db, get_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 db_url = os.environ.get("DATABASE_URL", f"sqlite:///{_PROJECT_ROOT}/database/netguard.db")
-# Normalise sqlite:/// to absolute path
 if db_url.startswith("sqlite:///") and not db_url.startswith("sqlite:////"):
     db_path = _PROJECT_ROOT / "database" / "netguard.db"
     db_url = f"sqlite:///{db_path}"
 
 initialize_db(db_url)
 engine = get_engine(db_url)
+
 
 @contextmanager
 def session_factory():
@@ -82,22 +66,23 @@ def session_factory():
     finally:
         session.close()
 
+
 logger.info("Database initialised at: %s", db_url)
 
-# ── Step 5: Build repositories ───────────────────────────────────────────────
+# Repositories
 from backend.repositories.event_repository import EventRepository
 from backend.repositories.block_repository import BlockRepository
 from backend.repositories.whitelist_repository import WhitelistRepository
 from backend.repositories.log_repository import LogRepository
 from backend.repositories.settings_repository import SettingsRepository
 
-event_repo = EventRepository(session_factory)
-block_repo = BlockRepository(session_factory)
+event_repo    = EventRepository(session_factory)
+block_repo    = BlockRepository(session_factory)
 whitelist_repo = WhitelistRepository(session_factory)
-log_repo = LogRepository(session_factory)
+log_repo      = LogRepository(session_factory)
 settings_repo = SettingsRepository(session_factory)
 
-# ── Step 6: Build services ───────────────────────────────────────────────────
+# Services
 from backend.services.log_service import LoggingEngine
 from backend.services.whitelist_service import WhitelistManager
 from backend.services.monitor_service import MonitorService, MonitoringState
@@ -107,62 +92,45 @@ from backend.services.expiry_service import ExpiryThread
 from backend.services.detection_service import DetectionEngine
 from backend.services.explain_service import ExplainabilityEngine
 
-# Shared state
 monitoring_state = MonitoringState()
-
-# Queues for inter-thread communication
 packet_queue: queue.Queue = queue.Queue(maxsize=10000)
-event_queue: queue.Queue = queue.Queue(maxsize=1000)
+event_queue: queue.Queue  = queue.Queue(maxsize=1000)
 
-# Logging engine
 log_engine = LoggingEngine(event_queue=event_queue, event_repo=event_repo, log_repo=log_repo)
 
-# Whitelist manager
 whitelist_manager = WhitelistManager(whitelist_repo)
 whitelist_manager.sync_from_db()
 
-# Stats service
-stats_service = StatsService(event_repo, block_repo, monitoring_state, whitelist_manager=whitelist_manager)
-
-# Explainability engine
+stats_service  = StatsService(event_repo, block_repo, monitoring_state, whitelist_manager=whitelist_manager)
 explain_engine = ExplainabilityEngine(whitelist_manager)
 
 
 def _on_threat_event(threat_event):
-    """
-    Callback invoked by DetectionEngine for every confirmed ThreatEvent.
-    - Generates explanation
-    - Enqueues to LoggingEngine for async DB persistence
-    - Triggers prevention
-    - Emits SocketIO event
-    """
+    """Callback invoked by DetectionEngine for every confirmed ThreatEvent."""
     try:
         explanation = explain_engine.explain(threat_event)
         threat_event.blocked = False
 
-        # Hand off to LoggingEngine for async DB persistence (Logging_Thread).
-        # Do NOT also call event_repo.insert() directly here — that would double-write
-        # the same event_id and cause a UNIQUE constraint failure on the second insert.
+        # Hand off to LoggingEngine for async DB persistence.
+        # Do NOT also call event_repo.insert() here — that would double-write
+        # the same event_id and cause a UNIQUE constraint failure.
         log_engine.log_event(threat_event, explanation)
         stats_service.invalidate_cache()
 
-        # Prevention
         prevention_engine.handle_event(threat_event, explanation)
 
-        # SocketIO emit
         _emit_socketio("new_threat", {
-            "event_id": threat_event.event_id,
-            "attack_type": threat_event.attack_type,
-            "source_ip": threat_event.source_ip,
-            "severity": threat_event.severity,
-            "confidence": threat_event.confidence,
-            "timestamp": threat_event.timestamp,
-            "explanation": explanation.plain_english_text,
+            "event_id":       threat_event.event_id,
+            "attack_type":    threat_event.attack_type,
+            "source_ip":      threat_event.source_ip,
+            "severity":       threat_event.severity,
+            "confidence":     threat_event.confidence,
+            "timestamp":      threat_event.timestamp,
+            "explanation":    explanation.plain_english_text,
             "recommendation": explanation.recommendation,
-            "rule_name": threat_event.rule_name,
-            "evidence": threat_event.evidence,
+            "rule_name":      threat_event.rule_name,
+            "evidence":       threat_event.evidence,
         })
-
     except Exception as exc:
         logger.error("on_threat_event error: %s", exc, exc_info=True)
 
@@ -176,7 +144,6 @@ def _emit_socketio(event_name: str, data: dict) -> None:
         logger.debug("SocketIO emit failed: %s", exc)
 
 
-# Prevention engine (socketio emit wired after app creation)
 prevention_engine = PreventionEngine(
     block_repo=block_repo,
     whitelist_manager=whitelist_manager,
@@ -185,30 +152,25 @@ prevention_engine = PreventionEngine(
     socketio_emit=_emit_socketio,
 )
 
-# ── Step 7: Verify firewall privileges ───────────────────────────────────────
 try:
     prevention_engine.verify_privileges()
 except RuntimeError as exc:
     logger.critical("Firewall privilege check failed: %s", exc)
     logger.warning("Continuing without firewall blocking capability.")
-    # Don't abort — allow monitoring/detection without blocking for dev/test
 
-# Detection engine
 detection_engine = DetectionEngine(
     packet_queue=packet_queue,
     on_event=_on_threat_event,
     config_manager=config_manager,
 )
 
-# Capture engine
 from detection.capture.sniffer import CaptureEngine
 capture_engine = CaptureEngine(
     packet_queue,
     socketio_emit=_emit_socketio,
-    stats_service=stats_service,   # Task 8: wires PPS tracking
+    stats_service=stats_service,
 )
 
-# Monitor service
 monitor_service = MonitorService(
     capture_engine=capture_engine,
     detection_engine=detection_engine,
@@ -217,28 +179,27 @@ monitor_service = MonitorService(
     socketio_emit=_emit_socketio,
 )
 
-# Expiry thread
 expiry_thread = ExpiryThread(
     block_repo=block_repo,
     log_engine=log_engine,
     socketio_emit=_emit_socketio,
 )
 
-# ── Step 8: Register services in dependency container ────────────────────────
+# Register all services in the dependency container
 from backend.api import dependencies
-dependencies.register("config", config_manager)
-dependencies.register("monitoring_state", monitoring_state)
-dependencies.register("monitor_service", monitor_service)
-dependencies.register("detection_engine", detection_engine)
+dependencies.register("config",            config_manager)
+dependencies.register("monitoring_state",  monitoring_state)
+dependencies.register("monitor_service",   monitor_service)
+dependencies.register("detection_engine",  detection_engine)
 dependencies.register("prevention_engine", prevention_engine)
 dependencies.register("whitelist_manager", whitelist_manager)
-dependencies.register("log_engine", log_engine)
-dependencies.register("stats_service", stats_service)
-dependencies.register("event_repo", event_repo)
-dependencies.register("block_repo", block_repo)
-dependencies.register("log_repo", log_repo)
-dependencies.register("settings_repo", settings_repo)
-dependencies.register("whitelist_repo", whitelist_repo)
+dependencies.register("log_engine",        log_engine)
+dependencies.register("stats_service",     stats_service)
+dependencies.register("event_repo",        event_repo)
+dependencies.register("block_repo",        block_repo)
+dependencies.register("log_repo",          log_repo)
+dependencies.register("settings_repo",     settings_repo)
+dependencies.register("whitelist_repo",    whitelist_repo)
 
 from backend.services.block_manager import BlockManager
 block_manager = BlockManager(
@@ -281,10 +242,7 @@ threat_simulator = ThreatSimulator(
 dependencies.register("threat_simulator", threat_simulator)
 
 from backend.services.attack_lab_service import AttackLabService
-attack_lab_service = AttackLabService(
-    packet_queue=packet_queue,
-    threat_simulator=threat_simulator,
-)
+attack_lab_service = AttackLabService(packet_queue=packet_queue, threat_simulator=threat_simulator)
 dependencies.register("attack_lab_service", attack_lab_service)
 
 from backend.services.geoip_engine import GeoIPEngine
@@ -301,24 +259,25 @@ anomaly_engine = AnomalyEngine(
 )
 dependencies.register("anomaly_engine", anomaly_engine)
 
-# Plugin registry
 from backend.services.plugin_registry import PluginRegistry
 plugin_registry = PluginRegistry(settings_repo)
 dependencies.register("plugin_registry", plugin_registry)
 
-# ── Step 9: Create Flask app and start background threads ────────────────────
+# Flask app
 from backend.api import create_app, socketio as _socketio
 
 app = create_app()
 
-# ── SocketIO live-stats background task ──────────────────────────────────────
+
 @_socketio.on("connect")
 def on_client_connect():
     logger.debug("Dashboard client connected.")
 
+
 @_socketio.on("disconnect")
 def on_client_disconnect():
     logger.debug("Dashboard client disconnected.")
+
 
 @_socketio.on("request_live_stats")
 def on_request_live_stats():
@@ -328,36 +287,29 @@ def on_request_live_stats():
 
 
 def _background_live_stats():
-    """Emit live_stats to all clients every second while monitoring."""
+    """Emit live_stats to all clients every refresh interval."""
     refresh = settings.dashboard_refresh_interval or 1
-    _last_health_score = None  # track last emitted value for Req 9.4
+    _last_health_score = None
     while True:
-        _socketio.sleep(refresh)  # Use socketio.sleep instead of time.sleep for threading mode
+        _socketio.sleep(refresh)
         try:
             data = stats_service.get_live_stats()
-            # Include health_score on first emit or when it changes by >=5 (Req 9.4)
             current_score = stats_service.get_health_score()
-            if (
-                _last_health_score is None
-                or abs(current_score - _last_health_score) >= 5
-            ):
+            if _last_health_score is None or abs(current_score - _last_health_score) >= 5:
                 data["health_score"] = current_score
                 _last_health_score = current_score
-            # ponytail: Use sleep_and_emit wrapper in threading mode to avoid emit from background thread issues
-            _socketio.sleep(0)  # Yield to socketio thread
+            _socketio.sleep(0)  # yield to socketio thread
             _socketio.emit("live_stats", data)
         except Exception as exc:
             logger.debug("live_stats emit error: %s", exc)
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     logger.info("Starting background services...")
     log_engine.start()
     expiry_thread.start()
     detection_engine.start()
 
-    # Start live-stats background task
     _socketio.start_background_task(_background_live_stats)
 
     log_engine.log_system(
@@ -370,9 +322,7 @@ if __name__ == "__main__":
     port = int(os.environ.get("FLASK_PORT", 5000))
     debug = settings.debug
 
-    # TLS termination (Task 16.6, Req 11.8)
-    # When TLS_CERT_FILE and TLS_KEY_FILE env vars are set, Flask serves HTTPS
-    # with a minimum of TLS 1.2 enforced by the ssl_context wrapper.
+    # TLS: when TLS_CERT_FILE and TLS_KEY_FILE are set, serve HTTPS (TLS 1.2+ minimum)
     tls_cert = os.environ.get("TLS_CERT_FILE", "")
     tls_key  = os.environ.get("TLS_KEY_FILE", "")
     ssl_context = None

@@ -1,17 +1,4 @@
-"""
-SQLAlchemy ORM models for NetGuard IDPS database schema.
-
-This module defines six database models using SQLAlchemy 2.x declarative style:
-- Event: Detection events with attack details and explanations
-- BlockedIP: Active and historical firewall blocks
-- WhitelistEntry: Trusted IPs that bypass automatic blocking
-- DetectionRule: Configurable detection rules and thresholds
-- Setting: System configuration key-value pairs
-- SystemLog: Application operational logs
-
-All models use DeclarativeBase and include appropriate indexes, constraints,
-and relationships for efficient querying and data integrity.
-"""
+"""SQLAlchemy ORM models for NetGuard IDPS."""
 
 from sqlalchemy import (
     CheckConstraint,
@@ -25,33 +12,21 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """Base class for all ORM models."""
     pass
 
 
 class Event(Base):
-    """
-    Detection events table.
-    
-    Stores every detected attack with full context, evidence, explanation,
-    and recommended actions. Links to blocked_ips via event_id.
-    """
+    """Detection events — one row per confirmed attack."""
     __tablename__ = "events"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    event_id: Mapped[str] = mapped_column(
-        String(36), unique=True, nullable=False
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False)
     timestamp: Mapped[str] = mapped_column(String(30), nullable=False)
     attack_type: Mapped[str] = mapped_column(String(50), nullable=False)
     source_ip: Mapped[str] = mapped_column(String(45), nullable=False)
     destination_ip: Mapped[str] = mapped_column(String(45), nullable=False)
     source_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    destination_port: Mapped[int | None] = mapped_column(
-        Integer, nullable=True
-    )
+    destination_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
     protocol: Mapped[str] = mapped_column(String(10), nullable=False)
     rule_name: Mapped[str] = mapped_column(String(50), nullable=False)
     severity: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -63,10 +38,7 @@ class Event(Base):
     blocked: Mapped[int] = mapped_column(Integer, default=0)
 
     __table_args__ = (
-        CheckConstraint(
-            "confidence BETWEEN 0 AND 100",
-            name="ck_confidence_range"
-        ),
+        CheckConstraint("confidence BETWEEN 0 AND 100", name="ck_confidence_range"),
         Index("idx_events_timestamp", "timestamp"),
         Index("idx_events_source_ip", "source_ip"),
         Index("idx_events_attack_type", "attack_type"),
@@ -82,31 +54,17 @@ class Event(Base):
 
 
 class BlockedIP(Base):
-    """
-    Blocked IPs table.
-    
-    Tracks active and historical firewall blocks with expiration times.
-    Links to events via event_id foreign key.
-    """
+    """Active and historical firewall blocks."""
     __tablename__ = "blocked_ips"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    event_id: Mapped[str] = mapped_column(
-        String(36),
-        ForeignKey("events.event_id"),
-        nullable=False
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    event_id: Mapped[str] = mapped_column(String(36), ForeignKey("events.event_id"), nullable=False)
     ip_address: Mapped[str] = mapped_column(String(45), nullable=False)
     blocked_at: Mapped[str] = mapped_column(String(30), nullable=False)
     expires_at: Mapped[str] = mapped_column(String(30), nullable=False)
-    unblock_time: Mapped[str | None] = mapped_column(
-        String(30), nullable=True
-    )
+    unblock_time: Mapped[str | None] = mapped_column(String(30), nullable=True)
     reason: Mapped[str] = mapped_column(String(50), nullable=False)
     active: Mapped[int] = mapped_column(Integer, default=1)
-    # Enterprise columns (Task 3.1 / Req 1.6, 1.8, 1.3)
     block_type: Mapped[str] = mapped_column(String(20), nullable=False, default="ip")
     threat_score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     operator_id: Mapped[str] = mapped_column(String(100), nullable=False, default="system")
@@ -126,27 +84,16 @@ class BlockedIP(Base):
 
 
 class WhitelistEntry(Base):
-    """
-    Whitelist table.
-    
-    Stores trusted IP addresses that should never be automatically blocked.
-    Checked at runtime before applying firewall rules.
-    """
+    """Trusted IPs that bypass automatic blocking."""
     __tablename__ = "whitelist"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    ip_address: Mapped[str] = mapped_column(
-        String(45), unique=True, nullable=False
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ip_address: Mapped[str] = mapped_column(String(45), unique=True, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), nullable=False)
     created_by: Mapped[str] = mapped_column(String(100), default="admin")
 
-    __table_args__ = (
-        Index("idx_whitelist_ip", "ip_address"),
-    )
+    __table_args__ = (Index("idx_whitelist_ip", "ip_address"),)
 
     def __repr__(self) -> str:
         return (
@@ -156,20 +103,11 @@ class WhitelistEntry(Base):
 
 
 class DetectionRule(Base):
-    """
-    Detection rules table.
-    
-    Stores configurable detection rules with thresholds, severity levels,
-    and block durations. Rules can be enabled/disabled without code changes.
-    """
+    """Configurable detection rules with thresholds and block durations."""
     __tablename__ = "detection_rules"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
-    rule_name: Mapped[str] = mapped_column(
-        String(50), unique=True, nullable=False
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    rule_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     attack_type: Mapped[str] = mapped_column(String(50), nullable=False)
     threshold: Mapped[int] = mapped_column(Integer, nullable=False)
     severity: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -186,12 +124,7 @@ class DetectionRule(Base):
 
 
 class Setting(Base):
-    """
-    Settings table.
-    
-    Stores application configuration as key-value pairs.
-    Updated at runtime without requiring application restart.
-    """
+    """Application configuration as key-value pairs."""
     __tablename__ = "settings"
 
     key: Mapped[str] = mapped_column(String(100), primary_key=True)
@@ -203,17 +136,10 @@ class Setting(Base):
 
 
 class SystemLog(Base):
-    """
-    System logs table.
-    
-    Stores operational logs with severity levels, module context,
-    and optional metadata. Supports dashboard log viewer and troubleshooting.
-    """
+    """Operational logs with severity, module context, and optional metadata."""
     __tablename__ = "system_logs"
 
-    id: Mapped[int] = mapped_column(
-        Integer, primary_key=True, autoincrement=True
-    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     timestamp: Mapped[str] = mapped_column(String(30), nullable=False)
     level: Mapped[str] = mapped_column(String(10), nullable=False)
     module: Mapped[str] = mapped_column(String(50), nullable=False)
@@ -232,10 +158,6 @@ class SystemLog(Base):
             f"module='{self.module}', event='{self.event}')>"
         )
 
-
-# ---------------------------------------------------------------------------
-# Enterprise models (Task 1.2)
-# ---------------------------------------------------------------------------
 
 class ScheduledJob(Base):
     """APScheduler job mirror for API queries."""
@@ -277,7 +199,7 @@ class UserAccount(Base):
 
 
 class AuditLog(Base):
-    """Append-only audit log — no UPDATE/DELETE via API."""
+    """Append-only audit log."""
     __tablename__ = "audit_log"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -337,9 +259,7 @@ class IOCStore(Base):
     source: Mapped[str] = mapped_column(String(30), nullable=False, default="manual")
     last_seen: Mapped[str] = mapped_column(String(30), nullable=False)
 
-    __table_args__ = (
-        Index("idx_ioc_value", "ioc_value"),
-    )
+    __table_args__ = (Index("idx_ioc_value", "ioc_value"),)
 
     def __repr__(self) -> str:
         return f"<IOCStore(id={self.id}, ioc_type='{self.ioc_type}', ioc_value='{self.ioc_value}')>"

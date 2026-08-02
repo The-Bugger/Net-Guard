@@ -8,21 +8,16 @@ Requirements: 1.1-1.15
 
 from __future__ import annotations
 
-import ipaddress
 import logging
-import shlex
 import subprocess
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
+from .firewall import fw_block, fw_unblock
+
 logger = logging.getLogger("netguard.block_manager")
 
 _VALID_TYPES = {"ip", "cidr", "country", "asn"}
-
-_IPTABLES_BLOCK   = "iptables -I INPUT -s {target} -j DROP"
-_IPTABLES_UNBLOCK = "iptables -D INPUT -s {target} -j DROP"
-_IP6TABLES_BLOCK  = "ip6tables -I INPUT -s {target} -j DROP"
-_IP6TABLES_UNBLOCK= "ip6tables -D INPUT -s {target} -j DROP"
 
 
 def _utc_now() -> str:
@@ -33,14 +28,6 @@ def _utc_future(seconds: int) -> str:
     return (datetime.now(timezone.utc) + timedelta(seconds=seconds)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _is_ipv6(target: str) -> bool:
-    try:
-        return isinstance(ipaddress.ip_address(target), ipaddress.IPv6Address)
-    except ValueError:
-        try:
-            return isinstance(ipaddress.ip_network(target, strict=False), ipaddress.IPv6Network)
-        except ValueError:
-            return False
 
 
 class BlockManager:
@@ -81,11 +68,16 @@ class BlockManager:
         if target_type == "ip" and self._whitelist_manager and self._whitelist_manager.is_whitelisted(target):
             return {"success": False, "error_code": "WHITELISTED_IP"}
 
-        # Duplicate block — extend expiry (Req 1.5)
+        # Duplicate block — extend expiry from current remaining time (Req 1.5)
         if target_type == "ip":
             existing = self._block_repo.get_active(target)
             if existing:
-                new_expires = _utc_future(duration)
+                # Parse current expiry and add duration on top (not from now).
+                try:
+                    current_exp = datetime.fromisoformat(existing["expires_at"].replace("Z", "+00:00"))
+                except (KeyError, ValueError):
+                    current_exp = datetime.now(timezone.utc)
+                new_expires = (current_exp + timedelta(seconds=duration)).strftime("%Y-%m-%dT%H:%M:%SZ")
                 self._block_repo.extend_expiry(target, new_expires)
                 logger.info("BlockManager: extended expiry for %s → %s", target, new_expires)
                 return {"success": True, "block_id": existing["id"], "extended": True,
@@ -181,25 +173,21 @@ class BlockManager:
 
     def _apply_firewall(self, target: str, block: bool, target_type: str = "ip") -> bool:
         """
-        Apply or remove iptables/ip6tables rule based on target type.
+        Apply or remove a firewall rule based on target type.
 
-        - ip/cidr  → iptables -s {target} -j DROP
-        - country  → iptables -m geoip --src-cc {code} -j DROP (logs warning if geoip unavailable)
-        - asn      → ipset (falls back to warning if ipset unavailable)
+        - ip/cidr    → fw_block / fw_unblock (platform-aware)
+        - country    → iptables geoip on Linux; DB-only on Windows (non-fatal skip)
+        - asn        → ipset on Linux; DB-only on Windows (non-fatal skip)
 
-        Returns True on success or non-fatal skip (dev environment, unsupported module).
+        Returns True on success or non-fatal skip.
         """
         try:
             if target_type == "country":
                 return self._apply_country_rule(target, block)
             if target_type == "asn":
                 return self._apply_asn_rule(target, block)
-            # ip or cidr — pick ip6tables if IPv6
-            if _is_ipv6(target):
-                cmd_tmpl = _IP6TABLES_BLOCK if block else _IP6TABLES_UNBLOCK
-            else:
-                cmd_tmpl = _IPTABLES_BLOCK if block else _IPTABLES_UNBLOCK
-            return self._run_cmd(cmd_tmpl.format(target=shlex.quote(target)))
+            # ip or cidr
+            return fw_block(target) if block else fw_unblock(target)
         except Exception as exc:
             logger.error("BlockManager: firewall error: %s", exc)
             return False
@@ -207,12 +195,22 @@ class BlockManager:
     def _apply_country_rule(self, country_code: str, block: bool) -> bool:
         """
         Apply/remove country-level block via iptables geoip match extension.
-        Logs a warning and returns True (non-fatal skip) if geoip module unavailable.
+        On Windows or when geoip module is unavailable, logs a warning and
+        returns True (non-fatal skip — DB record still created).
         """
+        import sys
+        if sys.platform == "win32":
+            logger.warning(
+                "BlockManager: country block for %s recorded in DB only "
+                "(netsh does not support geo-matching).", country_code
+            )
+            return True
+
         action = "-I" if block else "-D"
-        cmd = f"iptables {action} INPUT -m geoip --src-cc {shlex.quote(country_code)} -j DROP"
+        cmd = ["iptables", action, "INPUT", "-m", "geoip",
+               "--src-cc", country_code, "-j", "DROP"]
         try:
-            result = subprocess.run(shlex.split(cmd), capture_output=True, timeout=5)
+            result = subprocess.run(cmd, capture_output=True, timeout=5)
             if result.returncode != 0:
                 stderr = result.stderr.decode("utf-8", errors="replace").strip()
                 if "geoip" in stderr.lower() or "no match" in stderr.lower():
@@ -222,7 +220,7 @@ class BlockManager:
                         "country block for %s recorded in DB only. "
                         "Install xtables-addons to enforce at firewall level.", country_code
                     )
-                    return True  # DB record still created; firewall skip is non-fatal
+                    return True  # non-fatal
                 logger.error("BlockManager: country rule failed (rc=%d): %s", result.returncode, stderr)
                 return False
             return True
@@ -232,23 +230,38 @@ class BlockManager:
 
     def _apply_asn_rule(self, asn: str, block: bool) -> bool:
         """
-        Apply/remove ASN block via ipset.
-        Falls back to a warning log if ipset is unavailable.
+        Apply/remove ASN block via ipset (Linux only).
+        On Windows, logs a warning and returns True (non-fatal skip).
         """
+        import sys
+        if sys.platform == "win32":
+            logger.warning(
+                "BlockManager: ASN block for %s recorded in DB only "
+                "(ipset not available on Windows).", asn
+            )
+            return True
+
         set_name = f"ng_asn_{asn.lstrip('ASas')}"
         try:
             if block:
-                # Create the ipset if it doesn't exist, then reference it in iptables
                 subprocess.run(
-                    shlex.split(f"ipset create {set_name} hash:net"),
-                    capture_output=True, timeout=5
+                    ["ipset", "create", set_name, "hash:net"],
+                    capture_output=True, timeout=5,
                 )  # ignore error — may already exist
-                self._run_cmd(f"iptables -I INPUT -m set --match-set {shlex.quote(set_name)} src -j DROP")
-            else:
-                self._run_cmd(f"iptables -D INPUT -m set --match-set {shlex.quote(set_name)} src -j DROP")
                 subprocess.run(
-                    shlex.split(f"ipset destroy {set_name}"),
-                    capture_output=True, timeout=5
+                    ["iptables", "-I", "INPUT", "-m", "set",
+                     "--match-set", set_name, "src", "-j", "DROP"],
+                    capture_output=True, timeout=5,
+                )
+            else:
+                subprocess.run(
+                    ["iptables", "-D", "INPUT", "-m", "set",
+                     "--match-set", set_name, "src", "-j", "DROP"],
+                    capture_output=True, timeout=5,
+                )
+                subprocess.run(
+                    ["ipset", "destroy", set_name],
+                    capture_output=True, timeout=5,
                 )  # best-effort cleanup
             return True
         except FileNotFoundError:
@@ -257,19 +270,3 @@ class BlockManager:
                 "Install ipset to enforce at firewall level.", asn
             )
             return True  # non-fatal skip
-
-    def _run_cmd(self, cmd: str) -> bool:
-        """Run a firewall command; return True on success, False on error."""
-        try:
-            result = subprocess.run(shlex.split(cmd), capture_output=True, timeout=5)
-            if result.returncode != 0:
-                stderr = result.stderr.decode("utf-8", errors="replace").strip()
-                logger.error("BlockManager: firewall cmd failed (rc=%d): %s", result.returncode, stderr)
-                return False
-            return True
-        except FileNotFoundError:
-            logger.warning("BlockManager: iptables not found — skipping firewall rule.")
-            return True  # dev/test environment — don't hard-fail
-        except Exception as exc:
-            logger.error("BlockManager: firewall error: %s", exc)
-            return False

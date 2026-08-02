@@ -5,8 +5,9 @@ GET  /detections                  (with filters: severity, attack_type, source_i
 GET  /detections/<id>
 POST /detect                      (internal — submit packet for manual analysis)
 GET  /events/<id>/replay          (re-emit a stored event through the pipeline)
+GET  /rules/export                (export active rules in Suricata format)
 
-Requirements: 13.2, 13.3, 13.4, 13.8
+Requirements: 9.5, 13.2, 13.3, 13.4, 13.8
 """
 
 from __future__ import annotations
@@ -16,7 +17,8 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, request
 
-from backend.api.dependencies import get_event_repo
+from backend.api.dependencies import get_event_repo, get_detection_engine
+from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response
 from backend.utils.validators import validate_ip_address, validate_severity
 
@@ -192,28 +194,38 @@ def replay_event(event_id: str):
 # Suricata export endpoint (Task 13.6, Req 9.5)
 # ---------------------------------------------------------------------------
 
+# Static mapping: rule_name -> Suricata rule string.
+# ponytail: dict lookup O(1); extend by adding entries here, no abstraction needed.
+_SURICATA_RULE_MAP: dict[str, str] = {
+    "syn_flood":     'alert tcp any any -> any any (msg:"SYN Flood"; flags:S; threshold:type threshold,track by_src,count 100,seconds 3; sid:1000001; rev:1;)',
+    "port_scan":     'alert tcp any any -> any any (msg:"Port Scan"; flags:S; threshold:type threshold,track by_src,count 20,seconds 10; sid:1000002; rev:1;)',
+    "sql_injection": 'alert tcp any any -> any any (msg:"SQL Injection"; content:"SELECT"; content:"FROM"; sid:1000003; rev:1;)',
+    "brute_force":   'alert tcp any any -> any 22 (msg:"Brute Force"; threshold:type threshold,track by_src,count 10,seconds 60; sid:1000004; rev:1;)',
+    "icmp_flood":    'alert icmp any any -> any any (msg:"ICMP Flood"; threshold:type threshold,track by_src,count 100,seconds 1; sid:1000005; rev:1;)',
+    "slow_http":     'alert tcp any any -> any any (msg:"Slow HTTP"; content:"GET"; threshold:type threshold,track by_src,count 5,seconds 10; sid:1000006; rev:1;)',
+    "dns_tunnel":    'alert dns any any -> any any (msg:"DNS Tunnel"; content:"|00 00 10|"; sid:1000007; rev:1;)',
+    "arp_spoof":     'alert arp any any -> any any (msg:"ARP Spoof"; content:"|00 01|"; sid:1000008; rev:1;)',
+}
+
+
 @detection_bp.get("/rules/export")
+@require_role("admin", "analyst", "hunter", "viewer")
 def export_rules():
     """
     GET /api/v1/rules/export?format=suricata
 
     Convert active detection rules to Suricata rule syntax.
-    Returns empty list with HTTP 200 if no active rules.
+    Returns empty list with HTTP 200 if no active rules (Req 9.5).
     """
     fmt = request.args.get("format", "suricata").lower()
     if fmt != "suricata":
-        return error_response(f"Unsupported format: {fmt}. Only 'suricata' is supported.", 400)
+        return error_response(f"Unsupported format: {fmt}. Only 'suricata' is supported.", 400, "UNSUPPORTED_FORMAT")
 
-    from backend.api.dependencies import get_detection_engine
     engine = get_detection_engine()
     if not engine:
-        return success_response(data={"rules": [], "format": "suricata"})
+        return success_response(data={"rules": []})
 
-    suricata_rules = []
-    for rule_name in engine.active_rule_names:
-        suricata_rules.append(
-            f'alert tcp any any -> any any (msg:"NetGuard {rule_name}"; '
-            f'sid:{abs(hash(rule_name)) % 1000000 + 1000000}; rev:1;)'
-        )
+    active = getattr(engine, "active_rule_names", [])
+    rules = [_SURICATA_RULE_MAP[name] for name in active if name in _SURICATA_RULE_MAP]
 
-    return success_response(data={"rules": suricata_rules, "format": "suricata", "count": len(suricata_rules)})
+    return success_response(data={"rules": rules})

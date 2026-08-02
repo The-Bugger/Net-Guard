@@ -16,15 +16,18 @@ Requirements: 1.7, 11.8
 
 from __future__ import annotations
 
-# ── Step 1: Eventlet monkey-patch MUST happen before any other imports ──
-# eventlet is incompatible with Python 3.14+ (missing start_joinable_thread).
-# Fall back to threading async_mode automatically.
+# ── Step 1: Async mode selection ────────────────────────────────────────────
+# eventlet monkey-patches select/socket which corrupts Scapy's pcap fd
+# handling on Windows, causing monitor/start to hang indefinitely.
+# Use threading mode on Windows; keep eventlet on Linux where it works fine.
 import sys as _sys
-if _sys.version_info < (3, 14):
+import os as _os
+if _sys.platform == "win32":
+    _os.environ["SOCKETIO_ASYNC_MODE"] = "threading"
+elif _sys.version_info < (3, 14):
     import eventlet
     eventlet.monkey_patch()
 else:
-    import os as _os
     _os.environ.setdefault("SOCKETIO_ASYNC_MODE", "threading")
 
 import logging
@@ -182,11 +185,11 @@ prevention_engine = PreventionEngine(
     socketio_emit=_emit_socketio,
 )
 
-# ── Step 7: Verify iptables privileges ───────────────────────────────────────
+# ── Step 7: Verify firewall privileges ───────────────────────────────────────
 try:
     prevention_engine.verify_privileges()
 except RuntimeError as exc:
-    logger.critical("iptables privilege check failed: %s", exc)
+    logger.critical("Firewall privilege check failed: %s", exc)
     logger.warning("Continuing without firewall blocking capability.")
     # Don't abort — allow monitoring/detection without blocking for dev/test
 
@@ -234,6 +237,18 @@ dependencies.register("stats_service", stats_service)
 dependencies.register("event_repo", event_repo)
 dependencies.register("block_repo", block_repo)
 dependencies.register("log_repo", log_repo)
+dependencies.register("settings_repo", settings_repo)
+dependencies.register("whitelist_repo", whitelist_repo)
+
+from backend.services.block_manager import BlockManager
+block_manager = BlockManager(
+    block_repo=block_repo,
+    whitelist_manager=whitelist_manager,
+    log_engine=log_engine,
+    socketio_emit=_emit_socketio,
+)
+block_manager.restore_on_startup()
+dependencies.register("block_manager", block_manager)
 
 from backend.services.audit_service import AuditService
 audit_service = AuditService(session_factory)
@@ -255,11 +270,41 @@ from backend.services.security_advisor import SecurityAdvisor
 security_advisor = SecurityAdvisor()
 dependencies.register("security_advisor", security_advisor)
 
+from backend.services.compliance_reporter import ComplianceReporter
+compliance_reporter = ComplianceReporter()
+dependencies.register("compliance_reporter", compliance_reporter)
+
 from backend.services.threat_simulator import ThreatSimulator
 threat_simulator = ThreatSimulator(
     whitelist_set={e["ip_address"] for e in whitelist_manager.get_all()}
 )
 dependencies.register("threat_simulator", threat_simulator)
+
+from backend.services.attack_lab_service import AttackLabService
+attack_lab_service = AttackLabService(
+    packet_queue=packet_queue,
+    threat_simulator=threat_simulator,
+)
+dependencies.register("attack_lab_service", attack_lab_service)
+
+from backend.services.geoip_engine import GeoIPEngine
+geoip_engine = GeoIPEngine(settings_repo=settings_repo)
+dependencies.register("geoip_engine", geoip_engine)
+
+from backend.services.threat_intel_service import ThreatIntelService
+threat_intel_service = ThreatIntelService(event_repo, settings_repo, log_engine)
+dependencies.register("threat_intel_service", threat_intel_service)
+
+from backend.services.anomaly_engine import AnomalyEngine
+anomaly_engine = AnomalyEngine(
+    baseline_window_seconds=float(os.environ.get("ANOMALY_BASELINE_WINDOW", "300"))
+)
+dependencies.register("anomaly_engine", anomaly_engine)
+
+# Plugin registry
+from backend.services.plugin_registry import PluginRegistry
+plugin_registry = PluginRegistry(settings_repo)
+dependencies.register("plugin_registry", plugin_registry)
 
 # ── Step 9: Create Flask app and start background threads ────────────────────
 from backend.api import create_app, socketio as _socketio
@@ -343,11 +388,7 @@ if __name__ == "__main__":
         logger.info("Dashboard available at http://localhost:%d", port)
         logger.info("API base URL: http://localhost:%d/api/v1", port)
 
-    _socketio.run(
-        app,
-        host=host,
-        port=port,
-        debug=debug,
-        use_reloader=False,
-        ssl_context=ssl_context,
-    )
+    run_kwargs = dict(host=host, port=port, debug=debug, use_reloader=False)
+    if ssl_context is not None:
+        run_kwargs["ssl_context"] = ssl_context
+    _socketio.run(app, **run_kwargs)

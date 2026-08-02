@@ -207,18 +207,28 @@ def _pick_default_interface() -> str:
     """
     Return the first non-loopback is_up interface from psutil.
 
-    Excludes any interface whose lowercased name starts with 'lo' (covers
-    lo, loopback, localhost on Linux and Windows).  Returns empty string
-    if none found so callers can handle the missing-interface case explicitly.
+    Excludes loopback interfaces on both Linux ("lo") and Windows
+    ("Loopback Pseudo-Interface ..."). Falls back to any up interface
+    if no non-loopback up interface is found (e.g. only Wi-Fi is up).
 
     ponytail: linear scan is fine — typical host has < 10 interfaces.
 
     Requirements: 2.3
     """
+    def _is_loopback(name: str) -> bool:
+        n = name.lower()
+        return n.startswith("lo")  # covers lo, loopback, loopback pseudo-interface
+
     try:
         import psutil
-        for name, info in psutil.net_if_stats().items():
-            if info.isup and not name.lower().startswith("lo"):
+        stats = psutil.net_if_stats()
+        # First preference: up and non-loopback
+        for name, info in stats.items():
+            if info.isup and not _is_loopback(name):
+                return name
+        # Fallback: any up interface (includes loopback — better than nothing)
+        for name, info in stats.items():
+            if info.isup:
                 return name
     except Exception as exc:
         logger.warning("_pick_default_interface failed: %s", exc)

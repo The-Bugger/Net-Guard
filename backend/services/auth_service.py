@@ -79,13 +79,15 @@ class AuthService:
                     raise ValueError("MFA_INVALID")
 
             user.last_login = _utc_now()
+            # Read role inside the session before it expires (avoids DetachedInstanceError)
+            role = user.role
             session.commit()
 
         self._audit.log(username, "LOGIN", "/api/v1/auth/login", {})
         return {
-            "access_token": self._make_access_token(username, user.role),
+            "access_token": self._make_access_token(username, role),
             "refresh_token": self._make_refresh_token(username),
-            "role": user.role,
+            "role": role,
         }
 
     def refresh(self, refresh_token: str) -> dict:
@@ -98,7 +100,8 @@ class AuthService:
             user = session.query(UserAccount).filter_by(username=username, active=1).first()
             if not user:
                 raise ValueError("USER_NOT_FOUND")
-            return {"access_token": self._make_access_token(username, user.role)}
+            role = user.role  # read inside session
+        return {"access_token": self._make_access_token(username, role)}
 
     def create_user(self, username: str, password: str, role: str) -> dict:
         """

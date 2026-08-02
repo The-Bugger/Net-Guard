@@ -1,9 +1,9 @@
 """
 prevention_service.py — Prevention_Engine for NetGuard IDPS.
 
-Automatically blocks confirmed attackers via iptables. Checks the whitelist
-before issuing any block. Handles duplicate blocks by extending expiry.
-Verifies iptables privileges at startup.
+Automatically blocks confirmed attackers via the platform firewall.
+Checks the whitelist before issuing any block. Handles duplicate blocks
+by extending expiry. Verifies firewall privileges at startup.
 
 Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 11.1, 11.2, 11.4, 11.5, 11.6, 11.7, 11.8
 """
@@ -12,21 +12,15 @@ from __future__ import annotations
 
 import ipaddress
 import logging
-import shlex
-import subprocess
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import psutil
 
 from detection.rules.base_rule import Explanation, ThreatEvent
+from .firewall import fw_block, fw_unblock, fw_check
 
 logger = logging.getLogger("netguard.prevention_engine")
-
-# iptables command templates
-_IPTABLES_BLOCK = "iptables -I INPUT -s {ip} -j DROP"
-_IPTABLES_UNBLOCK = "iptables -D INPUT -s {ip} -j DROP"
-_IPTABLES_CHECK = "iptables -L INPUT -n"
 
 # Private, loopback, link-local, and multicast ranges that must never be blocked.
 # ponytail: stdlib ipaddress only — no new dependency needed.
@@ -76,9 +70,10 @@ def _is_own_address(ip: str) -> bool:
 
 class PreventionEngine:
     """
-    Blocks and unblocks IP addresses via iptables.
+    Blocks and unblocks IP addresses via the platform firewall
+    (iptables on Linux, netsh advfirewall on Windows).
 
-    Must be started with root/sudo privileges for iptables operations.
+    Must be started with elevated privileges for firewall operations.
 
     Usage::
 
@@ -95,14 +90,6 @@ class PreventionEngine:
         block_duration: int = 120,
         socketio_emit=None,
     ) -> None:
-        """
-        Args:
-            block_repo: BlockRepository instance.
-            whitelist_manager: WhitelistManager instance.
-            log_engine: LoggingEngine instance (optional).
-            block_duration: Default block duration in seconds.
-            socketio_emit: Callable(event_name, data) for SocketIO notifications.
-        """
         self._block_repo = block_repo
         self._whitelist_manager = whitelist_manager
         self._log_engine = log_engine
@@ -115,20 +102,20 @@ class PreventionEngine:
 
     def verify_privileges(self) -> None:
         """
-        Verify that iptables commands can be executed.
+        Verify that the platform firewall tool can be executed.
 
         Raises:
-            RuntimeError: If the process lacks iptables privileges.
+            RuntimeError: If the process lacks firewall privileges.
         """
-        ok = self._run_iptables(_IPTABLES_CHECK)
-        if not ok:
+        if not fw_check():
             msg = (
-                "PreventionEngine: insufficient privileges to execute iptables. "
-                "Run NetGuard with sudo or grant CAP_NET_ADMIN."
+                "PreventionEngine: insufficient privileges to execute firewall commands. "
+                "On Linux run with sudo or grant CAP_NET_ADMIN; "
+                "on Windows run as Administrator."
             )
             logger.critical(msg)
             raise RuntimeError(msg)
-        logger.info("PreventionEngine: iptables privilege check passed.")
+        logger.info("PreventionEngine: firewall privilege check passed.")
 
     # ------------------------------------------------------------------
     # Event handling
@@ -137,32 +124,21 @@ class PreventionEngine:
     def handle_event(self, event: ThreatEvent, explanation: Explanation) -> None:
         """
         Process a confirmed ThreatEvent and block the attacker if not whitelisted.
-
-        Args:
-            event: The ThreatEvent from the Detection_Engine.
-            explanation: The Explanation from the Explainability_Engine.
         """
         ip = event.source_ip
 
         # Check whitelist first (Requirement 11.1, 12.7)
         if self._whitelist_manager and self._whitelist_manager.is_whitelisted(ip):
-            logger.info(
-                "PreventionEngine: %s is whitelisted — no block applied.", ip
-            )
+            logger.info("PreventionEngine: %s is whitelisted — no block applied.", ip)
             return
 
         self.block_ip(ip, event.attack_type, event.event_id)
 
     def block_ip(self, ip: str, reason: str, event_id: str, *, allow_private_block: bool = False) -> bool:
         """
-        Block an IP address via iptables and record the block in the database.
+        Block an IP address and record the block in the database.
 
         Handles duplicate blocks by extending expiry (Requirement 11.6).
-
-        Args:
-            ip: IPv4 or IPv6 address to block.
-            reason: Attack type that triggered the block.
-            event_id: Originating ThreatEvent ID.
 
         Returns:
             True if block was applied (new or extended), False on failure.
@@ -196,25 +172,19 @@ class PreventionEngine:
             self._log_block(ip, reason, self._block_duration)
             return True
 
-        # Issue new iptables rule
-        cmd = _IPTABLES_BLOCK.format(ip=shlex.quote(ip))
-        success = self._run_iptables(cmd)
-
-        if not success:
-            logger.error(
-                "PreventionEngine: iptables block FAILED for %s — continuing.", ip
-            )
+        # Issue firewall rule
+        if not fw_block(ip):
+            logger.error("PreventionEngine: firewall block FAILED for %s — continuing.", ip)
             return False
 
         # Record in database
-        record_data = {
+        self._block_repo.insert({
             "event_id": event_id,
             "ip_address": ip,
             "blocked_at": now,
             "expires_at": expires_at,
             "reason": reason,
-        }
-        self._block_repo.insert(record_data)
+        })
         self._log_block(ip, reason, self._block_duration)
 
         # SocketIO notification
@@ -237,21 +207,15 @@ class PreventionEngine:
 
     def unblock_ip(self, ip: str) -> bool:
         """
-        Remove the iptables DROP rule for an IP and mark the block inactive.
-
-        Args:
-            ip: IPv4 or IPv6 address to unblock.
+        Remove the firewall DROP rule for an IP and mark the block inactive.
 
         Returns:
             True if unblocked successfully.
         """
-        cmd = _IPTABLES_UNBLOCK.format(ip=shlex.quote(ip))
-        success = self._run_iptables(cmd)
+        success = fw_unblock(ip)
 
         if not success:
-            logger.error(
-                "PreventionEngine: iptables unblock FAILED for %s.", ip
-            )
+            logger.error("PreventionEngine: firewall unblock FAILED for %s.", ip)
             # Still mark DB inactive so UI reflects change
             self._block_repo.set_inactive(ip)
             return False
@@ -280,47 +244,6 @@ class PreventionEngine:
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
-
-    def _run_iptables(self, cmd: str) -> bool:
-        """
-        Execute an iptables command via subprocess.
-
-        Args:
-            cmd: The complete iptables command string.
-
-        Returns:
-            True if the command exited with code 0, False otherwise.
-        """
-        try:
-            result = subprocess.run(
-                shlex.split(cmd),
-                capture_output=True,
-                timeout=5,
-            )
-            if result.returncode != 0:
-                stderr = result.stderr.decode("utf-8", errors="replace").strip()
-                logger.error(
-                    "PreventionEngine: iptables command failed (rc=%d): %s — stderr: %s",
-                    result.returncode, cmd, stderr,
-                )
-                return False
-            return True
-        except FileNotFoundError:
-            logger.error(
-                "PreventionEngine: iptables not found. Is it installed and in PATH?"
-            )
-            return False
-        except subprocess.TimeoutExpired:
-            logger.error(
-                "PreventionEngine: iptables command timed out: %s", cmd
-            )
-            return False
-        except Exception as exc:
-            logger.error(
-                "PreventionEngine: unexpected error running iptables: %s — %s",
-                cmd, exc,
-            )
-            return False
 
     def _log_block(self, ip: str, reason: str, duration: int) -> None:
         if self._log_engine:

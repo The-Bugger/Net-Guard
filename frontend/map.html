@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — World Attack Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+  <style>
+    /* Map layout — full-height two-column */
+    .map-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .map-canvas-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      gap: 0;
+    }
+    #world-map-svg {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: var(--surface);
+    }
+    /* Right sidebar panel */
+    .map-sidebar {
+      width: 320px;
+      flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .map-sidebar-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .map-sidebar-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin: 0 0 10px;
+    }
+    .resolve-row {
+      display: flex;
+      gap: 8px;
+    }
+    .resolve-row .input {
+      flex: 1;
+      min-width: 0;
+    }
+    #resolve-result {
+      margin-top: 10px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    #resolve-result .resolve-error {
+      color: var(--danger);
+    }
+    #resolve-result .resolve-row-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    #resolve-result .resolve-row-item:last-child { border-bottom: none; }
+    #resolve-result .resolve-label { color: var(--text-muted); }
+    /* Events feed */
+    .events-feed {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .feed-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .feed-item:last-child { border-bottom: none; }
+    .feed-item .feed-ip { font-family: monospace; color: var(--text); flex-shrink: 0; }
+    .feed-item .feed-type { color: var(--text-muted); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* Bottom strip */
+    .map-bottom-strip {
+      height: 52px;
+      border-top: 1px solid var(--border);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      flex-shrink: 0;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .strip-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      padding: 4px 10px;
+      background: var(--surface-2);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div id="monitoring-badge" class="status-badge inactive"><span class="status-dot"></span> Stopped</div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<div class="app-layout">
+  <nav class="sidebar" id="sidebar">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/threats.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Threats
+    </a>
+    <a href="/blocked.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Blocked IPs
+    </a>
+    <a href="/whitelist.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Whitelist
+    </a>
+    <a href="/logs.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </a>
+    <a href="/rules.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Rules
+    </a>
+    <a href="/map.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      Map
+    </a>
+    <a href="/settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+  </nav>
+
+  <main class="main-content" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
+
+    <div class="map-layout">
+      <!-- World map SVG -->
+      <div class="map-canvas-wrap">
+        <svg id="world-map-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"
+             aria-label="World attack map" role="img">
+          <!-- Simple equirectangular world outline (schematic, not cartographic-precise) -->
+          <!-- ponytail: hand-simplified continent paths; good enough for a threat-dot overlay -->
+          <g id="map-land" fill="var(--surface-2)" stroke="var(--border)" stroke-width="0.5">
+            <!-- North America -->
+            <path d="M80,80 L180,60 L220,100 L230,160 L200,200 L170,220 L130,250 L100,260 L80,240 L60,200 L50,160 L60,120 Z"/>
+            <!-- Central America / Caribbean -->
+            <path d="M170,220 L200,230 L215,250 L190,260 L165,250 Z"/>
+            <!-- Greenland -->
+            <path d="M200,30 L240,20 L260,50 L240,80 L210,70 Z"/>
+            <!-- South America -->
+            <path d="M160,280 L210,260 L240,280 L250,340 L240,400 L210,440 L180,450 L160,420 L140,360 L130,310 Z"/>
+            <!-- Europe -->
+            <path d="M420,70 L480,60 L510,80 L510,120 L480,130 L450,140 L420,130 L400,110 Z"/>
+            <!-- Scandinavia -->
+            <path d="M450,40 L470,30 L490,50 L480,70 L460,65 Z"/>
+            <!-- UK/Ireland -->
+            <path d="M400,80 L415,70 L420,90 L405,100 Z"/>
+            <!-- Africa -->
+            <path d="M420,160 L500,150 L530,170 L540,220 L530,280 L510,340 L490,380 L460,390 L430,370 L410,320 L400,260 L400,200 Z"/>
+            <!-- Russia / Central Asia -->
+            <path d="M510,50 L700,40 L760,70 L780,110 L720,130 L650,140 L560,130 L510,110 Z"/>
+            <!-- Middle East -->
+            <path d="M530,140 L580,130 L610,150 L610,190 L570,200 L530,185 Z"/>
+            <!-- South Asia -->
+            <path d="M600,150 L680,140 L710,160 L710,200 L690,230 L660,240 L630,230 L600,200 Z"/>
+            <!-- East Asia -->
+            <path d="M700,80 L820,70 L850,100 L840,160 L800,180 L740,170 L710,150 L700,120 Z"/>
+            <!-- Southeast Asia -->
+            <path d="M730,180 L790,180 L810,210 L790,240 L750,240 L720,220 Z"/>
+            <!-- Australia -->
+            <path d="M760,280 L870,270 L900,300 L900,360 L870,390 L800,400 L760,370 L740,330 Z"/>
+            <!-- Japan -->
+            <path d="M840,110 L860,100 L870,120 L855,135 L840,130 Z"/>
+            <!-- Indonesia / Philippines (islands schematic) -->
+            <path d="M780,250 L810,240 L830,255 L820,270 L795,270 Z"/>
+          </g>
+          <!-- Graticule lines (subtle grid) -->
+          <g id="map-grid" stroke="var(--border)" stroke-width="0.3" opacity="0.4">
+            <!-- Horizontal lines every ~30° lat -->
+            <line x1="0" y1="83" x2="1000" y2="83"/>
+            <line x1="0" y1="167" x2="1000" y2="167"/>
+            <line x1="0" y1="250" x2="1000" y2="250"/>
+            <line x1="0" y1="333" x2="1000" y2="333"/>
+            <line x1="0" y1="417" x2="1000" y2="417"/>
+            <!-- Vertical lines every ~60° lon -->
+            <line x1="167" y1="0" x2="167" y2="500"/>
+            <line x1="333" y1="0" x2="333" y2="500"/>
+            <line x1="500" y1="0" x2="500" y2="500"/>
+            <line x1="667" y1="0" x2="667" y2="500"/>
+            <line x1="833" y1="0" x2="833" y2="500"/>
+          </g>
+          <!-- Attack dots layer — populated by map.js -->
+          <g id="map-dots"></g>
+        </svg>
+
+        <!-- Bottom events strip -->
+        <div class="map-bottom-strip" id="events-strip">
+          <span>Loading events…</span>
+        </div>
+      </div>
+
+      <!-- IP resolution sidebar -->
+      <aside class="map-sidebar" aria-label="IP resolution panel">
+        <div class="map-sidebar-section">
+          <h3>IP Lookup</h3>
+          <div class="resolve-row">
+            <input id="resolve-input" class="input" type="text" placeholder="e.g. 8.8.8.8"
+                   aria-label="IP address to resolve" autocomplete="off" spellcheck="false">
+            <button class="btn btn-primary btn-sm" onclick="resolveIP()">Resolve</button>
+          </div>
+          <div id="resolve-result"></div>
+        </div>
+
+        <div class="map-sidebar-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;border-bottom:none;">
+          <h3>Recent Events</h3>
+          <div class="events-feed" id="events-feed">
+            <div style="padding:12px;color:var(--text-muted);font-size:13px">Loading…</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+  </main>
+</div>
+
+<div id="reconnecting-banner" class="reconnecting-banner">Reconnecting…</div>
+<div id="notifications"></div>
+<div id="toast-container"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/socket.js"></script>
+<script src="/js/map.js"></script>
+</body>
+</html>

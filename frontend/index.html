@@ -1,36 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NetGuard — IDPS Dashboard</title>
+  <title>NetGuard — SOC Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/dark-theme.css">
-
-
-
-  
   <style>
-    /* Task 39 — onboarding tour */
+    /* ── Bottom-row two-column layout ─────────────────────────────────── */
+    .bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1200px) { .bottom-row { grid-template-columns: 1fr; } }
+
+    /* ── MITRE heatmap ────────────────────────────────────────────────── */
+    .mitre-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 8px;
+    }
+    .mitre-cell {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      text-align: center;
+      cursor: default;
+      transition: background var(--motion-normal);
+    }
+    .mitre-cell.has-hits { background: rgba(168,85,247,0.2); border-color: rgba(168,85,247,0.4); }
+    .mitre-cell.hot      { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.5); }
+    .mitre-cell-label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+    .mitre-cell-count { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .mitre-cell.has-hits .mitre-cell-count { color: var(--color-purple, #A855F7); }
+    .mitre-cell.hot      .mitre-cell-count { color: var(--danger); }
+
+    /* ── Top attackers ────────────────────────────────────────────────── */
+    .attacker-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(51,65,85,0.5);
+    }
+    .attacker-rank { font-size: 11px; font-weight: 700; color: var(--text-muted); width: 18px; flex-shrink: 0; }
+    .attacker-ip   { flex: 1; font-size: 13px; font-family: ui-monospace, monospace; }
+    .attacker-bar-wrap { width: 60px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+    .attacker-bar-fill { height: 100%; background: var(--danger); border-radius: 2px; }
+    .attacker-count { font-size: 12px; font-weight: 600; color: var(--danger); flex-shrink: 0; }
+
+    /* ── Tour overlay ─────────────────────────────────────────────────── */
     .tour-highlight {
-      position: relative;
-      z-index: 600;
+      position: relative; z-index: 600;
       box-shadow: 0 0 0 4px var(--accent), 0 0 0 9999px rgba(0,0,0,0.55);
-      border-radius: var(--radius);
-      pointer-events: none;
+      border-radius: var(--radius); pointer-events: none;
     }
     .tour-tooltip {
-      position: fixed;
-      z-index: 601;
-      background: var(--bg-card);
-      border: 1px solid var(--accent);
-      border-radius: var(--radius);
-      padding: 16px 18px;
-      max-width: 300px;
-      box-shadow: 0 8px 32px rgba(0,229,255,0.2);
-      font-size: 13px;
-      line-height: 1.5;
+      position: fixed; z-index: 601;
+      background: var(--bg-card); border: 1px solid var(--accent);
+      border-radius: var(--radius); padding: 16px 18px;
+      max-width: 300px; box-shadow: 0 8px 32px rgba(0,229,255,0.2);
+      font-size: 13px; line-height: 1.5;
     }
     .tour-tooltip strong { color: var(--accent); display: block; margin-bottom: 6px; font-size: 14px; }
     .tour-tooltip-actions { display: flex; gap: 8px; margin-top: 12px; }
@@ -39,345 +74,322 @@
 </head>
 <body>
 
-
-
-  
-<!-- Header -->
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
 <header class="header">
   <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>
   </button>
+
   <div class="header-logo">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
     </svg>
     NetGuard
   </div>
+
   <div class="header-spacer"></div>
-  <div class="header-status">
-    <span id="current-interface" style="color:var(--text-muted);font-size:13px"></span>
-    <div id="monitoring-badge" class="status-badge inactive">
-      <span class="status-dot"></span> Monitoring Stopped
-    </div>
+
+  <span id="current-interface" style="color:var(--text-muted);font-size:13px"></span>
+
+  <div id="monitoring-badge" class="status-badge inactive">
+    <span class="status-dot"></span> Monitoring Stopped
   </div>
-  <div class="header-time" id="system-time"></div>
+
+  <div class="header-time" id="system-time" aria-live="polite"></div>
+
+  <!-- Theme toggle (Req 8.4 / tokens.css) -->
+  <button class="theme-toggle-btn" id="theme-btn" onclick="toggleTheme()" aria-label="Toggle colour theme" title="Toggle dark/light theme">
+    <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1"  x2="12" y2="3"/>  <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22"  x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>    <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <span id="theme-label">Light</span>
+  </button>
+
+  <!-- User role indicator -->
+  <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+    <span id="user-role-label">Admin</span>
+  </div>
 </header>
 
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <div class="app-layout">
 
-  <!-- Sidebar -->
-  <nav class="sidebar" id="sidebar">
-    <a href="/" class="nav-item active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-      Dashboard
-    </a>
-    <a href="/threats.html" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      Threats
-    </a>
-    <a href="/blocked.html" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-      Blocked IPs
-    </a>
-    <a href="/whitelist.html" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-      Whitelist
-    </a>
-    <a href="/logs.html" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Logs
-    </a>
-    <a href="/rules.html" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-      Rules
-    </a>
-    <a href="/settings.html" class="nav-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Settings
-    </a>
-  </nav>
+<!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+<nav class="sidebar" id="sidebar" aria-label="Main navigation">
+  <a href="/" class="nav-item active">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </a>
+  <a href="/threats.html" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Threats
+  </a>
+  <a href="/blocked.html" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+    Blocks
+  </a>
+  <a href="/threats.html#map" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+    Map
+  </a>
+  <a href="/threats.html#hunt" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    Hunt
+  </a>
+  <a href="/analytics.html" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Analytics
+  </a>
+  <a href="/rules.html" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+    Rules
+  </a>
+  <a href="/about.html#lab" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+    Attack Lab
+  </a>
+  <a href="/analytics.html#reports" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Reports
+  </a>
+  <a href="/settings.html" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
+  </a>
+  <a href="/logs.html" class="nav-item">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
+    Logs
+  </a>
+</nav>
 
-  <!-- Main Content -->
-  <main class="main-content">
+<!-- ── Main Content ──────────────────────────────────────────────────────── -->
+<main class="main-content">
 
-    <!-- Dashboard page header -->
-    <div class="page-header-row" style="margin-bottom:16px">
-      <div>
-        <div class="page-title">Dashboard</div>
-        <div class="page-subtitle">Live network security overview</div>
-      </div>
+  <!-- Page header + monitor controls -->
+  <div class="page-header-row" style="margin-bottom:16px">
+    <div>
+      <div class="page-title">SOC Dashboard</div>
+      <div class="page-subtitle">Live network security overview</div>
     </div>
-
-    <!-- Monitor Controls -->
-    <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <select id="interface-select" class="input" style="width:180px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <select id="interface-select" class="input" style="width:180px" aria-label="Network interface">
         <option value="">Loading interfaces…</option>
       </select>
-      <button class="btn btn-primary" onclick="startMonitoring()">▶ Start Monitoring</button>
+      <button class="btn btn-primary" onclick="startMonitoring()">▶ Start</button>
       <button class="btn btn-ghost" onclick="stopMonitoring()">⏹ Stop</button>
-      <button class="btn btn-ghost" onclick="loadInterfaces()">🔄 Refresh Interfaces</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportJSON()" title="Export JSON">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleAIAssistant()">💬 AI</button>
+    </div>
+  </div>
+
+  <!-- Status badges row -->
+  <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:center">
+    <div id="badge-monitoring" class="status-badge inactive"><span class="status-dot"></span> Monitoring Stopped</div>
+    <div id="badge-ai" class="status-badge inactive"><span class="status-dot"></span> AI Unavailable</div>
+  </div>
+
+  <!-- ── KPI Row (6 cards, live via live_stats) ──────────────────────── -->
+  <div class="kpi-grid" id="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
+
+    <div class="kpi-card">
+      <div class="kpi-label">Total Events</div>
+      <div class="kpi-value" id="kpi-packets">0</div>
     </div>
 
-    <!-- Quick Actions Bar -->
-    <div class="filter-bar" style="margin-bottom:16px">
-      <button class="btn btn-ghost btn-sm" onclick="exportJSON()" title="Export to JSON">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Export JSON
-      </button>
-      <button class="btn btn-ghost btn-sm" onclick="viewAnalytics()" title="View Analytics Page">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        View Analytics
-      </button>
-      <button class="btn btn-ghost btn-sm" onclick="toggleAIAssistant()" title="Open AI Assistant">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-        AI Assistant
-      </button>
-      <button class="btn btn-ghost btn-sm" onclick="refreshLanDevices()" title="Refresh LAN device list">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Scan LAN
-      </button>
+    <div class="kpi-card">
+      <div class="kpi-label">Blocked IPs</div>
+      <div class="kpi-value" id="kpi-blocked" style="color:var(--danger)">0</div>
     </div>
 
-    <!-- Live Status Badges -->
-    <div id="status-badges-bar" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;align-items:center">
-      <span style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-right:4px">System Status</span>
-      <div id="badge-monitoring" class="status-badge inactive">
-        <span class="status-dot"></span> Monitoring Stopped
-      </div>
-      <div id="badge-ai" class="status-badge inactive">
-        <span class="status-dot"></span> AI Unavailable
-      </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Active Threats</div>
+      <div class="kpi-value" id="kpi-alerts" style="color:var(--warning)">0</div>
     </div>
 
-    <!-- KPI Cards -->
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">Packets Processed</div>
-        <div class="kpi-value" id="kpi-packets">0</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Alerts Today</div>
-        <div class="kpi-value" id="kpi-alerts" style="color:var(--warning)">0</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Active Blocks</div>
-        <div class="kpi-value" id="kpi-blocked" style="color:var(--danger)">0</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Packets / sec</div>
-        <div class="kpi-value" id="kpi-pps" style="color:var(--info)">0.0</div>
-      </div>
-      <!-- New KPI cards (Req 3.1) -->
-      <div class="kpi-card">
-        <div class="kpi-label">Blocked IPs Total</div>
-        <div class="kpi-value" id="kpi-blocked-total" style="color:var(--danger)">0</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Detection Accuracy</div>
-        <div class="kpi-value" id="kpi-accuracy" style="color:var(--accent)">0%</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Security Health Score</div>
-        <div class="kpi-value" id="kpi-health">—</div>
-      </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Packets / sec</div>
+      <div class="kpi-value" id="kpi-pps" style="color:var(--info)">0.0</div>
     </div>
 
-    <!-- Security Gauges (Req 3.6) -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-
-      <!-- Severity Gauge — canvas arc, green→yellow→red by health_score -->
-      <div class="card card-glass" style="display:flex;flex-direction:column;align-items:center;padding:20px">
-        <div class="card-title" style="margin-bottom:12px">Security Health Score</div>
-        <canvas id="severity-gauge" width="200" height="120"
-                style="max-width:200px"
-                aria-label="Security health score gauge" role="img"></canvas>
-        <div id="gauge-label" style="font-size:28px;font-weight:700;margin-top:6px;letter-spacing:-.5px">—</div>
-        <div id="gauge-sublabel" style="font-size:12px;color:var(--text-muted);margin-top:2px">Health Score</div>
-      </div>
-
-      <!-- Detection Accuracy Ring — SVG stroke-dashoffset -->
-      <div class="card card-glass" style="display:flex;flex-direction:column;align-items:center;padding:20px">
-        <div class="card-title" style="margin-bottom:12px">Detection Accuracy</div>
-        <div class="progress-ring-wrap" aria-label="Detection accuracy ring" role="img">
-          <svg class="progress-ring" viewBox="0 0 120 120" width="120" height="120">
-            <circle class="progress-ring-track" cx="60" cy="60" r="50"/>
-            <circle id="accuracy-ring" class="progress-ring-fill" cx="60" cy="60" r="50"/>
-          </svg>
-          <div class="progress-ring-text">
-            <span id="ring-value">0%</span>
-            <small>Accuracy</small>
-          </div>
+    <!-- Health Score with coloured ring (tokens.css progress-ring) -->
+    <div class="kpi-card" style="align-items:center">
+      <div class="kpi-label">Health Score</div>
+      <div class="progress-ring-wrap" style="margin-top:6px" aria-label="Health score ring">
+        <svg class="progress-ring" viewBox="0 0 80 80" width="80" height="80">
+          <circle class="progress-ring-track" cx="40" cy="40" r="32"/>
+          <circle id="health-ring" class="progress-ring-fill" cx="40" cy="40" r="32"
+                  style="stroke-dasharray:201.06;stroke-dashoffset:201.06;stroke:var(--success)"/>
+        </svg>
+        <div class="progress-ring-text">
+          <span id="kpi-health" style="font-size:15px">—</span>
         </div>
       </div>
-
     </div>
 
-    <!-- Charts -->
-    <div class="charts-grid">
-      <div class="card">
-        <div class="card-header"><span class="card-title">Live Traffic Rate</span></div>
-        <div class="chart-container"><canvas id="traffic-chart"></canvas></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Severity Distribution</span></div>
-        <div class="chart-container"><canvas id="severity-chart"></canvas></div>
-      </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Blocked Today</div>
+      <div class="kpi-value" id="kpi-blocked-total" style="color:var(--danger)">0</div>
     </div>
 
-    <!-- Threat Timeline -->
-    <div class="card" style="margin-bottom:20px">
+  </div><!-- /kpi-grid -->
+
+  <!-- ── Charts row ────────────────────────────────────────────────────── -->
+  <div class="charts-grid">
+    <div class="card">
       <div class="card-header">
-        <span class="card-title">Threat Timeline</span>
-        <small style="color:var(--text-muted)">Click a row to view evidence</small>
+        <span class="card-title">Event Timeline — last 60 min</span>
+        <span style="font-size:11px;color:var(--text-muted)">Packets/sec</span>
       </div>
-      <div style="overflow-x:auto">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Time</th><th>Attack</th><th>Source IP</th>
-              <th>Severity</th><th>Confidence</th><th>Status</th><th></th>
-            </tr>
-          </thead>
-          <tbody id="threat-tbody">
-            <tr><td colspan="6" class="empty-state"><p>No threats detected yet.</p></td></tr>
-          </tbody>
-        </table>
-      </div>
+      <div class="chart-container"><canvas id="traffic-chart" aria-label="Live traffic rate chart" role="img"></canvas></div>
     </div>
-
-    <!-- Active Blocks + Whitelist -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div class="card">
-        <div class="card-header"><span class="card-title">Active Blocks</span></div>
-        <table class="data-table">
-          <thead><tr><th>IP</th><th>Reason</th><th>Blocked At</th><th>Expires In</th><th></th></tr></thead>
-          <tbody id="blocks-tbody">
-            <tr><td colspan="5" class="empty-state"><p>No active blocks.</p></td></tr>
-          </tbody>
-        </table>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Attack Types</span>
       </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Whitelist</span></div>
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <input id="wl-ip-input" class="input" placeholder="IP address" style="flex:1">
-          <input id="wl-desc-input" class="input" placeholder="Description" style="flex:1">
-          <button class="btn btn-primary btn-sm" onclick="addToWhitelist()">Add</button>
-        </div>
-        <div id="whitelist-list"></div>
-      </div>
+      <div class="chart-container"><canvas id="severity-chart" aria-label="Attack type distribution" role="img"></canvas></div>
     </div>
+  </div>
 
-    <!-- Network Topology (Task 32) -->
-    <div class="card card-glass" style="margin-bottom:20px">
-      <div class="card-header"><span class="card-title">Network Topology</span><small style="color:var(--text-muted)">Live attack paths</small></div>
-      <canvas id="network-topology" style="width:100%;height:260px;display:block"
-              aria-label="Network topology diagram" role="img"></canvas>
+  <!-- ── Live Threats table ──────────────────────────────────────────── -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-header">
+      <span class="card-title">Live Threats</span>
+      <small style="color:var(--text-muted)">Most recent 20 · click row for evidence</small>
     </div>
+    <div class="table-wrap">
+      <table class="data-table" aria-label="Live threats">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Attack Type</th>
+            <th>Source IP</th>
+            <th>Severity</th>
+            <th>Confidence</th>
+            <th>MITRE Tactic</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="threat-tbody">
+          <tr><td colspan="7" class="empty-state"><p>No threats detected yet.</p></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-    <!-- System Health + Activity Feed (Req 3.3, 3.4) -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+  <!-- ── Bottom row: MITRE heatmap + Top Attackers + System Health ───── -->
+  <div class="bottom-row">
 
-      <!-- System Health Panel (Req 3.4) -->
-      <div class="card card-glass">
+    <!-- Left: MITRE heatmap -->
+    <div>
+      <div class="card" style="margin-bottom:24px">
         <div class="card-header">
-          <span class="card-title">System Health</span>
-          <span id="health-refresh-ts" style="font-size:11px;color:var(--text-muted)"></span>
+          <span class="card-title">MITRE ATT&amp;CK Coverage</span>
+          <small style="color:var(--text-muted)">Event counts by tactic</small>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div class="kpi-card" style="padding:14px">
-            <div class="kpi-label">CPU Usage</div>
-            <div class="kpi-value" id="sys-cpu" style="font-size:22px;color:var(--accent)">—</div>
+        <div class="mitre-grid" id="mitre-heatmap">
+          <!-- populated by renderMitreHeatmap() -->
+        </div>
+      </div>
+
+      <!-- System Health + Activity Feed -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div class="card card-glass">
+          <div class="card-header">
+            <span class="card-title">System Health</span>
+            <span id="health-refresh-ts" style="font-size:11px;color:var(--text-muted)"></span>
           </div>
-          <div class="kpi-card" style="padding:14px">
-            <div class="kpi-label">Memory Usage</div>
-            <div class="kpi-value" id="sys-mem" style="font-size:22px;color:var(--warning)">—</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="kpi-card" style="padding:14px"><div class="kpi-label">CPU</div><div class="kpi-value" id="sys-cpu" style="font-size:22px;color:var(--accent)">—</div></div>
+            <div class="kpi-card" style="padding:14px"><div class="kpi-label">Memory</div><div class="kpi-value" id="sys-mem" style="font-size:22px;color:var(--warning)">—</div></div>
+            <div class="kpi-card" style="padding:14px"><div class="kpi-label">Uptime</div><div class="kpi-value" id="sys-uptime" style="font-size:16px">—</div></div>
+            <div class="kpi-card" style="padding:14px"><div class="kpi-label">Monitor</div><div class="kpi-value" id="sys-monitoring" style="font-size:14px">—</div></div>
           </div>
-          <div class="kpi-card" style="padding:14px">
-            <div class="kpi-label">Uptime</div>
-            <div class="kpi-value" id="sys-uptime" style="font-size:18px">—</div>
+        </div>
+        <div class="card card-glass">
+          <div class="card-header">
+            <span class="card-title">Activity Feed</span>
+            <span style="font-size:11px;color:var(--text-muted)">Last 10 events</span>
           </div>
-          <div class="kpi-card" style="padding:14px">
-            <div class="kpi-label">Monitoring</div>
-            <div class="kpi-value" id="sys-monitoring" style="font-size:15px">—</div>
+          <div id="activity-feed" style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto">
+            <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0">Waiting for events…</p>
           </div>
         </div>
       </div>
 
-      <!-- Activity Feed (Req 3.3) -->
-      <div class="card card-glass">
+      <!-- Security Advisor -->
+      <div class="card card-glass" id="advisor-panel" style="margin-bottom:24px">
         <div class="card-header">
-          <span class="card-title">Activity Feed</span>
-          <span style="font-size:11px;color:var(--text-muted)">Last 10 events</span>
+          <span class="card-title">Security Advisor</span>
+          <span id="advisor-score-badge"></span>
         </div>
-        <div id="activity-feed" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto">
-          <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0">Waiting for events…</p>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Connected Devices on LAN -->
-    <div id="devices-panel" class="card card-glass" style="margin-bottom:20px">
-      <div class="card-header">
-        <span class="card-title">Connected Devices</span>
-        <button class="btn btn-ghost btn-sm" onclick="refreshLanDevices()" style="margin-left:auto">🔄 Refresh</button>
-      </div>
-      <div id="lan-devices-list" style="overflow-x:auto">
-        <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:16px 0">Scanning LAN…</p>
-      </div>
-    </div>
-
-    <!-- Security Advisor Panel (Req 10.7) -->
-    <div class="card card-glass" id="advisor-panel" style="margin-bottom:20px">
-      <div class="card-header">
-        <span class="card-title">Security Advisor</span>
-        <span id="advisor-score-badge"></span>
-      </div>
-      <div style="margin-bottom:8px">
         <strong id="advisor-title" style="font-size:15px;color:var(--text-primary)"></strong>
-      </div>
-      <p id="advisor-message" style="font-size:13px;color:var(--text-muted);margin-bottom:12px"></p>
-      <ul id="advisor-actions" style="list-style:disc;padding-left:20px;font-size:13px;color:var(--text-primary);display:flex;flex-direction:column;gap:4px"></ul>
-    </div>
-
-    <!-- Recent Incidents Widget -->
-    <div class="card card-glass" id="recent-incidents-widget" style="margin-bottom:20px">
-      <div class="card-header">
-        <span class="card-title">Recent Incidents</span>
-        <span style="font-size:11px;color:var(--text-muted)">Auto-refreshes every 30s</span>
-      </div>
-      <div id="recent-incidents-list">
-        <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">Loading…</p>
+        <p id="advisor-message" style="font-size:13px;color:var(--text-muted);margin:8px 0 12px"></p>
+        <ul id="advisor-actions" style="list-style:disc;padding-left:20px;font-size:13px;color:var(--text-primary);display:flex;flex-direction:column;gap:4px"></ul>
       </div>
     </div>
 
-  </main>
-</div>
+    <!-- Right: Top Attackers widget -->
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">Top Attackers</span>
+          <small style="color:var(--text-muted)">Top 5 by hits</small>
+        </div>
+        <div id="top-attackers-list">
+          <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">No data yet.</p>
+        </div>
+      </div>
 
-<!-- Judges / Presentation Mode (Req 13) -->
-<div id="judges-banner" style="
-  display:none;position:fixed;top:0;left:0;right:0;
-  background:linear-gradient(90deg,#7C3AED,#00E5FF);
-  color:#fff;font-weight:700;font-size:14px;text-align:center;
-  padding:8px 16px;z-index:1000;letter-spacing:.04em
-">🏆 JUDGES MODE — MVIC Build Nepal Hackathon 2026</div>
+      <!-- Active Blocks mini -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">Active Blocks</span>
+          <a href="/blocked.html" style="font-size:12px;color:var(--info)">View all →</a>
+        </div>
+        <table class="data-table">
+          <thead><tr><th>IP</th><th>Reason</th><th>Exp.</th><th></th></tr></thead>
+          <tbody id="blocks-tbody"><tr><td colspan="4" class="empty-state"><p>No active blocks.</p></td></tr></tbody>
+        </table>
+      </div>
 
-<button id="next-feature-btn" style="
-  display:none;position:fixed;bottom:24px;left:24px;
-  background:linear-gradient(135deg,#7C3AED,#00E5FF);
-  color:#fff;border:none;border-radius:var(--radius);
-  padding:12px 20px;font-size:14px;font-weight:700;
-  cursor:pointer;z-index:1000;box-shadow:0 4px 16px rgba(0,229,255,0.3)
-" onclick="judgesNextFeature()">Next Feature →</button>
+      <!-- Recent Incidents -->
+      <div class="card card-glass" id="recent-incidents-widget">
+        <div class="card-header">
+          <span class="card-title">Recent Incidents</span>
+          <span style="font-size:11px;color:var(--text-muted)">30s refresh</span>
+        </div>
+        <div id="recent-incidents-list">
+          <p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">Loading…</p>
+        </div>
+      </div>
+    </div>
 
-<!-- Toast container (Req 7.3, 7.4) -->
-<div id="toast-container" style="
-  position:fixed;bottom:24px;right:24px;
-  display:flex;flex-direction:column;gap:8px;
-  z-index:300;pointer-events:none
-"></div>
+  </div><!-- /bottom-row -->
+
+</main>
+</div><!-- /app-layout -->
+
+<!-- ── Judges / Presentation Mode ──────────────────────────────────────── -->
+<div id="judges-banner" style="display:none;position:fixed;top:0;left:0;right:0;background:linear-gradient(90deg,#7C3AED,#00E5FF);color:#fff;font-weight:700;font-size:14px;text-align:center;padding:8px 16px;z-index:1000;letter-spacing:.04em">🏆 JUDGES MODE — MVIC Build Nepal Hackathon 2026</div>
+<button id="next-feature-btn" style="display:none;position:fixed;bottom:24px;left:24px;background:linear-gradient(135deg,#7C3AED,#00E5FF);color:#fff;border:none;border-radius:var(--radius);padding:12px 20px;font-size:14px;font-weight:700;cursor:pointer;z-index:1000;box-shadow:0 4px 16px rgba(0,229,255,0.3)" onclick="judgesNextFeature()">Next Feature →</button>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
 
 <!-- Reconnecting banner -->
 <div id="reconnecting-banner">⚠ Reconnecting to server…</div>
@@ -385,80 +397,46 @@
 <!-- Notifications -->
 <div id="notifications"></div>
 
-<!-- Keyboard Shortcuts Modal (Task 29) -->
-<div id="shortcuts-modal" style="
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
-  z-index:500;align-items:center;justify-content:center
-" onclick="if(event.target===this)this.style.display='none'">
+<!-- Keyboard Shortcuts Modal -->
+<div id="shortcuts-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
   <div class="card card-glass" style="min-width:340px;max-width:480px;width:90%;padding:28px;position:relative">
-    <button onclick="document.getElementById('shortcuts-modal').style.display='none'"
-            style="position:absolute;top:14px;right:14px;background:none;border:none;
-                   color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1"
-            aria-label="Close shortcuts modal">×</button>
+    <button onclick="document.getElementById('shortcuts-modal').style.display='none'" style="position:absolute;top:14px;right:14px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer" aria-label="Close">×</button>
     <div class="card-title" style="margin-bottom:16px;font-size:16px">⌨ Keyboard Shortcuts</div>
     <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead>
-        <tr>
-          <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">Shortcut</th>
-          <th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:600;border-bottom:1px solid var(--border)">Action</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th style="text-align:left;padding:6px 8px;color:var(--text-muted);border-bottom:1px solid var(--border)">Shortcut</th>
+        <th style="text-align:left;padding:6px 8px;color:var(--text-muted);border-bottom:1px solid var(--border)">Action</th>
+      </tr></thead>
       <tbody>
-        <tr>
-          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">D</kbd></td>
-          <td style="padding:8px">Focus detections search</td>
-        </tr>
-        <tr>
-          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Ctrl+/</kbd></td>
-          <td style="padding:8px">Toggle this help modal</td>
-        </tr>
-        <tr>
-          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Ctrl+Shift+P</kbd></td>
-          <td style="padding:8px">Toggle fullscreen</td>
-        </tr>
-        <tr>
-          <td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Esc</kbd></td>
-          <td style="padding:8px">Close this modal</td>
-        </tr>
+        <tr><td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">D</kbd></td><td style="padding:8px">Focus search</td></tr>
+        <tr><td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Ctrl+/</kbd></td><td style="padding:8px">This modal</td></tr>
+        <tr><td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Ctrl+Shift+P</kbd></td><td style="padding:8px">Fullscreen</td></tr>
+        <tr><td style="padding:8px"><kbd style="background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:12px">Esc</kbd></td><td style="padding:8px">Close modal</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- AI Assistant Panel (Task 37) -->
-<div id="ai-assistant-panel" style="
-  position:fixed;bottom:0;right:0;width:360px;max-width:100vw;
-  background:var(--bg-card);border-left:1px solid var(--border);border-top:1px solid var(--border);
-  border-radius:var(--radius) 0 0 0;box-shadow:-4px -4px 24px rgba(0,0,0,0.4);
-  z-index:400;display:flex;flex-direction:column;
-  transform:translateY(100%);transition:transform .3s ease
-">
+<!-- AI Assistant Panel -->
+<div id="ai-assistant-panel" style="position:fixed;bottom:0;right:0;width:360px;max-width:100vw;background:var(--bg-card);border-left:1px solid var(--border);border-top:1px solid var(--border);border-radius:var(--radius) 0 0 0;box-shadow:-4px -4px 24px rgba(0,0,0,0.4);z-index:400;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .3s ease">
   <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
     <span style="font-weight:600;font-size:14px">💬 AI Security Assistant</span>
-    <button onclick="toggleAIAssistant()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;line-height:1" aria-label="Close AI assistant">×</button>
+    <button onclick="toggleAIAssistant()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer" aria-label="Close AI assistant">×</button>
   </div>
   <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;max-height:260px;min-height:80px">
     <p style="color:var(--text-muted);font-size:13px;text-align:center;margin:0">Ask me anything about current threats…</p>
   </div>
   <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)">
-    <input id="ai-question-input" class="input" placeholder="Ask a security question…" style="flex:1;font-size:13px"
-           onkeydown="if(event.key==='Enter')submitAIQuestion()">
+    <input id="ai-question-input" class="input" placeholder="Ask a security question…" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter')submitAIQuestion()">
     <button class="btn btn-primary btn-sm" onclick="submitAIQuestion()">Ask</button>
   </div>
 </div>
 
-<!-- AI Assistant FAB (Task 37) -->
-<button id="ai-fab" onclick="toggleAIAssistant()" aria-label="Open AI assistant"
-  style="position:fixed;bottom:80px;right:24px;width:52px;height:52px;border-radius:50%;
-         background:linear-gradient(135deg,var(--accent),#7C3AED);border:none;
-         color:#000;font-size:22px;cursor:pointer;z-index:401;
-         box-shadow:0 4px 16px rgba(0,229,255,0.4);display:flex;align-items:center;justify-content:center">
-  💬
-</button>
+<!-- AI FAB -->
+<button id="ai-fab" onclick="toggleAIAssistant()" aria-label="Open AI assistant" style="position:fixed;bottom:80px;right:24px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#7C3AED);border:none;color:#000;font-size:22px;cursor:pointer;z-index:401;box-shadow:0 4px 16px rgba(0,229,255,0.4);display:flex;align-items:center;justify-content:center">💬</button>
 
-<!-- Scripts -->
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<!-- ── Scripts ──────────────────────────────────────────────────────────── -->
+<script src="/js/vendor/socket.io.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="/js/api.js"></script>
 <script src="/js/utils.js"></script>
@@ -466,113 +444,288 @@
 <script src="/js/charts.js"></script>
 <script src="/js/topology.js"></script>
 <script src="/js/dashboard.js"></script>
+
 <script>
+// ── Sidebar toggle ─────────────────────────────────────────────────────────
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebar-overlay').classList.toggle('visible');
 }
-loadInterfaces();
+
+// ── Theme toggle (Req 8.4) — persisted in localStorage as ng_theme ─────────
+(function applyStoredTheme() {
+  const saved = localStorage.getItem('ng_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  _syncThemeBtn(saved);
+})();
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('ng_theme', next);
+  _syncThemeBtn(next);
+}
+
+function _syncThemeBtn(theme) {
+  const label = document.getElementById('theme-label');
+  const icon  = document.getElementById('theme-icon');
+  if (!label) return;
+  if (theme === 'light') {
+    label.textContent = 'Dark';
+    // moon icon
+    icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+  } else {
+    label.textContent = 'Light';
+    // sun icon (restore)
+    icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  }
+}
+
+// ── User role from sessionStorage (set by auth.js on login) ───────────────
+(function showUserRole() {
+  const roleEl = document.getElementById('user-role-label');
+  if (!roleEl) return;
+  const role = sessionStorage.getItem('ng_user_role');
+  if (role) roleEl.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+})();
+
+// ── Health ring update (mirrors updateHealthScore in dashboard.js) ─────────
+// dashboard.js calls updateHealthScore() → we also update the ring here.
+// Patch: override updateHealthScore to additionally drive the ring.
+document.addEventListener('DOMContentLoaded', () => {
+  const _origUpdateHealth = window.updateHealthScore;
+  window.updateHealthScore = function(score) {
+    if (_origUpdateHealth) _origUpdateHealth(score);
+    const ring = document.getElementById('health-ring');
+    if (!ring || score === undefined || score === null || score === -1) return;
+    const circ = 2 * Math.PI * 32; // r=32
+    const offset = circ * (1 - Math.max(0, Math.min(100, score)) / 100);
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = score < 50 ? 'var(--danger)' : score < 80 ? 'var(--warning)' : 'var(--success)';
+  };
+});
 </script>
 
-<!-- Judges / Presentation Mode -->
 <script>
+// ── MITRE Heatmap ──────────────────────────────────────────────────────────
+// ponytail: simple tactic-count grid; tactics derived from live events.
+// No external dep — plain DOM cells. Ceiling: only 11 ATT&CK tactics shown.
+const MITRE_TACTICS = [
+  'Reconnaissance','Resource Dev','Initial Access','Execution',
+  'Persistence','Priv Escalation','Defense Evasion','Credential Access',
+  'Discovery','Lateral Movement','Collection','Exfiltration',
+  'Command & Control','Impact'
+];
+
+// Map common attack types → ATT&CK tactic
+const ATTACK_TACTIC_MAP = {
+  'SYN Flood':     'Impact',
+  'ICMP Flood':    'Impact',
+  'UDP Flood':     'Impact',
+  'Slow HTTP':     'Impact',
+  'Brute Force':   'Credential Access',
+  'SQL Injection': 'Initial Access',
+  'Port Scan':     'Discovery',
+  'DNS Tunneling': 'Command & Control',
+  'ARP Spoofing':  'Lateral Movement',
+  'XSS':           'Execution',
+};
+
+const _mitreCounts = {};
+MITRE_TACTICS.forEach(t => _mitreCounts[t] = 0);
+
+function renderMitreHeatmap() {
+  const grid = document.getElementById('mitre-heatmap');
+  if (!grid) return;
+  const max = Math.max(1, ...Object.values(_mitreCounts));
+  grid.innerHTML = MITRE_TACTICS.map(tactic => {
+    const count = _mitreCounts[tactic] || 0;
+    const cls = count === 0 ? '' : count >= max * 0.6 ? 'hot' : 'has-hits';
+    return `<div class="mitre-cell ${cls}" title="${tactic}: ${count} events">
+      <div class="mitre-cell-label">${tactic}</div>
+      <div class="mitre-cell-count">${count}</div>
+    </div>`;
+  }).join('');
+}
+
+function incrementMitreTactic(attackType) {
+  const tactic = ATTACK_TACTIC_MAP[attackType];
+  if (tactic && _mitreCounts[tactic] !== undefined) {
+    _mitreCounts[tactic]++;
+    renderMitreHeatmap();
+  }
+}
+
+// ── Top Attackers widget ───────────────────────────────────────────────────
+// ponytail: in-memory map, updated on new_threat. Max 5 displayed.
+const _attackerHits = {};
+
+function recordAttacker(ip) {
+  if (!ip) return;
+  _attackerHits[ip] = (_attackerHits[ip] || 0) + 1;
+  renderTopAttackers();
+}
+
+function renderTopAttackers() {
+  const el = document.getElementById('top-attackers-list');
+  if (!el) return;
+  const sorted = Object.entries(_attackerHits)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  if (!sorted.length) { el.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:12px 0">No data yet.</p>'; return; }
+  const max = sorted[0][1];
+  el.innerHTML = sorted.map(([ip, count], i) => `
+    <div class="attacker-row">
+      <span class="attacker-rank">#${i+1}</span>
+      <code class="attacker-ip">${escHtml(ip)}</code>
+      <div class="attacker-bar-wrap"><div class="attacker-bar-fill" style="width:${Math.round(count/max*100)}%"></div></div>
+      <span class="attacker-count">${count}</span>
+    </div>`).join('');
+}
+
+// ── Patch renderThreatTimeline to add MITRE badge column ──────────────────
+// dashboard.js renders the threat table; we wrap it to add our two hooks
+// and inject the MITRE tactic badge into each row.
+document.addEventListener('DOMContentLoaded', () => {
+  // Wrap onNewThreat to also drive MITRE + Top Attackers
+  const _origOnNewThreat = window.onNewThreat;
+  window.onNewThreat = function(event) {
+    incrementMitreTactic(event.attack_type);
+    recordAttacker(event.source_ip);
+    if (_origOnNewThreat) _origOnNewThreat(event);
+  };
+
+  // Wrap renderThreatTimeline to inject MITRE column
+  const _origRender = window.renderThreatTimeline;
+  window.renderThreatTimeline = function(events) {
+    if (_origRender) _origRender(events);
+    // Now patch each row to add MITRE tactic badge in the 6th column
+    const tbody = document.getElementById('threat-tbody');
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll('tr[data-event-id]');
+    rows.forEach(row => {
+      // Find attack type from 2nd cell (index 1)
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 6) return;
+      const attackType = cells[1] ? cells[1].textContent.trim() : '';
+      const tactic = ATTACK_TACTIC_MAP[attackType] || '—';
+      // Insert MITRE badge cell before last status cell if not already done
+      if (!row.querySelector('.badge-mitre')) {
+        const mitreCell = document.createElement('td');
+        mitreCell.innerHTML = tactic !== '—'
+          ? `<span class="badge-mitre">${escHtml(tactic)}</span>`
+          : `<span style="color:var(--text-muted);font-size:12px">—</span>`;
+        // Insert before the last td (status)
+        row.insertBefore(mitreCell, cells[cells.length - 1]);
+      }
+    });
+  };
+
+  // Seed MITRE counts from any events already in recentEvents
+  // (recentEvents is populated by dashboard.js loadDashboard)
+  setTimeout(() => {
+    if (window.recentEvents) {
+      window.recentEvents.forEach(e => {
+        incrementMitreTactic(e.attack_type);
+        recordAttacker(e.source_ip);
+      });
+    }
+    renderMitreHeatmap();
+    renderTopAttackers();
+  }, 1500);
+});
+
+// escHtml is defined in dashboard.js — safe to reuse here (same page scope)
+</script>
+
+<script>
+// ── Active Blocks table: shorter version for sidebar widget ───────────────
+// dashboard.js renderActiveBlocks targets #blocks-tbody and renders full rows.
+// The sidebar widget has 4 columns (IP, Reason, Exp, Unblock), so we patch it.
+const _origRenderBlocks = window.renderActiveBlocks;
+window.renderActiveBlocks = function(blocks) {
+  const tbody = document.getElementById('blocks-tbody');
+  if (!tbody) return;
+  if (!blocks.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><p>No active blocks.</p></td></tr>';
+    return;
+  }
+  tbody.innerHTML = blocks.slice(0, 10).map(b => `
+    <tr>
+      <td><code style="font-size:11px">${escHtml(b.ip_address)}</code></td>
+      <td style="font-size:12px">${escHtml(b.reason || '—')}</td>
+      <td style="font-size:12px">${b.expires_in !== undefined ? b.expires_in + 's' : '—'}</td>
+      <td><button class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px" onclick="manualUnblock('${escHtml(b.ip_address)}')">Unblock</button></td>
+    </tr>`).join('');
+};
+</script>
+
+<script>
+// ── Judges / Presentation Mode ─────────────────────────────────────────────
 (function () {
   const p = new URLSearchParams(location.search);
   if (!p.has('judges') && !p.has('presentation')) return;
-
-  // Show banner
   const banner = document.getElementById('judges-banner');
   banner.style.display = 'block';
   document.body.style.paddingTop = '36px';
-
-  // "Next Feature →" cycling button
   const FEATURE_SCRIPT = [
-    { label: 'Dashboard',   url: '/?judges=1' },
-    { label: 'Threats',     url: '/threats.html?judges=1' },
-    { label: 'Analytics',   url: '/analytics?judges=1' },
-    { label: 'Timeline',    url: '/timeline?judges=1' },
-    { label: 'Export',      url: '/analytics?judges=1&export=1' },
+    { label: 'Dashboard',  url: '/?judges=1' },
+    { label: 'Threats',    url: '/threats.html?judges=1' },
+    { label: 'Analytics',  url: '/analytics.html?judges=1' },
+    { label: 'Timeline',   url: '/timeline.html?judges=1' },
   ];
-  let featureIdx = 0;
+  let idx = 0;
   const btn = document.getElementById('next-feature-btn');
   btn.style.display = 'block';
-
   window.judgesNextFeature = function () {
-    featureIdx = (featureIdx + 1) % FEATURE_SCRIPT.length;
-    const next = FEATURE_SCRIPT[featureIdx];
-    btn.textContent = next.label + ' →';
-    location.href = next.url;
+    idx = (idx + 1) % FEATURE_SCRIPT.length;
+    location.href = FEATURE_SCRIPT[idx].url;
   };
-  btn.textContent = (FEATURE_SCRIPT[1].label) + ' →';
+  btn.textContent = FEATURE_SCRIPT[1].label + ' →';
 }());
 </script>
 
-<!-- First-time onboarding tour -->
 <script>
+// ── Onboarding tour ────────────────────────────────────────────────────────
 (function () {
   if (localStorage.getItem('ng_toured')) return;
-
   const STEPS = [
-    { sel: '.kpi-grid',            title: 'Live Metrics',      text: 'These KPI cards update in real time with packet counts, alerts, blocked IPs, and your overall security health score.' },
-    { sel: '#activity-feed',       title: 'Activity Feed',     text: 'Every new threat, block, and unblock event appears here instantly via WebSocket — keep an eye on the last 10 events.' },
-    { sel: '#lan-devices-list',    title: 'Connected Devices', text: 'Active devices on your LAN discovered via ARP scan — use this to identify the attacker machine by IP and MAC.' },
-    { sel: 'a[href="/analytics"]', title: 'Analytics',         text: 'Head to the Analytics page for historical charts, severity breakdowns, top attackers, and a threat radar.' },
+    { sel: '#kpi-grid',        title: 'Live KPIs',       text: 'Six cards update in real time: events, blocks, threats, packets/sec, health score, and blocks today.' },
+    { sel: '.charts-grid',     title: 'Charts',          text: 'Event timeline (last 60 min) and attack-type breakdown update live via SocketIO.' },
+    { sel: '#threat-tbody',    title: 'Live Threats',    text: 'Most recent 20 events. Click any row to expand the full evidence panel inline.' },
+    { sel: '#mitre-heatmap',   title: 'MITRE Heatmap',   text: 'Tactic coverage grid — cells turn purple or red as attacks are detected.' },
+    { sel: '#top-attackers-list', title: 'Top Attackers', text: 'Top 5 source IPs by hit count, updated on every new threat.' },
   ];
-
-  function resolveEl(sel) {
-    try { return document.querySelector(sel); } catch (_) { return null; }
-  }
-
-  let current = 0;
-  let highlightEl = null;
+  let current = 0, highlightEl = null;
   const tooltip = document.createElement('div');
   tooltip.className = 'tour-tooltip';
   document.body.appendChild(tooltip);
 
-  function finish() {
-    localStorage.setItem('ng_toured', '1');
+  function finish() { localStorage.setItem('ng_toured', '1'); if (highlightEl) highlightEl.classList.remove('tour-highlight'); tooltip.remove(); }
+  function show(i) {
     if (highlightEl) highlightEl.classList.remove('tour-highlight');
-    tooltip.remove();
-  }
-
-  function show(idx) {
-    if (highlightEl) highlightEl.classList.remove('tour-highlight');
-    const step = STEPS[idx];
-    const target = resolveEl(step.sel);
-
-    tooltip.innerHTML = `
-      <div class="tour-step-count">Step ${idx + 1} of ${STEPS.length}</div>
-      <strong>${step.title}</strong>
-      <p style="margin:0">${step.text}</p>
-      <div class="tour-tooltip-actions">
-        <button class="btn btn-primary btn-sm" id="tour-next">${idx === STEPS.length - 1 ? 'Finish' : 'Next →'}</button>
-        <button class="btn btn-ghost btn-sm" id="tour-skip">Skip tour</button>
-      </div>`;
-
-    document.getElementById('tour-next').onclick = () => {
-      if (idx === STEPS.length - 1) { finish(); return; }
-      current++; show(current);
-    };
+    const step = STEPS[i];
+    const target = document.querySelector(step.sel);
+    tooltip.innerHTML = `<div class="tour-step-count">Step ${i+1} of ${STEPS.length}</div><strong>${step.title}</strong><p style="margin:0">${step.text}</p><div class="tour-tooltip-actions"><button class="btn btn-primary btn-sm" id="tour-next">${i===STEPS.length-1?'Finish':'Next →'}</button><button class="btn btn-ghost btn-sm" id="tour-skip">Skip</button></div>`;
+    document.getElementById('tour-next').onclick = () => { if (i===STEPS.length-1){finish();return;} current++;show(current); };
     document.getElementById('tour-skip').onclick = finish;
-
     if (target) {
-      target.classList.add('tour-highlight');
-      highlightEl = target;
+      target.classList.add('tour-highlight'); highlightEl = target;
       const r = target.getBoundingClientRect();
       const tH = 180;
-      const top = (r.bottom + 12 + tH < window.innerHeight) ? r.bottom + 12 : Math.max(8, r.top - tH - 12);
-      const left = Math.min(Math.max(8, r.left), window.innerWidth - 316);
-      tooltip.style.top = top + 'px';
-      tooltip.style.left = left + 'px';
-      tooltip.style.transform = '';
-    } else {
-      tooltip.style.top = '50%';
-      tooltip.style.left = '50%';
-      tooltip.style.transform = 'translate(-50%, -50%)';
-    }
+      const top = (r.bottom+12+tH < window.innerHeight) ? r.bottom+12 : Math.max(8, r.top-tH-12);
+      tooltip.style.top = top+'px'; tooltip.style.left = Math.min(Math.max(8,r.left), window.innerWidth-316)+'px'; tooltip.style.transform='';
+    } else { tooltip.style.top='50%'; tooltip.style.left='50%'; tooltip.style.transform='translate(-50%,-50%)'; }
   }
-
   setTimeout(() => show(0), 800);
 }());
 </script>
+
+<script>
+// ── Bootstrap: load interfaces on page load ────────────────────────────────
+loadInterfaces();
+</script>
+
+</body>
 </html>

@@ -10,11 +10,11 @@ Requirements: 11.3
 from __future__ import annotations
 
 import logging
-import shlex
-import subprocess
 import threading
 import time
 from typing import Optional
+
+from .firewall import fw_unblock
 
 logger = logging.getLogger("netguard.expiry_service")
 
@@ -105,9 +105,8 @@ class ExpiryThread:
             ip = block["ip_address"]
             logger.info("ExpiryThread: expiring block for %s.", ip)
 
-            # Remove iptables rule
-            cmd = f"iptables -D INPUT -s {shlex.quote(ip)} -j DROP"
-            self._run_iptables(cmd, ip)
+            # Remove firewall rule
+            fw_unblock(ip)
 
             # Mark inactive in database
             try:
@@ -130,23 +129,3 @@ class ExpiryThread:
                     self._socketio_emit("ip_unblocked", {"ip": ip, "reason": "expired"})
                 except Exception:
                     pass
-
-    def _run_iptables(self, cmd: str, ip: str) -> bool:
-        """Execute an iptables command. Failures are logged but not fatal."""
-        try:
-            result = subprocess.run(
-                shlex.split(cmd),
-                capture_output=True,
-                timeout=5,
-            )
-            if result.returncode != 0:
-                stderr = result.stderr.decode("utf-8", errors="replace").strip()
-                logger.warning(
-                    "ExpiryThread: iptables -D for %s returned rc=%d: %s",
-                    ip, result.returncode, stderr,
-                )
-                return False
-            return True
-        except Exception as exc:
-            logger.error("ExpiryThread: iptables error for %s: %s", ip, exc)
-            return False

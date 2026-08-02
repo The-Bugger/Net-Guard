@@ -7,7 +7,7 @@ GET /api/v1/map/events
 Requirements: 5.1, 5.8
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, jsonify, request
 from backend.api import dependencies
 from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response
@@ -29,10 +29,8 @@ def resolve_ip():
 
     result = engine.resolve(ip)
     if isinstance(result, GeoIPError):
-        return success_response({
-            "ip": ip, "country": "", "city": "", "lat": 0.0, "lon": 0.0,
-            "asn": "", "isp": "", "error": result.error_code,
-        })
+        # Req 5.8: structured error body {ip, error_code, timestamp} with HTTP 503
+        return jsonify({"ip": result.ip, "error_code": result.error_code, "timestamp": result.timestamp}), 503
     return success_response(result)
 
 
@@ -43,16 +41,24 @@ def map_events():
     event_repo = dependencies.get("event_repo")
     geoip = dependencies.get("geoip_engine")
 
-    limit = min(int(request.args.get("limit", 100)), 500)
-    events = event_repo.get_recent(limit) if hasattr(event_repo, "get_recent") else []
+    try:
+        limit = min(int(request.args.get("limit", 100)), 500)
+    except (ValueError, TypeError):
+        limit = 100
+
+    # event_repo.get_all returns most-recent-first; limit is honoured
+    events = event_repo.get_all(limit=limit) if event_repo else []
 
     items = []
     for ev in events:
-        geo = {"lat": 0.0, "lon": 0.0, "country": "", "city": ""}
+        lat, lon, country, city = 0.0, 0.0, "", ""
         if geoip:
             resolved = geoip.resolve(ev.get("source_ip", ""))
             if not isinstance(resolved, GeoIPError):
-                geo = {k: resolved.get(k, geo[k]) for k in geo}
-        items.append({**ev, **geo})
+                lat = resolved.get("lat", 0.0)
+                lon = resolved.get("lon", 0.0)
+                country = resolved.get("country", "")
+                city = resolved.get("city", "")
+        items.append({**ev, "lat": lat, "lon": lon, "country": country, "city": city})
 
     return success_response({"events": items})

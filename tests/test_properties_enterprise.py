@@ -454,3 +454,289 @@ def test_property14_severity_gating(event_severity: str, channel_threshold: str)
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# Property 7: GeoIP cache prevents redundant API calls
+# Feature: net-guard-enterprise-idps, Property 7: GeoIP cache prevents redundant API calls
+# ---------------------------------------------------------------------------
+
+from backend.services.geoip_engine import GeoIPEngine
+
+
+@settings(max_examples=100)
+@given(
+    st.lists(st.ip_addresses(v=4), min_size=1, max_size=10),
+    st.integers(min_value=1, max_value=5),
+)
+def test_property7_geoip_cache_deduplication(unique_ips, repeat_factor):
+    """Property 7: external API calls == distinct IPs, even with repetitions.
+
+    For any sequence of resolve() calls that includes repeated IPs, the number
+    of external (_resolve_uncached) calls SHALL equal the number of distinct IPs,
+    not the total call count.
+
+    Validates: Requirements 5.9
+    """
+    # Feature: net-guard-enterprise-idps, Property 7: GeoIP cache prevents redundant API calls
+
+    # Build a sequence with guaranteed repetitions: each distinct IP appears repeat_factor times.
+    ip_strings = [str(ip) for ip in unique_ips]
+    distinct_count = len(set(ip_strings))
+    ip_sequence = ip_strings * repeat_factor  # e.g. [A, B, C, A, B, C] for factor=2
+
+    engine = GeoIPEngine(settings_repo=None, cache_size=10_000, ttl_hours=24)
+
+    # Patch Redis helpers to no-ops so the in-process dict cache is the only layer.
+    dummy_result = {"ip": "0.0.0.0", "country": "XX", "lat": 0.0, "lon": 0.0,
+                    "city": "", "asn": "", "isp": ""}
+
+    with patch.object(engine, "_redis_get", return_value=None), \
+         patch.object(engine, "_redis_set"), \
+         patch.object(engine, "_resolve_uncached", return_value=dummy_result) as mock_uncached:
+
+        for ip in ip_sequence:
+            engine.resolve(ip)
+
+    assert mock_uncached.call_count == distinct_count, (
+        f"Expected {distinct_count} external calls for {len(ip_sequence)} IPs "
+        f"({distinct_count} distinct), got {mock_uncached.call_count}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Property 3: Whitelisted IPs are always rejected from blocking
+# Feature: net-guard-enterprise-idps, Property 3: Whitelisted IPs are always rejected from blocking
+# ---------------------------------------------------------------------------
+
+
+@settings(max_examples=100)
+@given(st.ip_addresses(v=4))
+def test_property3_whitelisted_ip_always_rejected(ip_addr):
+    """Property 3: Any IP in the active whitelist is always rejected with WHITELISTED_IP.
+
+    For any IP address that is present in the active whitelist, every block request
+    targeting that IP SHALL return a WHITELISTED_IP error code and SHALL NOT create
+    a block record or apply an iptables rule.
+
+    Validates: Requirements 1.7
+    """
+    # Feature: net-guard-enterprise-idps, Property 3: Whitelisted IPs are always rejected from blocking
+    ip_str = str(ip_addr)
+
+    # Whitelist manager: always says the IP is whitelisted
+    whitelist_mgr = MagicMock()
+    whitelist_mgr.is_whitelisted.return_value = True
+
+    # Mock repo and emit so we can assert they are never called
+    block_repo = MagicMock()
+    socketio_emit = MagicMock()
+
+    mgr = BlockManager(
+        block_repo=block_repo,
+        whitelist_manager=whitelist_mgr,
+        log_engine=MagicMock(),
+        socketio_emit=socketio_emit,
+    )
+
+    with patch.object(mgr, "_apply_firewall", return_value=True) as mock_fw:
+        result = mgr.block(ip_str, target_type="ip", reason="test", duration=3600,
+                           operator="tester", severity=5, confidence=50)
+
+    # Must return the WHITELISTED_IP error code
+    assert result.get("error_code") == "WHITELISTED_IP", (
+        f"Expected WHITELISTED_IP for whitelisted IP {ip_str}, got {result}"
+    )
+    assert result.get("success") is False, (
+        f"Expected success=False for whitelisted IP {ip_str}, got {result}"
+    )
+
+    # Firewall must NOT have been touched
+    mock_fw.assert_not_called()
+
+    # DB must NOT have been written
+    block_repo.insert_enterprise.assert_not_called()
+    block_repo.extend_expiry.assert_not_called()
+
+    # WebSocket must NOT have emitted a block event
+    socketio_emit.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Property 1: Block atomicity — no partial state on failure
+# Feature: net-guard-enterprise-idps, Property 1: Block atomicity — no partial state on failure
+# ---------------------------------------------------------------------------
+
+
+@settings(max_examples=100)
+@given(
+    st.ip_addresses(v=4).map(str),
+    st.text(min_size=1, max_size=100),
+)
+def test_property1_block_atomicity_db_failure(ip: str, reason: str):
+    """Scenario A: iptables succeeds but DB insert fails → compensating DELETE issued, no record exists.
+
+    Validates: Requirements 1.1, 1.14
+    """
+    # Feature: net-guard-enterprise-idps, Property 1: Block atomicity — no partial state on failure
+    assume(not ipaddress.ip_address(ip).is_private)
+
+    block_repo = MagicMock()
+    block_repo.get_active.return_value = None           # no existing block (fresh IP)
+    block_repo.count_hits.return_value = 0
+    block_repo.insert_enterprise.return_value = None    # DB insert fails
+
+    whitelist_mgr = MagicMock()
+    whitelist_mgr.is_whitelisted.return_value = False
+
+    manager = BlockManager(block_repo, whitelist_mgr, MagicMock())
+
+    apply_calls = []
+
+    def fake_apply_firewall(target, block, target_type="ip"):
+        apply_calls.append((target, block))
+        return True  # iptables always succeeds in this scenario
+
+    manager._apply_firewall = fake_apply_firewall
+
+    result = manager.block(target=ip, reason=reason)
+
+    # Must report failure
+    assert result["success"] is False, f"Expected failure when DB insert returns None, got {result}"
+    assert result.get("error_code") == "DB_ERROR"
+
+    # Compensating DELETE must have been issued after the initial INSERT rule
+    block_calls   = [(t, b) for t, b in apply_calls if b is True]
+    unblock_calls = [(t, b) for t, b in apply_calls if b is False]
+    assert block_calls,   "iptables INSERT rule must have been attempted"
+    assert unblock_calls, "Compensating iptables DELETE must have been issued on DB failure"
+    assert unblock_calls[0][0] == ip, "Compensating DELETE must target the same IP"
+
+    # DB insert was called (it was the step that failed by returning None)
+    block_repo.insert_enterprise.assert_called_once()
+
+
+@settings(max_examples=100)
+@given(
+    st.ip_addresses(v=4).map(str),
+    st.text(min_size=1, max_size=100),
+)
+def test_property1_block_atomicity_firewall_failure(ip: str, reason: str):
+    """Scenario B: iptables fails → DB insert is never attempted.
+
+    Validates: Requirements 1.1, 1.14
+    """
+    # Feature: net-guard-enterprise-idps, Property 1: Block atomicity — no partial state on failure
+    assume(not ipaddress.ip_address(ip).is_private)
+
+    block_repo = MagicMock()
+    block_repo.get_active.return_value = None
+    block_repo.count_hits.return_value = 0
+
+    whitelist_mgr = MagicMock()
+    whitelist_mgr.is_whitelisted.return_value = False
+
+    manager = BlockManager(block_repo, whitelist_mgr, MagicMock())
+    manager._apply_firewall = MagicMock(return_value=False)  # iptables fails
+
+    result = manager.block(target=ip, reason=reason)
+
+    # Must report failure
+    assert result["success"] is False
+    assert result.get("error_code") == "FIREWALL_ERROR"
+
+    # DB insert must never have been called
+    block_repo.insert_enterprise.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Property 2: Duplicate block extends expiry, never duplicates
+# Feature: net-guard-enterprise-idps, Property 2: Duplicate block extends expiry, never duplicates
+# ---------------------------------------------------------------------------
+
+@settings(max_examples=100)
+@given(
+    st.ip_addresses(v=4),
+    st.integers(min_value=1, max_value=3600),
+    st.integers(min_value=1, max_value=3600),
+)
+def test_property2_duplicate_block_extends_expiry(raw_ip, first_duration: int, second_duration: int):
+    """Property 2: Duplicate block extends expiry, never duplicates.
+
+    For any IP that already has an active block, a second block request SHALL result
+    in exactly one active record for that IP and the new expires_at SHALL be strictly
+    later than the original expires_at.
+
+    Validates: Requirements 1.5
+    """
+    # Feature: net-guard-enterprise-idps, Property 2: Duplicate block extends expiry, never duplicates
+    ip = str(raw_ip)
+
+    # ---- in-memory fake block_repo ----
+    # Stores at most one active record per IP (mimics real DB behaviour).
+    active_store: dict[str, dict] = {}
+    insert_calls: list[str] = []
+
+    class _FakeBlockRepo:
+        def get_active(self, ip_address):
+            return active_store.get(ip_address)
+
+        def extend_expiry(self, ip_address, new_expires_at):
+            if ip_address in active_store:
+                active_store[ip_address]["expires_at"] = new_expires_at
+            return True
+
+        def insert_enterprise(self, record_data):
+            ip_addr = record_data["ip_address"]
+            # Track every insert to detect duplicates
+            insert_calls.append(ip_addr)
+            active_store[ip_addr] = {
+                "id": len(active_store) + 1,
+                "ip_address": ip_addr,
+                "expires_at": record_data["expires_at"],
+                "threat_score": record_data.get("threat_score", 0),
+                "active": True,
+            }
+            return active_store[ip_addr]["id"]
+
+        def count_hits(self, ip_address):
+            return 0
+
+    fake_repo = _FakeBlockRepo()
+    whitelist_mock = MagicMock()
+    whitelist_mock.is_whitelisted.return_value = False
+
+    manager = BlockManager(
+        block_repo=fake_repo,
+        whitelist_manager=whitelist_mock,
+        log_engine=MagicMock(),
+        socketio_emit=None,
+    )
+
+    # Patch firewall calls so the test never touches iptables.
+    with patch.object(manager, "_apply_firewall", return_value=True):
+        # First block
+        result1 = manager.block(ip, target_type="ip", duration=first_duration)
+        assert result1["success"], f"First block failed: {result1}"
+
+        original_expires = active_store[ip]["expires_at"]
+
+        # Second block — must extend, not duplicate
+        result2 = manager.block(ip, target_type="ip", duration=second_duration)
+        assert result2["success"], f"Second block failed: {result2}"
+
+    # Exactly one active record
+    assert len(active_store) == 1, (
+        f"Expected exactly 1 active record after duplicate block, got {len(active_store)}"
+    )
+    # No second insert was issued — only the first block should have called insert_enterprise
+    assert len(insert_calls) == 1, (
+        f"insert_enterprise called {len(insert_calls)} times; should be called only once"
+    )
+    # New expiry must be strictly later: extend_expiry now adds second_duration to the
+    # original expires_at (not to now), so new_expires = original_expires + second_duration.
+    # Since second_duration >= 1, new_expires is always strictly greater.
+    new_expires = active_store[ip]["expires_at"]
+    assert new_expires > original_expires, (
+        f"New expires_at ({new_expires!r}) must be strictly later than original ({original_expires!r})"
+    )

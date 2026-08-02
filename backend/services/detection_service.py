@@ -24,6 +24,8 @@ import logging
 import queue
 import threading
 import time
+import uuid
+from datetime import datetime, timezone
 from typing import Callable, Optional
 
 from detection.parsers.packet_decoder import Packet
@@ -38,6 +40,15 @@ from detection.rules.sql_injection import SqlInjectionRule
 from detection.rules.syn_flood import SynFloodRule
 
 logger = logging.getLogger("netguard.detection_engine")
+
+# Optional YARA dependency (Req 9.4)
+try:
+    import yara as _yara_mod
+    _YARA_AVAILABLE = True
+except ImportError:
+    _yara_mod = None  # type: ignore[assignment]
+    _YARA_AVAILABLE = False
+    logger.warning("yara-python not installed; YARA evaluation disabled")
 
 # Severity ordering for cooldown escalation logic
 _SEVERITY_ORDER: dict[str, int] = {
@@ -242,6 +253,9 @@ class DetectionEngine:
         Args:
             packet: Normalised packet from PacketDecoder.
         """
+        futures: list[concurrent.futures.Future] = []
+
+        # Submit enabled rules to thread pool
         for rule in self._rules:
             if not rule.enabled:
                 continue
@@ -250,7 +264,24 @@ class DetectionEngine:
 
             try:
                 rule.process_packet(packet)
-                event = rule.evaluate()
+                future = self._executor.submit(rule.evaluate)
+                futures.append((future, rule))
+            except Exception as exc:  # noqa: BLE001
+                # Requirement 9.5: disable faulty rule for the session
+                logger.error(
+                    "DetectionEngine: rule %s raised %s — disabling for this session. %s",
+                    rule.rule_name,
+                    type(exc).__name__,
+                    exc,
+                    exc_info=True,
+                )
+                self._disabled_rules.add(rule.rule_name)
+                continue
+
+        # Collect results from thread pool
+        for future, rule in futures:
+            try:
+                event = future.result()
             except Exception as exc:  # noqa: BLE001
                 # Requirement 9.5: disable faulty rule for the session
                 logger.error(
@@ -275,7 +306,7 @@ class DetectionEngine:
             self._cooldown[key] = (event.severity, time.monotonic())
 
             # MITRE annotation (Task 13.3)
-            event = self._annotate_mitre(event)
+            event = self.annotate_mitre(event)
 
             # Dispatch to callback
             if self._on_event:
@@ -289,6 +320,10 @@ class DetectionEngine:
 
             # Redis Streams publish (Task 16.3, Req 11.3)
             self._publish_to_redis(event)
+
+        # YARA evaluation against HTTP payload (Req 9.4)
+        if packet.payload:
+            self._dispatch_yara(packet)
 
     def _should_emit(self, event: ThreatEvent) -> bool:
         """
@@ -421,31 +456,132 @@ class DetectionEngine:
     # ------------------------------------------------------------------
 
     def _load_sigma_rules(self) -> None:
-        """Load Sigma YAML rules from configured directory (Req 9.3)."""
+        """Load Sigma YAML rules at startup using configured directory (Req 9.3)."""
         sigma_dir = None
         if self._config_manager:
             try:
                 sigma_dir = self._config_manager.get("ai.sigma_rules_dir")
             except Exception:
                 pass
-        if not sigma_dir:
-            return
-        try:
+        directory = sigma_dir or "rules/sigma"
+        loaded = self.load_sigma_rules(directory)
+        if loaded:
+            logger.info("DetectionEngine: loaded %d Sigma rules from '%s'", loaded, directory)
+        self._start_sigma_watcher(directory)
+
+    def load_sigma_rules(self, directory: str) -> int:
+        """
+        Load Sigma YAML files from *directory*, converting each to the internal
+        rule format.  Returns the count of successfully loaded rules.
+
+        Internal rule format::
+
+            {"id": str, "name": str, "tags": list, "conditions": list[dict], "logsource": dict}
+
+        Parse errors skip the offending file and log with filename + line number
+        (Req 9.3).
+        """
+        import yaml
+        from pathlib import Path
+
+        rules_path = Path(directory)
+        rules_path.mkdir(parents=True, exist_ok=True)
+
+        loaded: list[dict] = []
+        for f in sorted(rules_path.glob("*.yml")) + sorted(rules_path.glob("*.yaml")):
+            try:
+                with open(f, encoding="utf-8") as fh:
+                    raw = yaml.safe_load(fh)
+                if not isinstance(raw, dict):
+                    raise ValueError("expected a YAML mapping")
+                rule = {
+                    "id":         str(raw.get("id", f.stem)),
+                    "name":       str(raw.get("title", f.stem)),
+                    "tags":       list(raw.get("tags") or []),
+                    "conditions": _sigma_conditions(raw.get("detection", {})),
+                    "logsource":  dict(raw.get("logsource") or {}),
+                }
+                loaded.append(rule)
+            except yaml.YAMLError as exc:
+                # Extract line number when available
+                lineno = getattr(getattr(exc, "problem_mark", None), "line", 0) + 1
+                logger.warning(
+                    "Sigma parse error in %s line %d: %s", f.name, lineno, exc
+                )
+            except Exception as exc:
+                logger.warning("Sigma parse error in %s line %d: %s", f.name, 0, exc)
+
+        # Atomically replace the rule list
+        self._sigma_rules = loaded
+        # Track mtimes for hot-reload watcher
+        self._sigma_mtimes = {
+            str(f): f.stat().st_mtime
+            for f in list(rules_path.glob("*.yml")) + list(rules_path.glob("*.yaml"))
+        }
+        return len(loaded)
+
+    def reload_sigma_rules(self) -> None:
+        """Hot-reload Sigma rules from the configured directory."""
+        sigma_dir = None
+        if self._config_manager:
+            try:
+                sigma_dir = self._config_manager.get("ai.sigma_rules_dir")
+            except Exception:
+                pass
+        directory = sigma_dir or "rules/sigma"
+        loaded = self.load_sigma_rules(directory)
+        logger.info("DetectionEngine: reloaded %d Sigma rules from '%s'", loaded, directory)
+
+    def _match_sigma(self, event: dict) -> list[str]:
+        """
+        Return names of Sigma rules that match *event*.
+
+        Matching is keyword/field based (Req 9.3): a rule matches when every
+        condition in the rule matches (AND across conditions), where a condition
+        matches when any of its keywords appears in any string value of the event
+        OR every field/value pair in its ``fields`` dict matches an event key.
+
+        ponytail: O(rules * conditions * fields) linear scan — fine for typical
+        Sigma rule counts (<1000); upgrade to compiled regexes if profiling shows
+        this hot path is costly.
+        """
+        matched: list[str] = []
+        event_str = " ".join(str(v) for v in event.values()).lower()
+        for rule in self._sigma_rules:
+            conditions = rule.get("conditions", [])
+            if not conditions:
+                continue
+            # All conditions must match (AND semantics across conditions)
+            if all(_sigma_cond_matches(cond, event, event_str) for cond in conditions):
+                matched.append(rule["name"])
+        return matched
+
+    def _start_sigma_watcher(self, directory: str) -> None:
+        """Start a daemon thread that hot-reloads Sigma rules on file changes (every 5 s)."""
+        # ponytail: polling instead of inotify/watchdog — O(files) scan every 5 s;
+        # upgrade to watchdog if the rules directory grows beyond ~1000 files.
+        if not hasattr(self, "_sigma_mtimes"):
+            self._sigma_mtimes: dict[str, float] = {}
+
+        def _watch() -> None:
             from pathlib import Path
-            rules_path = Path(sigma_dir)
-            if not rules_path.exists():
-                return
-            for f in rules_path.glob("*.yml"):
+            rules_path = Path(directory)
+            while True:
+                time.sleep(5)
                 try:
-                    import yaml
-                    with open(f) as fh:
-                        rule = yaml.safe_load(fh)
-                    self._sigma_rules.append(rule)
+                    if not rules_path.is_dir():
+                        continue
+                    current = {
+                        str(f): f.stat().st_mtime
+                        for f in list(rules_path.glob("*.yml")) + list(rules_path.glob("*.yaml"))
+                    }
+                    if current != self._sigma_mtimes:
+                        self.reload_sigma_rules()
                 except Exception as exc:
-                    logger.error("DetectionEngine: Sigma parse error %s: %s", f.name, exc)
-            logger.info("DetectionEngine: loaded %d Sigma rules", len(self._sigma_rules))
-        except Exception as exc:
-            logger.error("DetectionEngine: Sigma load failed: %s", exc)
+                    logger.debug("Sigma watcher error: %s", exc)
+
+        t = threading.Thread(target=_watch, name="SigmaWatcher", daemon=True)
+        t.start()
 
     def _load_yara_rules(self) -> None:
         """Load YARA rules from configured directory (Req 9.4)."""
@@ -455,28 +591,108 @@ class DetectionEngine:
                 yara_dir = self._config_manager.get("ai.yara_rules_dir")
             except Exception:
                 pass
-        if not yara_dir:
-            return
+        directory = yara_dir or "rules/yara"
+        count = self.load_yara_rules(directory)
+        if count:
+            logger.info("DetectionEngine: loaded %d YARA rule files", count)
+
+    def load_yara_rules(self, directory: str) -> int:
+        """
+        Load and compile YARA rules from *directory*.
+
+        Skips files that fail to compile (logs a warning per file) and
+        continues loading the rest.  Stores compiled rules internally for
+        use by :meth:`evaluate_yara`.
+
+        Args:
+            directory: Path to the directory containing ``*.yar`` files.
+
+        Returns:
+            Number of successfully compiled rule files.
+        """
+        if not _YARA_AVAILABLE:
+            return 0
+
+        from pathlib import Path  # stdlib
+
+        rules_path = Path(directory)
+        if not rules_path.exists():
+            return 0
+
+        compiled: dict = {}
+        rule_files = sorted(rules_path.glob("*.yar")) + sorted(rules_path.glob("*.yara"))
+        for f in rule_files:
+            try:
+                compiled[f.stem] = _yara_mod.compile(str(f))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("YARA compile error in %s: %s", f.name, exc)
+
+        if compiled:
+            self._yara_rules = compiled
+        return len(compiled)
+
+    def evaluate_yara(self, payload: bytes) -> list[str]:
+        """
+        Match all loaded YARA rules against *payload*.
+
+        Args:
+            payload: Raw HTTP payload bytes to scan.
+
+        Returns:
+            List of matched rule names (strings).  Empty list when YARA is
+            unavailable, no rules are loaded, or there are no matches.
+            Never raises.
+        """
+        if not self._yara_rules or not payload:
+            return []
+        matched: list[str] = []
+        for _filename, compiled in self._yara_rules.items():
+            try:
+                matches = compiled.match(data=payload)
+                matched.extend(m.rule for m in matches)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("DetectionEngine: YARA eval error: %s", exc)
+        return matched
+
+    def _dispatch_yara(self, packet: Packet) -> None:
+        """
+        Run YARA evaluation on packet payload and emit ThreatEvents for matches.
+
+        Called from _dispatch when a packet carries payload bytes.
+        Never raises.
+        """
         try:
-            import yara
-            from pathlib import Path
-            rules_path = Path(yara_dir)
-            if not rules_path.exists():
-                return
-            rule_files = {}
-            for f in rules_path.glob("*.yar"):
+            matched = self.evaluate_yara(packet.payload)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("DetectionEngine: YARA dispatch error: %s", exc)
+            return
+
+        for rule_name in matched:
+            event = ThreatEvent(
+                event_id=str(uuid.uuid4()),
+                timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                attack_type="YARA Match",
+                source_ip=packet.src_ip,
+                destination_ip=packet.dst_ip,
+                source_port=packet.src_port,
+                destination_port=packet.dst_port,
+                protocol=packet.protocol,
+                rule_name=rule_name,
+                severity="High",
+                confidence=80,
+                packet_count=1,
+                evidence={"yara_rule": rule_name, "payload_length": len(packet.payload or b"")},
+            )
+            if not self._should_emit(event):
+                continue
+            self._cooldown[(event.source_ip, event.rule_name)] = (event.severity, time.monotonic())
+            event = self.annotate_mitre(event)
+            if self._on_event:
                 try:
-                    compiled = yara.compile(str(f))
-                    rule_files[f.stem] = compiled
+                    self._on_event(event)
                 except Exception as exc:
-                    logger.error("DetectionEngine: YARA compile error %s: %s", f.name, exc)
-            if rule_files:
-                self._yara_rules = rule_files
-                logger.info("DetectionEngine: loaded %d YARA rule files", len(rule_files))
-        except ImportError:
-            logger.debug("DetectionEngine: yara-python not installed — YARA disabled")
-        except Exception as exc:
-            logger.error("DetectionEngine: YARA load failed: %s", exc)
+                    logger.error("DetectionEngine: on_event (YARA) raised %s: %s", type(exc).__name__, exc)
+            self._publish_to_redis(event)
 
     @staticmethod
     def _publish_to_redis(event: ThreatEvent) -> None:
@@ -501,26 +717,120 @@ class DetectionEngine:
         except Exception as exc:
             logger.warning("DetectionEngine: redis publish failed — %s", exc)
 
-    @staticmethod
-    def _annotate_mitre(event: ThreatEvent) -> ThreatEvent:
-        """Annotate ThreatEvent with MITRE tactic/technique (Task 13.3, Req 9.8)."""
-        _MITRE = {
-            "SYN Flood":          ("Impact", "T1499"),
-            "Port Scan":          ("Reconnaissance", "T1595"),
-            "SQL Injection":      ("Initial Access", "T1190"),
-            "Brute Force":        ("Credential Access", "T1110"),
-            "ARP Spoofing":       ("Credential Access", "T1557"),
-            "ICMP Flood":         ("Impact", "T1498"),
-            "Slow HTTP":          ("Impact", "T1499"),
-            "DNS Tunneling":      ("Command and Control", "T1071.004"),
-        }
-        tactic, technique = _MITRE.get(event.attack_type, ("", ""))
-        if hasattr(event, "mitre_tactic"):
-            event.mitre_tactic = tactic
-        if hasattr(event, "mitre_technique"):
-            event.mitre_technique = technique
-        # Also store in evidence dict
+    # MITRE ATT&CK mapping keyed by rule_name or attack_type (Task 13.3, Req 9.8)
+    _MITRE_MAP: dict[str, dict] = {
+        # rule_name keys (primary lookup)
+        "port_scan":          {"tactic": "Reconnaissance",       "technique": "T1595"},
+        "syn_flood":          {"tactic": "Impact",               "technique": "T1499"},
+        "brute_force":        {"tactic": "Credential Access",    "technique": "T1110"},
+        "sql_injection":      {"tactic": "Initial Access",       "technique": "T1190"},
+        "xss":                {"tactic": "Initial Access",       "technique": "T1189"},
+        "dns_amplification":  {"tactic": "Impact",               "technique": "T1498"},
+        "http_flood":         {"tactic": "Impact",               "technique": "T1499"},
+        "ssh_attack":         {"tactic": "Lateral Movement",     "technique": "T1021"},
+        "data_exfiltration":  {"tactic": "Exfiltration",         "technique": "T1041"},
+        "malware_beacon":     {"tactic": "Command and Control",  "technique": "T1071"},
+        # attack_type fallback keys (display names used by built-in rules)
+        "SYN Flood":          {"tactic": "Impact",               "technique": "T1499"},
+        "Port Scan":          {"tactic": "Reconnaissance",       "technique": "T1595"},
+        "SQL Injection":      {"tactic": "Initial Access",       "technique": "T1190"},
+        "Brute Force":        {"tactic": "Credential Access",    "technique": "T1110"},
+        "ARP Spoofing":       {"tactic": "Credential Access",    "technique": "T1557"},
+        "ICMP Flood":         {"tactic": "Impact",               "technique": "T1498"},
+        "Slow HTTP":          {"tactic": "Impact",               "technique": "T1499"},
+        "DNS Tunneling":      {"tactic": "Command and Control",  "technique": "T1071.004"},
+    }
+
+    def annotate_mitre(self, event: ThreatEvent) -> ThreatEvent:
+        """
+        Annotate *event* with MITRE ATT&CK tactic and technique (Task 13.3, Req 9.8).
+
+        Looks up ``event.rule_name`` then ``event.attack_type`` in ``_MITRE_MAP``.
+        Falls back to ``"Unknown"`` for both fields if no entry is found.
+        Stores the result on ``event.mitre_tactic``, ``event.mitre_technique``,
+        and inside ``event.evidence`` so it surfaces in serialised event data.
+
+        Args:
+            event: ThreatEvent to annotate (mutated in place).
+
+        Returns:
+            The same event with MITRE fields populated.
+        """
+        entry = (
+            self._MITRE_MAP.get(event.rule_name)
+            or self._MITRE_MAP.get(event.attack_type)
+        )
+        tactic    = entry["tactic"]    if entry else "Unknown"
+        technique = entry["technique"] if entry else "Unknown"
+
+        event.mitre_tactic    = tactic
+        event.mitre_technique = technique
         if isinstance(event.evidence, dict):
-            event.evidence["mitre_tactic"] = tactic
+            event.evidence["mitre_tactic"]    = tactic
             event.evidence["mitre_technique"] = technique
         return event
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers
+# ---------------------------------------------------------------------------
+
+def _sigma_conditions(detection: dict) -> list[dict]:
+    """
+    Convert a Sigma ``detection`` block into a flat list of condition dicts.
+
+    Each condition dict has the form::
+
+        {"keywords": [...], "fields": {field: value, ...}}
+
+    Named selections (``condition: selection``) are inlined; the special
+    ``condition`` key itself is ignored.  Unknown/complex condition combinators
+    (``and``, ``or``, ``not``, ``1 of``, etc.) are silently treated as
+    individual keyword matches — good enough for simple keyword/field matching
+    against event dicts (Req 9.3).
+
+    ponytail: linear scan, no parser — upgrade to pySigma if full condition
+    algebra is needed.
+    """
+    if not detection or not isinstance(detection, dict):
+        return []
+
+    conditions: list[dict] = []
+    for key, value in detection.items():
+        if key == "condition":
+            continue  # combinator expression, not a selection block
+        cond: dict = {"keywords": [], "fields": {}}
+        if isinstance(value, list):
+            # e.g. keywords: [cmd.exe, powershell]
+            cond["keywords"] = [str(v) for v in value]
+        elif isinstance(value, dict):
+            # e.g. EventID: 1 / CommandLine|contains: 'malware'
+            for field, val in value.items():
+                cond["fields"][field] = val
+        elif isinstance(value, str):
+            cond["keywords"] = [value]
+        if cond["keywords"] or cond["fields"]:
+            conditions.append(cond)
+    return conditions
+
+
+def _sigma_cond_matches(cond: dict, event: dict, event_str: str) -> bool:
+    """
+    Return True if *cond* matches *event*.
+
+    - keywords: any keyword present (case-insensitive) in the flattened event string
+    - fields: every field key present in event with a value that contains the rule value
+              (Sigma modifiers like ``|contains`` stripped to the bare field name)
+    """
+    keywords = cond.get("keywords", [])
+    fields = cond.get("fields", {})
+
+    if keywords and not any(kw.lower() in event_str for kw in keywords):
+        return False
+    if fields:
+        for field, val in fields.items():
+            bare_field = field.split("|")[0]  # strip |contains, |startswith, etc.
+            ev_val = str(event.get(bare_field, "")).lower()
+            if str(val).lower() not in ev_val:
+                return False
+    return True

@@ -329,26 +329,29 @@ class ConfigurationManager:
         Returns:
             A list of invalid field names.  An empty list means all valid.
         """
-        invalid: list[str] = []
+        try:
+            invalid: list[str] = []
 
-        for key, value in updates.items():
-            if key not in _VALID_KEYS:
-                invalid.append(key)
-                continue
-
-            if key in _INT_RANGES:
-                min_val, max_val = _INT_RANGES[key]
-                if not isinstance(value, int) or isinstance(value, bool):
-                    invalid.append(key)
-                    continue
-                if value < min_val:
-                    invalid.append(key)
-                    continue
-                if max_val is not None and value > max_val:
+            for key, value in updates.items():
+                if key not in _VALID_KEYS:
                     invalid.append(key)
                     continue
 
-        return invalid
+                if key in _INT_RANGES:
+                    min_val, max_val = _INT_RANGES[key]
+                    if not isinstance(value, int) or isinstance(value, bool):
+                        invalid.append(key)
+                        continue
+                    if value < min_val:
+                        invalid.append(key)
+                        continue
+                    if max_val is not None and value > max_val:
+                        invalid.append(key)
+                        continue
+
+            return invalid
+        except Exception:  # noqa: BLE001
+            return []
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -356,7 +359,20 @@ class ConfigurationManager:
 
     @staticmethod
     def _build_settings(raw: dict[str, Any]) -> Settings:
-        """Construct a Settings object from the raw YAML dict, using defaults for missing keys."""
+        """Construct a Settings object from the raw YAML dict, using defaults for missing keys.
+
+        May raise ValueError for invalid data. Never raises any other exception type.
+        """
+        try:
+            return ConfigurationManager._build_settings_inner(raw)
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Unexpected error building settings: {exc}") from exc
+
+    @staticmethod
+    def _build_settings_inner(raw: dict[str, Any]) -> Settings:
+        """Inner implementation — may raise anything."""
         defaults = Settings()
 
         rules_raw = raw.get("rules_enabled", {})

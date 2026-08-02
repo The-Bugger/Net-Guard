@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetGuard — Attack Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/dark-theme.css">
+</head>
+<body>
+
+<header class="header">
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" onclick="toggleSidebar()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div class="header-logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    NetGuard
+  </div>
+  <div class="header-spacer"></div>
+  <div id="monitoring-badge" class="status-badge inactive"><span class="status-dot"></span> Stopped</div>
+  <div class="header-time" id="system-time"></div>
+</header>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<div class="app-layout">
+  <nav class="sidebar" id="sidebar">
+    <a href="/" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </a>
+    <a href="/threats.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Threats
+    </a>
+    <a href="/blocked.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+      Blocked IPs
+    </a>
+    <a href="/whitelist.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Whitelist
+    </a>
+    <a href="/logs.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Logs
+    </a>
+    <a href="/rules.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+      Rules
+    </a>
+    <a href="/settings.html" class="nav-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <a href="/lab.html" class="nav-item active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+      Attack Lab
+    </a>
+  </nav>
+
+  <main class="main-content">
+    <div class="page-header-row">
+      <div>
+        <div class="page-title">Attack Lab</div>
+        <div class="page-subtitle">Simulate attacks to validate detection coverage</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="loadSessions()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Launch form -->
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header"><span class="card-title">Launch Simulation</span></div>
+      <form id="launch-form" onsubmit="handleLaunch(event)" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;align-items:end">
+        <div>
+          <label class="form-label" for="attack-type">Attack Type</label>
+          <select id="attack-type" class="input" required>
+            <option value="">Loading…</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" for="difficulty">Difficulty</label>
+          <select id="difficulty" class="input" required>
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+            <option value="expert">Expert</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label" for="duration">Duration (sec)</label>
+          <input id="duration" class="input" type="number" min="10" max="3600" value="60" required>
+        </div>
+        <div>
+          <label class="form-label" for="packets-per-sec">Packets / sec</label>
+          <input id="packets-per-sec" class="input" type="number" min="1" max="10000" value="100" required>
+        </div>
+        <div>
+          <label class="form-label" for="attacker-count">Attacker Count</label>
+          <input id="attacker-count" class="input" type="number" min="1" max="100" value="1" required>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button type="submit" class="btn btn-primary" style="width:100%">Launch Simulation</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Active sessions table -->
+    <div class="card" style="padding:0">
+      <div class="card-header" style="padding:14px 16px"><span class="card-title">Active Sessions</span></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Session ID</th>
+              <th>Attack Type</th>
+              <th>Difficulty</th>
+              <th>Elapsed</th>
+              <th>Packets Sent</th>
+              <th>Detection</th>
+              <th style="width:80px">Cancel</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-tbody">
+            <tr><td colspan="7" class="empty-state"><p>No active sessions.</p></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Session detail panel (inline, hidden by default) -->
+    <div id="session-detail" class="card" style="margin-top:16px;display:none">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <span class="card-title">Session Detail</span>
+        <button class="btn btn-ghost btn-sm" onclick="closeDetail()">✕ Close</button>
+      </div>
+      <div id="session-detail-content" style="font-size:13px;color:var(--text-muted);padding:8px 0">
+        Loading…
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Confirmation dialog (Req 3.4) -->
+<dialog id="confirm-dialog" style="
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  color:var(--text-primary);padding:28px;min-width:320px;max-width:460px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5)
+">
+  <div style="font-size:16px;font-weight:600;margin-bottom:12px">Confirm Simulation</div>
+  <p id="confirm-body" style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6"></p>
+  <div style="display:flex;gap:8px;justify-content:flex-end">
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('confirm-dialog').close('cancel')">Cancel</button>
+    <button class="btn btn-primary btn-sm" id="confirm-ok">Launch</button>
+  </div>
+</dialog>
+
+<div id="toast-container" style="position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:300;pointer-events:none"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/utils.js"></script>
+<script src="/js/lab.js"></script>
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('visible');
+}
+function startClock() {
+  const el = document.getElementById('system-time');
+  if (el) setInterval(() => { el.textContent = new Date().toLocaleTimeString(); }, 1000);
+}
+startClock();
+</script>
+</body>
+</html>

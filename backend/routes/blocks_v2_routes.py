@@ -10,7 +10,7 @@ GET    /api/v1/blocks/{ip}/history
 Requirements: 1.10, 1.11, 1.12
 """
 
-from flask import Blueprint, request
+from flask import Blueprint, request, g
 from backend.api import dependencies
 from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response, created_response
@@ -33,12 +33,14 @@ def create_block():
     if not target:
         return error_response("target required", 400)
 
+    operator = (g.current_user or {}).get("sub", "api")
+
     result = _mgr().block(
         target=target,
         target_type=data.get("target_type", "ip"),
         reason=str(data.get("reason", ""))[:1000],
         duration=int(data.get("duration", 3600)),
-        operator=data.get("operator", "api"),
+        operator=operator,
         severity=int(data.get("severity", 5)),
         confidence=int(data.get("confidence", 50)),
     )
@@ -53,13 +55,13 @@ def create_block():
             return error_response("Database error — block rolled back", 500, code)
         return error_response(code, 400, code)
 
-    # Confirmation dialog data (Req 1.11) embedded in response
+    # Confirmation data (Req 1.11)
     confirmation = {
         "target": target,
         "target_type": data.get("target_type", "ip"),
-        "reason": data.get("reason", ""),
-        "duration": data.get("duration", 3600),
         "threat_score": result.get("threat_score", 0),
+        "operator": operator,
+        "timestamp": result.get("blocked_at"),
     }
     return created_response({**result, "confirmation": confirmation}, "Block applied")
 
@@ -67,8 +69,7 @@ def create_block():
 @blocks_v2_bp.delete("/blocks/<int:block_id>")
 @require_role("admin", "analyst")
 def delete_block(block_id: int):
-    from flask import g
-    operator = getattr(g, "current_user", {}).get("sub", "api")
+    operator = (g.current_user or {}).get("sub", "api")
     ok = _mgr().unblock(block_id, operator)
     if not ok:
         return error_response("Block not found", 404)
@@ -84,12 +85,13 @@ def list_blocks():
     except (ValueError, TypeError):
         return error_response("Invalid pagination", 400)
 
+    # Map incoming query params to repo filter keys
     filters = {
         "ip": request.args.get("ip"),
-        "block_type": request.args.get("block_type"),
-        "active": {"true": True, "false": False}.get(request.args.get("active", "").lower()),
-        "date_from": request.args.get("date_from"),
-        "date_to": request.args.get("date_to"),
+        "block_type": request.args.get("type"),   # API param "type" → repo key "block_type"
+        "status": request.args.get("status"),      # "active" | "inactive"
+        "date_from": request.args.get("from_date"),
+        "date_to": request.args.get("to_date"),
     }
     result = _repo().get_paginated(page, per_page, filters)
     return success_response(result)
@@ -112,5 +114,6 @@ def get_block_history(ip: str):
         per_page = min(100, max(1, int(request.args.get("per_page", 20))))
     except (ValueError, TypeError):
         return error_response("Invalid pagination", 400)
+    # Req 1.12: descending chronological order — handled by repo.get_history
     result = _mgr().get_history(ip, page, per_page)
     return success_response(result)

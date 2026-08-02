@@ -88,7 +88,10 @@ class CaptureEngine:
             raise RuntimeError("CaptureEngine is already running.")
         self._interface = interface
         self._stop_event.clear()
-        self._thread = threading.Thread(
+        # Use a real OS thread (not eventlet green thread) so that blocking
+        # Scapy/pcap calls don't stall the eventlet worker pool.
+        import threading as _threading
+        self._thread = _threading.Thread(
             target=self._capture_loop,
             name="Packet_Capture_Thread",
             daemon=True,
@@ -145,11 +148,11 @@ class CaptureEngine:
         """
         Try real Scapy capture; fall back to simulation if libpcap unavailable.
 
-        Task 5 hardening: any exception during the probe that isn't clearly
-        a pcap/interface error is treated as a non-fatal probe failure and we
-        switch to simulation rather than letting the thread die and triggering
-        the watchdog's "stopped unexpectedly" path.
+        On Windows without Npcap, skip the probe and go straight to simulation
+        to avoid blocking the event loop.
         """
+        import sys as _sys
+
         if not _SCAPY_AVAILABLE:
             logger.warning(
                 "CaptureEngine: Scapy unavailable — SIMULATION MODE on '%s'.",
@@ -159,30 +162,61 @@ class CaptureEngine:
             self._simulation_loop()
             return
 
-        try:
-            from scapy.sendrecv import sniff
-
-            # Runtime probe: 0.1 s sniff to detect missing libpcap / Npcap
+        # On Windows, sniff() blocks even with timeout= if Npcap is absent.
+        # Skip the probe and attempt live capture; on failure, fall back to sim.
+        if _sys.platform == "win32":
             try:
-                sniff(iface=self._interface, store=False, timeout=0.1, count=1,
-                      stop_filter=lambda _: True)
-                logger.debug("CaptureEngine: probe succeeded on '%s'.", self._interface)
-            except Exception as probe_exc:
-                probe_lower = str(probe_exc).lower()
-                is_pcap_err = any(k in probe_lower for k in (
-                    "pcap", "libpcap", "npcap", "no interface",
-                    "winpcap", "socket", "permission", "access denied",
-                    "cannot open", "no such device",
-                ))
+                from scapy.sendrecv import sniff
+                logger.info("CaptureEngine: live capture starting on '%s' (Windows).", self._interface)
+                while not self._stop_event.is_set():
+                    sniff(
+                        iface=self._interface,
+                        prn=self._on_packet,
+                        store=False,
+                        timeout=0.5,
+                        count=0,
+                    )
+                return
+            except Exception as exc:
                 logger.warning(
-                    "CaptureEngine: probe failed on '%s' (%s) — SIMULATION MODE.",
-                    self._interface, probe_exc,
+                    "CaptureEngine: live capture failed on '%s' (%s) — SIMULATION MODE.",
+                    self._interface, exc,
                 )
-                # Regardless of error type, fall back to simulation so monitoring
-                # stays active (Task 5: monitoring must not stop immediately).
                 self._emit_sim_status()
                 self._simulation_loop()
                 return
+
+        try:
+            from scapy.sendrecv import sniff
+
+            # Runtime probe: 0.1 s sniff in a separate thread to avoid blocking
+            # on Windows where sniff() can hang even with timeout= set.
+            probe_ok = [False]
+            probe_exc_holder = [None]
+
+            def _probe():
+                try:
+                    sniff(iface=self._interface, store=False, timeout=0.1, count=1,
+                          stop_filter=lambda _: True)
+                    probe_ok[0] = True
+                except Exception as exc:
+                    probe_exc_holder[0] = exc
+
+            probe_thread = threading.Thread(target=_probe, daemon=True)
+            probe_thread.start()
+            probe_thread.join(timeout=3.0)  # hard 3s wall clock limit
+
+            if not probe_ok[0]:
+                exc_info = probe_exc_holder[0] or "probe timed out"
+                logger.warning(
+                    "CaptureEngine: probe failed on '%s' (%s) — SIMULATION MODE.",
+                    self._interface, exc_info,
+                )
+                self._emit_sim_status()
+                self._simulation_loop()
+                return
+
+            logger.debug("CaptureEngine: probe succeeded on '%s'.", self._interface)
 
             logger.info("CaptureEngine: live capture starting on '%s'.", self._interface)
             while not self._stop_event.is_set():
@@ -292,7 +326,7 @@ class CaptureEngine:
         logger.info("CaptureEngine: simulation warmup — attacks start in ~%ds", int(startup_end - time.monotonic()))
 
         while not self._stop_event.is_set() and time.monotonic() < startup_end:
-            self._sim_send_normal(ATTACKER_IPS, LOCAL_IPS, NORMAL_PORTS)
+            self._sim_send_normal(ATTACKER_IPS_ASIA + ATTACKER_IPS_GLOBAL, LOCAL_IPS, NORMAL_PORTS)
             time.sleep(random.uniform(0.08, 0.15))
 
         # ── Main loop: 2-3 attacks/min with randomised intervals ─────────────

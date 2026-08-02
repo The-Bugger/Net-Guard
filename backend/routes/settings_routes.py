@@ -8,7 +8,7 @@ POST /api/v1/settings/apikeys/rotate
 GET  /api/v1/settings/backup        (download)
 POST /api/v1/settings/restore       (upload)
 
-Requirements: 6.1-6.9, 12.6, 15.7
+Requirements: 6.1-6.9, 12.6, 15.6, 15.7
 """
 
 from __future__ import annotations
@@ -18,9 +18,12 @@ import io
 import json
 import os
 import secrets
+import socket
 import zipfile
 from dataclasses import asdict
 from datetime import datetime, timezone
+
+import requests
 
 from flask import Blueprint, g, request, send_file
 
@@ -151,13 +154,58 @@ def update_settings():
 # POST /settings/integrations/test  (Req 15.7)
 # ---------------------------------------------------------------------------
 
+_SIEM_INTEGRATIONS = ("elastic", "splunk", "wazuh", "opensearch")
+
+_SIEM_TEST_PAYLOAD = {
+    "event_id": "test-0000",
+    "attack_type": "Test Event",
+    "source_ip": "1.2.3.4",
+    "severity": "Low",
+    "confidence": 100,
+    "rule_name": "TEST",
+}
+
+
 @settings_bp.post("/settings/integrations/test")
 @require_role("admin")
 def test_integration():
     data = request.get_json(silent=True) or {}
+
+    # SIEM path: body carries {"integration": "elastic"|"splunk"|"wazuh"|"opensearch"}
+    integration = data.get("integration", "")
+    if integration:
+        if integration not in _SIEM_INTEGRATIONS:
+            return error_response(
+                f"Unknown integration '{integration}'. Valid: {list(_SIEM_INTEGRATIONS)}",
+                400, "VALIDATION_ERROR",
+            )
+
+        from backend.api import dependencies
+        settings_repo = dependencies.get("settings_repo")
+        url = settings_repo.get(f"siem.{integration}.url") if settings_repo else None
+        if not url:
+            return error_response(
+                f"siem.{integration}.url not configured", 400, "NOT_CONFIGURED"
+            )
+
+        token = settings_repo.get(f"siem.{integration}.token") if settings_repo else None
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        payload = {**_SIEM_TEST_PAYLOAD, "timestamp": _utc_now()}
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=15)
+            return success_response({"status_code": resp.status_code, "response": resp.text})
+        except requests.exceptions.Timeout:
+            return error_response("INTEGRATION_TIMEOUT", 503, "INTEGRATION_TIMEOUT")
+        except requests.exceptions.ConnectionError:
+            return error_response("INTEGRATION_UNREACHABLE", 503, "INTEGRATION_UNREACHABLE")
+
+    # SOAR channel path (original behaviour)
     channel = data.get("channel", "")
     if not channel:
-        return error_response("channel required", 400)
+        return error_response("integration or channel required", 400)
 
     from backend.api import dependencies
     soar = dependencies.get("soar_engine")
@@ -188,7 +236,12 @@ def rotate_api_key():
     from backend.api import dependencies
     settings_repo = dependencies.get("settings_repo")
     if settings_repo:
-        settings_repo.set(key_name, new_key)
+        # Req 6.9: store hash only — plain-text key never persisted
+        key_hash = hashlib.sha256(new_key.encode()).hexdigest()
+        settings_repo.set(key_name, key_hash)
+        # Record masked value and creation time for the list endpoint
+        settings_repo.set(f"{key_name}.__masked", new_key[-4:])
+        settings_repo.set(f"{key_name}.__created_at", _utc_now())
 
     audit = dependencies.get("audit_service")
     if audit:
@@ -216,16 +269,15 @@ def backup():
     protected ZIP archive with an embedded SHA-256 checksum file.
     """
     from backend.api import dependencies
-    import tempfile, time
 
     settings_repo = dependencies.get("settings_repo")
     block_repo = dependencies.get("block_repo")
+    whitelist_repo = dependencies.get("whitelist_repo")
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     archive_name = f"netguard_backup_{ts}.zip"
 
     buf = io.BytesIO()
-    password = os.environ.get("BACKUP_PASSWORD", "netguard-backup").encode()
 
     # Collect data payloads
     payloads: dict[str, bytes] = {}
@@ -246,8 +298,24 @@ def backup():
         except Exception:
             payloads["blocks.json"] = b"[]"
 
+    # Whitelist entries (Req 6.6)
+    if whitelist_repo:
+        try:
+            payloads["whitelist.json"] = json.dumps(whitelist_repo.get_all(), indent=2).encode()
+        except Exception:
+            payloads["whitelist.json"] = b"[]"
+
+    # config.yaml content
+    try:
+        cfg_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "config", "config.yaml"
+        )
+        payloads["config.yaml"] = open(cfg_path, "rb").read()
+    except Exception:
+        payloads["config.yaml"] = b""
+
     # Compute overall checksum
-    combined = b"".join(payloads.values())
+    combined = b"".join(payloads[k] for k in sorted(payloads))
     sha256 = hashlib.sha256(combined).hexdigest()
     payloads["checksum.sha256"] = f"{sha256}  combined\n".encode()
 
@@ -304,20 +372,39 @@ def restore():
             400, "CHECKSUM_MISMATCH"
         )
 
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+
     if not confirm:
+        # Build conflict list: backup settings that differ from current DB values
+        conflicts = []
+        if settings_repo and "settings.json" in names:
+            try:
+                backup_settings = json.loads(zf.read("settings.json"))
+                for key, backup_val in backup_settings.items():
+                    current_val = settings_repo.get(key)
+                    if current_val is not None and str(current_val) != str(backup_val):
+                        conflicts.append({"key": key, "current": current_val, "backup": backup_val})
+            except Exception:
+                pass
         return success_response(
-            {"files": names, "checksum_ok": True, "confirm_required": True},
+            {"files": names, "checksum_ok": True, "confirm_required": True, "conflicts": conflicts},
             "Checksum verified. Send confirm=true to commit restore."
         )
 
     # Commit restore
-    from backend.api import dependencies
-    settings_repo = dependencies.get("settings_repo")
+    # Keys that must never be restored (security-sensitive, Req 12.6)
+    _SKIP_ON_RESTORE = {"security.jwt_secret"}
+
+    restored = 0
     if settings_repo and "settings.json" in names:
         try:
             data = json.loads(zf.read("settings.json"))
             for key, val in data.items():
+                if key in _SKIP_ON_RESTORE:
+                    continue
                 settings_repo.set(key, val)
+                restored += 1
         except Exception as exc:
             return error_response(f"Settings restore failed: {exc}", 500)
 
@@ -325,9 +412,9 @@ def restore():
     if audit:
         user = getattr(g, "current_user", {})
         audit.log(user.get("sub", "system"), "BACKUP_RESTORED",
-                  "/api/v1/settings/restore", {"files": names})
+                  "/api/v1/settings/restore", {"files": names, "restored_keys": restored})
 
-    return success_response(None, "Backup restored successfully")
+    return success_response({"restored_keys": restored}, "Backup restored successfully")
 
 
 # ---------------------------------------------------------------------------
@@ -367,3 +454,105 @@ def _enterprise_defaults() -> dict:
         "performance.rule_workers": "4",
         "licensing.key": "",
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /settings/enterprise  (Req 6.1)
+# ---------------------------------------------------------------------------
+
+@settings_bp.get("/settings/enterprise")
+@require_role("admin", "analyst", "hunter", "viewer")
+def get_enterprise_settings():
+    """Return all enterprise settings grouped by namespace prefix."""
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+
+    defaults = _enterprise_defaults()
+    if settings_repo:
+        for key in list(defaults):
+            val = settings_repo.get(key)
+            if val is not None:
+                defaults[key] = val
+
+    # Group by prefix (part before first dot)
+    grouped: dict = {}
+    for key, val in defaults.items():
+        ns, _, leaf = key.partition(".")
+        grouped.setdefault(ns, {})[leaf] = val
+
+    return success_response(data=grouped)
+
+
+# ---------------------------------------------------------------------------
+# PUT /settings/enterprise  (Req 6.1, 6.5)
+# ---------------------------------------------------------------------------
+
+# Sections that only admin may write (Req 6.5)
+_ADMIN_ONLY_SECTIONS = {"security", "firewall", "ai", "roles", "licensing"}
+# Sections that analyst+ may write
+_ANALYST_SECTIONS = {"notifications", "alerting"}
+
+
+@settings_bp.put("/settings/enterprise")
+@require_role("admin", "analyst")
+def update_enterprise_settings():
+    """Bulk-update enterprise settings with fine-grained RBAC (Req 6.5)."""
+    body = request.get_json(silent=True)
+    if not body or not isinstance(body, dict):
+        return error_response("JSON body required.", 400, "VALIDATION_ERROR")
+
+    user = getattr(g, "current_user", {})
+    user_role = user.get("role", "viewer") if user else "viewer"
+
+    # RBAC check before touching the repo
+    for key in body:
+        section = key.split(".")[0].lower()
+        if section in _ADMIN_ONLY_SECTIONS and user_role != "admin":
+            return error_response(
+                f"Admin role required to modify '{section}' settings", 403, "FORBIDDEN"
+            )
+        if section not in _ANALYST_SECTIONS and user_role != "admin":
+            # anything not in analyst-allowed list → admin only
+            return error_response(
+                f"Admin role required to modify '{section}' settings", 403, "FORBIDDEN"
+            )
+
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+    if not settings_repo:
+        return error_response("Settings service unavailable", 503, "SERVICE_UNAVAILABLE")
+
+    for key, val in body.items():
+        settings_repo.set(key, str(val))
+
+    return success_response(data=None, message="Enterprise settings updated.")
+
+
+# ---------------------------------------------------------------------------
+# GET /settings/apikeys  (Req 6.9)
+# ---------------------------------------------------------------------------
+
+@settings_bp.get("/settings/apikeys")
+@require_role("admin")
+def list_api_keys():
+    """List API keys: id, creation date, masked last-4 only (Req 6.9)."""
+    from backend.api import dependencies
+    settings_repo = dependencies.get("settings_repo")
+    if not settings_repo:
+        return success_response(data=[])
+
+    all_settings = settings_repo.get_all()
+
+    # Keys with a stored .__masked sentinel are managed API keys
+    api_keys = []
+    for k, v in all_settings.items():
+        if k.endswith(".__masked"):
+            key_name = k[: -len(".__masked")]
+            created_at = all_settings.get(f"{key_name}.__created_at")
+            api_keys.append({
+                "key_id": key_name,
+                "masked": f"{'*' * 60}{v}",
+                "created_at": created_at,
+            })
+
+    return success_response(data=api_keys)

@@ -21,6 +21,7 @@ from database.schema import (
     Base,
     DetectionRule,
     Setting,
+    UserAccount,
 )
 
 # ---------------------------------------------------------------------------
@@ -178,6 +179,7 @@ def initialize_db(db_url: str | None = None) -> None:
         with Session(engine) as session:
             _seed_detection_rules(session)
             _seed_settings(session)
+            _seed_admin_user(session)
             session.commit()
 
         logger.info("Database initialization complete.")
@@ -259,6 +261,22 @@ def _seed_settings(session: Session) -> None:
             )
             session.add(setting)
             logger.debug("Seeded setting: %s", setting_data["key"])
+
+
+def _seed_admin_user(session: Session) -> None:
+    """Create the default admin account if no users exist yet."""
+    if session.query(UserAccount).count() > 0:
+        return
+    from werkzeug.security import generate_password_hash
+    admin = UserAccount(
+        username="admin",
+        password_hash=generate_password_hash("Admin@NetGuard1"),
+        role="admin",
+        created_at=_utc_now(),
+        active=1,
+    )
+    session.add(admin)
+    logger.info("Seeded default admin user (username=admin, password=Admin@NetGuard1)")
 
 
 def _utc_now() -> str:

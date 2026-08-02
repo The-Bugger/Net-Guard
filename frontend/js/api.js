@@ -21,8 +21,12 @@ const API_BASE = '/api/v1';
 async function apiRequest(path, options = {}) {
   const url = `${API_BASE}${path}`;
 
+  const token = sessionStorage.getItem('ng_access_token');
   const defaults = {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
   };
 
   const config = { ...defaults, ...options };
@@ -42,6 +46,12 @@ async function apiRequest(path, options = {}) {
     const msg = json.error || json.message || 'Unknown API error';
     const err = new Error(msg);
     err.code = json.error_code || json.code || res.status;
+    // Redirect to login on auth failure
+    if (res.status === 401) {
+      sessionStorage.clear();
+      window.location.href = '/frontend/login.html';
+      return;
+    }
     throw err;
   }
 

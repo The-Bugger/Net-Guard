@@ -3,9 +3,12 @@ backend/middleware/rate_limiter.py — Sliding-window rate limiter.
 
 Two tiers (both enforced, whichever fires first wins):
   1. Per-IP  : 120 req / 60 s  — unauthenticated safety net (original Req 10.x)
-  2. Per-User: 300 req / 60 s  — authenticated user limit (Req 11.4)
+  2. Per-User: path-dependent   — authenticated user limit (Req 11.4)
+       - Auth endpoints (/api/v1/auth/):  20 req / 60 s
+       - Admin endpoints (/api/v1/admin/): 60 req / 60 s
+       - All other API paths:            300 req / 60 s
 
-Only /api/v1/ paths are counted. Static files and Socket.IO are never limited.
+Only /api/ paths are counted. Static files and Socket.IO are never limited.
 Returns HTTP 429 + Retry-After header on breach.
 
 ponytail: in-process deque windows — not shared across workers.
@@ -32,9 +35,11 @@ class RateLimiter:
     _IP_WINDOW  = 60
     _IP_MAX     = 120
 
-    # Per-user limit (Req 11.4)
-    _USER_WINDOW = 60
-    _USER_MAX    = 300
+    # Per-user limits (Req 11.4) — window is always 60 s
+    _USER_WINDOW       = 60
+    _USER_MAX_DEFAULT  = 300   # general API
+    _USER_MAX_AUTH     = 20    # /api/v1/auth/* (login / refresh brute-force protection)
+    _USER_MAX_ADMIN    = 60    # /api/v1/admin/*
 
     # Paths always exempt even if a window is full
     _EXEMPT = {"/api/v1/health", "/api/v1/dashboard/live", "/api/v1/status"}
@@ -77,9 +82,10 @@ class RateLimiter:
             if user:
                 username = user.get("sub", "")
                 if username:
+                    user_max = self._user_limit_for_path(path)
                     user_result = self._check_window(
                         self._user_windows, username, now,
-                        self._USER_WINDOW, self._USER_MAX,
+                        self._USER_WINDOW, user_max,
                     )
                     if user_result is not None:
                         return user_result
@@ -89,6 +95,18 @@ class RateLimiter:
         except Exception:
             logger.error("Rate limiter error", exc_info=True)
             return None  # fail open
+
+    # ------------------------------------------------------------------
+    # Path → per-user limit
+    # ------------------------------------------------------------------
+
+    def _user_limit_for_path(self, path: str) -> int:
+        """Return the per-user request cap for the given path (Req 11.4)."""
+        if path.startswith("/api/v1/auth/"):
+            return self._USER_MAX_AUTH
+        if path.startswith("/api/v1/admin/"):
+            return self._USER_MAX_ADMIN
+        return self._USER_MAX_DEFAULT
 
     # ------------------------------------------------------------------
     # Sliding-window helper

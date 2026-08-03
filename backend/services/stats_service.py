@@ -117,7 +117,17 @@ class StatsService:
             "active_threats": active_blocks,
             "alerts_today": alerts_today,
             "monitoring": self._state.active,
+            "drops": self._get_drop_metrics(),
         }
+
+    @staticmethod
+    def _get_drop_metrics() -> dict:
+        """Return pipeline drop counters; empty dict if unavailable."""
+        try:
+            from backend.services.drop_metrics import DropMetrics
+            return DropMetrics.get().snapshot()
+        except Exception:
+            return {}
 
     def get_dashboard_data(self) -> dict:
         """Return full dashboard snapshot, cached for 2 seconds. Req 12.2."""

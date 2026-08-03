@@ -40,16 +40,36 @@ Common HTTP Status Codes:
 
 ## Authentication
 
-When `NETGUARD_API_KEY` is set in the environment, all mutating endpoints
-(`POST`, `PUT`, `DELETE`, `PATCH`) require an `X-API-Key` request header:
+NetGuard supports two complementary auth mechanisms:
+
+**JWT Bearer tokens (primary).** Most `/api/v1/*` endpoints require a valid
+access token obtained from `POST /auth/login`. Send it in the
+`Authorization` header:
+
+```
+Authorization: Bearer <access-token>
+```
+
+Public paths that never require a token: `/api/v1/auth/login`,
+`/api/v1/auth/refresh`, `/api/v1/health`, `/api/v1/status`,
+`/api/v1/advisor`, `/api/v1/interfaces`, `/api/v1/monitor/interfaces`, and
+all `/socket.io` traffic. If the auth service is unavailable, protected
+endpoints fail closed with `503 SERVICE_UNAVAILABLE`.
+
+**API key (legacy / service-to-service).** When `NETGUARD_API_KEY` is set in
+the environment, mutating endpoints (`POST`, `PUT`, `DELETE`, `PATCH`) also
+accept an `X-API-Key` request header:
 
 ```
 X-API-Key: <your-api-key>
 ```
 
-When `NETGUARD_API_KEY` is **not set**, the app runs in dev no-auth mode and
-the header is not checked. When `REQUIRE_AUTH_FOR_READS=true`, `GET` endpoints
-are also protected. SocketIO paths (`/socket.io/`) are always exempt.
+When `NETGUARD_API_KEY` is **not set**, the API-key check runs in dev no-auth
+mode. When `REQUIRE_AUTH_FOR_READS=true`, `GET` endpoints are also protected
+by the API-key check. SocketIO paths (`/socket.io/`) are always exempt.
+
+Many endpoints additionally enforce role-based access control (RBAC) via
+`@require_role(...)`. Roles: `admin`, `analyst`, `hunter`, `viewer`.
 
 ---
 
@@ -926,6 +946,204 @@ Response `200`:
 
 ---
 
+### 29. Authentication (JWT)
+
+**POST /auth/login**
+
+Authenticate with username/password (+ optional TOTP) and receive JWT tokens.
+
+Response `200`: `data` = `{ access_token, refresh_token }`.
+Errors: `400` missing fields, `401` `MFA_REQUIRED` / `MFA_INVALID` / `LOGIN_FAILED`.
+
+**POST /auth/refresh**
+
+Exchange a refresh token for a new token pair.
+
+Response `200`: `data` = new token pair. Errors: `400` missing token, `401` `INVALID_TOKEN`.
+
+**POST /auth/logout**
+
+Stateless logout — writes an audit log entry; the client discards its token.
+
+Response `200`: `data: null`.
+
+**POST /auth/users** _(admin only)_
+
+Create a new user with a role.
+
+Response `201`: `data` = created user object.
+Errors: `400` `PASSWORD_POLICY_VIOLATION`, `409` `USERNAME_TAKEN`.
+
+---
+
+### 30. Audit Log
+
+**GET /audit** _(admin only)_
+
+Paginated audit log. Query params: `page`, `per_page` (≤ 100).
+
+Response `200`: `data` = `{ items, page, per_page, total, ... }`.
+Errors: `400` invalid pagination.
+
+---
+
+### 31. GeoIP Map
+
+**GET /map/resolve?ip=...** _(roles: admin/analyst/hunter/viewer)_
+
+GeoIP-resolve a single IP.
+
+Response `200`: `data` = `{ lat, lon, country, city, ... }`.
+Errors: `400` missing ip, `503` engine unavailable.
+
+**GET /map/events?limit=N**
+
+Recent threat events enriched with GeoIP coordinates for map display (limit ≤ 500).
+
+Response `200`: `data.events[]` = event objects with `lat/lon/country/city`.
+
+---
+
+### 32. AI Anomaly Calibration
+
+**GET /ai/calibration**
+
+Per-IP rolling anomaly stats + warm-up status.
+
+Response `200`: `data` = `{ calibration, baseline_window_start, warming_up }`.
+Errors: `503` engine unavailable.
+
+**PUT /ai/calibration** _(admin/analyst)_
+
+Manual override of baseline values for an IP. Body: `{ ip, values }`.
+
+Response `200`: `data` = `{ ip }`. Errors: `400` missing ip, `503` unavailable.
+
+---
+
+### 33. Threat Hunting
+
+**GET /hunt?ioc=...&page=N** _(admin/analyst/hunter)_
+
+Threat-hunt search by IOC value, paginated.
+
+Response `200`: `data` = paginated hunt results.
+Errors: `400` missing ioc, `503` service unavailable.
+
+**POST /events/{event_id}/feedback** _(admin/analyst)_
+
+Mark a detection event as false positive. Body: `{ is_false_positive }`. Operator taken from JWT.
+
+Response `200`: `data: null`, message "Feedback recorded".
+
+---
+
+### 34. Blocks v2
+
+Enhanced block API (complements the v1 `/block`, `/unblock`, `/blocked` endpoints).
+
+**POST /blocks** _(admin/analyst)_
+
+Create a block. Body: `{ target, target_type, reason, duration, severity, confidence }`.
+
+Response `201`: `data` = block result + `confirmation{ target, target_type, threat_score, operator, timestamp }`.
+Errors: `400` missing target, `409` `WHITELISTED_IP`, `500` `FIREWALL_ERROR` / `DB_ERROR`.
+
+**DELETE /blocks/{block_id}** _(admin/analyst)_
+
+Unblock by block ID. Response `200`: `data: null`. Errors: `404` not found.
+
+**GET /blocks**
+
+List blocks, paginated, with filters (`ip`, `type`, `status`, `from_date`, `to_date`).
+
+Response `200`: `data` = paginated block list.
+
+**GET /blocks/{block_id}**
+
+Get a single block record. Response `200`: `data` = block record. Errors: `404`.
+
+**GET /blocks/{ip}/history**
+
+Block history for an IP, descending chronological, paginated.
+
+Response `200`: `data` = paginated history.
+
+---
+
+### 35. Attack Lab
+
+**GET /lab/attacks**
+
+List available attack types for the attack lab. Response `200`: `data` = attack type list.
+
+**POST /lab/sessions** _(admin/analyst)_
+
+Launch an attack session. Body: `{ difficulty, ... }`.
+
+Response `200`: `data` = `{ session_id, config, operator, estimated_detection_time }`.
+Errors: `400` invalid config, `429` `CONCURRENCY_LIMIT`, `503` unavailable.
+
+**GET /lab/sessions**
+
+List active attack-lab sessions. Response `200`: `data` = session list.
+
+**GET /lab/sessions/{session_id}**
+
+Get status of one session. Response `200`: `data` = session status object. Errors: `404`.
+
+**DELETE /lab/sessions/{session_id}** _(admin/analyst)_
+
+Cancel a session. Response `200`: `data: null`. Errors: `404`.
+
+---
+
+### 36. Compliance Reports
+
+**GET /reports/compliance?framework=X&regenerate=bool**
+
+Compliance report as JSON.
+
+Response `200`: `data` = `{ framework, last_generated, report{ controls_evaluated, percent_compliant, findings[] } }`.
+Errors: `400` missing / `UNSUPPORTED_FRAMEWORK`, `503` reporter unavailable.
+
+**GET /reports/compliance/download?framework=X&format=pdf|json** _(admin/analyst)_
+
+Download report as a file attachment.
+
+Response `200`: binary attachment (PDF or JSON), `Content-Disposition: attachment`.
+Errors: `400` `INVALID_FORMAT` / `UNSUPPORTED_FRAMEWORK`, `503` `PDF_UNAVAILABLE`.
+
+---
+
+### 37. Plugins
+
+**GET /plugins**
+
+List registered plugins (empty list if registry unavailable). Response `200`: `data` = plugin list.
+
+**POST /plugins/{name}/enable** _(admin only)_
+
+Enable a plugin. Response `200`: `data: null`. Errors: `404` not found.
+
+**POST /plugins/{name}/disable** _(admin only)_
+
+Disable a plugin. Response `200`: `data: null`. Errors: `404` not found.
+
+---
+
+### 38. Reset Data (Demo/Testing)
+
+**POST /reset-data**
+
+Demo/testing utility — deletes all detection events, deactivates all blocks,
+invalidates the stats cache. **No role guard** — do not expose in production.
+
+Response `200`: `data` = `{ events_deleted, blocks_deleted }`.
+Errors: `500` `SERVICE_UNAVAILABLE` / `PARTIAL_RESET`.
+
+---
+
 ## Socket.IO Events
 
 The server emits the following real-time events via Socket.IO:
@@ -952,4 +1170,18 @@ The server emits the following real-time events via Socket.IO:
 | `BLOCK_FAILED` | iptables command execution failed |
 | `DATABASE_ERROR` | Database operation failed |
 | `SERVICE_UNAVAILABLE` | Internal service dependency unavailable |
+| `FORBIDDEN` | Authenticated but role not permitted (RBAC) |
+| `LOGIN_FAILED` | Invalid username or password |
+| `MFA_REQUIRED` | TOTP code required to complete login |
+| `MFA_INVALID` | TOTP code incorrect |
+| `INVALID_TOKEN` | JWT refresh/access token invalid or expired |
+| `PASSWORD_POLICY_VIOLATION` | Password does not meet complexity policy |
+| `USERNAME_TAKEN` | Username already exists |
+| `WHITELISTED_IP` | Target IP is whitelisted and cannot be blocked |
+| `FIREWALL_ERROR` | Firewall/iptables operation failed |
+| `CONCURRENCY_LIMIT` | Too many concurrent attack-lab sessions |
+| `UNSUPPORTED_FRAMEWORK` | Compliance framework not supported |
+| `INVALID_FORMAT` | Report download format not supported |
+| `PDF_UNAVAILABLE` | PDF generation backend unavailable |
+| `PARTIAL_RESET` | Reset completed with some failures |
 | `UNKNOWN_ERROR` | Unexpected internal error |

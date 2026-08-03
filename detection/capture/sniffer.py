@@ -86,6 +86,11 @@ class CaptureEngine:
                     pass
         except queue.Full:
             _system_logger.warning("CaptureEngine: packet_queue is full — dropping packet.")
+            try:
+                from backend.services.drop_metrics import DropMetrics
+                DropMetrics.get().increment("capture_packet")
+            except Exception:
+                pass
         except Exception as exc:  # noqa: BLE001
             _system_logger.warning("CaptureEngine: error processing packet — %s: %s", type(exc).__name__, exc)
 

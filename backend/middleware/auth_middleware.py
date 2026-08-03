@@ -67,8 +67,11 @@ def jwt_required_hook() -> None:
     token = auth_header[7:]
     svc = _auth_service()
     if svc is None:
-        # auth service not wired yet (startup); fail open for health checks
-        return None
+        # Auth service unavailable — fail closed. A security appliance must
+        # never silently allow requests when its auth backend is down.
+        logger.error("auth_service unavailable; denying request to %s", path)
+        return jsonify({"success": False, "error": "SERVICE_UNAVAILABLE",
+                        "message": "Authentication service unavailable."}), 503
 
     try:
         payload = svc.validate_token(token)

@@ -147,6 +147,7 @@ def _register_blueprints(app: Flask) -> None:
     from backend.routes.lab_routes import lab_bp
     from backend.routes.reports_routes import reports_bp
     from backend.routes.plugins_routes import plugins_bp
+    from backend.routes.scheduler_routes import scheduler_bp
 
     prefix = "/api/v1"
     app.register_blueprint(health_bp, url_prefix=prefix)
@@ -175,6 +176,7 @@ def _register_blueprints(app: Flask) -> None:
     app.register_blueprint(lab_bp, url_prefix=prefix)
     app.register_blueprint(reports_bp, url_prefix=prefix)
     app.register_blueprint(plugins_bp, url_prefix=prefix)
+    app.register_blueprint(scheduler_bp, url_prefix=prefix)
 
     logger.info("All route blueprints registered under %s.", prefix)
 

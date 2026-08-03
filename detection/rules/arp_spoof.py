@@ -223,6 +223,7 @@ class ArpSpoofRule(BaseRule):
         evidence = {
             "conflicting_ip": conflicting_ip,
             "conflicting_macs": macs_list,
+            "mac_count": mac_count,
             "first_observed_timestamp": self._ip_first_seen.get(conflicting_ip, timestamp),
             "most_recent_timestamp": self._ip_last_seen.get(conflicting_ip, timestamp),
         }

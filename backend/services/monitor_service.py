@@ -157,7 +157,8 @@ def _pick_default_interface() -> str:
     """
     Return the first non-loopback is_up interface from psutil.
 
-    Falls back to any up interface if no non-loopback is found.
+    Returns "" when no non-loopback interface is up (loopback is never
+    selected as a capture source).
     ponytail: linear scan — typical host has < 10 interfaces.
     """
     def _is_loopback(name: str) -> bool:
@@ -168,9 +169,6 @@ def _pick_default_interface() -> str:
         stats = psutil.net_if_stats()
         for name, info in stats.items():
             if info.isup and not _is_loopback(name):
-                return name
-        for name, info in stats.items():
-            if info.isup:
                 return name
     except Exception as exc:
         logger.warning("_pick_default_interface failed: %s", exc)

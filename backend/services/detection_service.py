@@ -168,6 +168,13 @@ class DetectionEngine:
 
     def _dispatch(self, packet: Packet) -> None:
         """Run all enabled rules on a single packet. Never raises."""
+        # Lazily create the executor so _dispatch works before start() is called
+        # (e.g. in unit tests that drive the engine directly).
+        if self._executor is None:
+            self._executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=self._rule_workers, thread_name_prefix="RuleWorker"
+            )
+
         futures: list[concurrent.futures.Future] = []
 
         for rule in self._rules:

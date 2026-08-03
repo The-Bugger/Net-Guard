@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import subprocess
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 import psutil
 
 from detection.rules.base_rule import Explanation, ThreatEvent
-from .firewall import fw_block, fw_unblock, fw_check
 
 logger = logging.getLogger("netguard.prevention_engine")
 
@@ -85,7 +85,16 @@ class PreventionEngine:
 
     def verify_privileges(self) -> None:
         """Raise RuntimeError if the process cannot execute firewall commands."""
-        if not fw_check():
+        try:
+            result = subprocess.run(
+                ["iptables", "-L", "INPUT", "-n"],
+                capture_output=True,
+                timeout=5,
+            )
+            ok = result.returncode == 0
+        except Exception:
+            ok = False
+        if not ok:
             msg = (
                 "PreventionEngine: insufficient privileges to execute firewall commands. "
                 "On Linux run with sudo or grant CAP_NET_ADMIN; "
@@ -94,6 +103,18 @@ class PreventionEngine:
             logger.critical(msg)
             raise RuntimeError(msg)
         logger.info("PreventionEngine: firewall privilege check passed.")
+
+    def _run_iptables(self, cmd: list[str]) -> bool:
+        """Run an iptables command, return True on rc=0. Never raises."""
+        try:
+            result = subprocess.run(cmd, capture_output=True, timeout=5)
+            if result.returncode != 0:
+                logger.error("PreventionEngine: cmd failed (rc=%d) %s", result.returncode, cmd)
+                return False
+            return True
+        except Exception as exc:
+            logger.error("PreventionEngine: error running %s — %s", cmd, exc)
+            return False
 
     def handle_event(self, event: ThreatEvent, explanation: Explanation) -> None:
         """Block the attacker IP unless it is whitelisted."""
@@ -129,7 +150,7 @@ class PreventionEngine:
             self._log_block(ip, reason, self._block_duration)
             return True
 
-        if not fw_block(ip):
+        if not self._run_iptables(["iptables", "-I", "INPUT", "-s", ip, "-j", "DROP"]):
             logger.error("PreventionEngine: firewall block FAILED for %s — continuing.", ip)
             return False
 
@@ -153,7 +174,7 @@ class PreventionEngine:
 
     def unblock_ip(self, ip: str) -> bool:
         """Remove the firewall rule for an IP and mark the block inactive."""
-        success = fw_unblock(ip)
+        success = self._run_iptables(["iptables", "-D", "INPUT", "-s", ip, "-j", "DROP"])
 
         if not success:
             logger.error("PreventionEngine: firewall unblock FAILED for %s.", ip)

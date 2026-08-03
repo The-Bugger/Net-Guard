@@ -32,7 +32,7 @@ def make_arp_packet(
     mac: str = "aa:bb:cc:dd:ee:ff",
     timestamp: str | None = None,
 ) -> Packet:
-    """Build a single ARP Packet with the given source IP and MAC address."""
+    """Build a single ARP reply Packet with the given source IP and MAC address."""
     return Packet(
         src_ip=src_ip,
         dst_ip="192.168.1.254",
@@ -44,6 +44,7 @@ def make_arp_packet(
         length=42,
         payload=None,
         hw_src=mac,
+        arp_op=2,
     )
 
 

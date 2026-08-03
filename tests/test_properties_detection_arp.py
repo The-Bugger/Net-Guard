@@ -74,7 +74,7 @@ def _make_arp_packet(
     hw_src: str,
     timestamp: str | None = None,
 ) -> Packet:
-    """Build a minimal ARP packet with the given src_ip and hw_src MAC."""
+    """Build a minimal ARP reply packet with the given src_ip and hw_src MAC."""
     return Packet(
         src_ip=src_ip,
         dst_ip="0.0.0.0",
@@ -86,6 +86,7 @@ def _make_arp_packet(
         length=28,
         payload=None,
         hw_src=hw_src,
+        arp_op=2,
     )
 
 

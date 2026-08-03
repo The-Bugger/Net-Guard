@@ -19,13 +19,34 @@ logger = logging.getLogger("netguard.middleware")
 
 _MAX_FIELD_LEN = 1024
 
+_CSP_VALUE = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "connect-src 'self' ws: wss:; "
+    "img-src 'self' data:; "
+    "font-src 'self'; "
+    "object-src 'none'; "
+    "frame-ancestors 'none'"
+)
+
+_PERMISSIONS_POLICY = "geolocation=(), microphone=(), camera=()"
+
+_HSTS_VALUE = "max-age=63072000; includeSubDomains"
+
 
 def add_security_headers(response: Response) -> Response:
-    """Attach 4 security headers to every response. Req 11.1."""
+    """Attach security headers to every response. Req 11.1, 4.1–4.5."""
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = _CSP_VALUE
+    response.headers["Permissions-Policy"] = _PERMISSIONS_POLICY
+    # HSTS only over HTTPS — sending it over plain HTTP is meaningless and
+    # can cause browsers to cache a policy the site cannot honour.
+    if request.is_secure:
+        response.headers["Strict-Transport-Security"] = _HSTS_VALUE
     return response
 
 

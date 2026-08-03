@@ -82,7 +82,7 @@ def test_arp_spoof():
         return Packet(
             src_ip="192.168.1.1", dst_ip="0.0.0.0",
             src_port=None, dst_port=None, protocol="ARP", flags=None,
-            timestamp=ts(), length=28, payload=None, hw_src=mac,
+            timestamp=ts(), length=28, payload=None, hw_src=mac, arp_op=2,
         )
     rule.process_packet(_arp("aa:bb:cc:dd:ee:ff"))
     rule.process_packet(_arp("11:22:33:44:55:66"))

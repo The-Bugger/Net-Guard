@@ -66,6 +66,11 @@ def create_app(config: dict | None = None) -> Flask:
     from backend.middleware.auth_middleware import jwt_required_hook
     app.before_request(jwt_required_hook)
 
+    # Register legacy API-key auth hook (before_request) — governs mutating
+    # requests when NETGUARD_API_KEY is set; passes through in dev/test mode.
+    from backend.middleware.auth import check_api_key
+    app.before_request(check_api_key)
+
     # Register rate limiter (before_request)
     from backend.middleware.rate_limiter import RateLimiter
     limiter = RateLimiter()

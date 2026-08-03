@@ -201,43 +201,74 @@ class LoggingEngine:
         self._persist_system_log(level, module, event, safe_message, metadata)
 
     def _logging_loop(self) -> None:
-        """Consume queue items and persist to the database."""
+        """Consume queue items and persist to the database.
+
+        Threat events are buffered and written via EventRepository.insert_many
+        in batches (up to _BATCH_SIZE rows, or after _BATCH_FLUSH_SECONDS with
+        no new arrivals) to avoid one transaction per event under flood load.
+        System-log side effects still run per event.
+        """
+        batch: list[dict] = []
         while not self._stop_event.is_set():
             try:
-                item = self._event_queue.get(timeout=1.0)
+                item = self._event_queue.get(timeout=self._BATCH_FLUSH_SECONDS)
             except queue.Empty:
+                self._flush_batch(batch)
                 continue
             if item is _STOP_SENTINEL:
-                self._drain_queue()
+                self._drain_queue(batch)
+                self._flush_batch(batch)
                 break
-            self._process_queue_item(item)
+            self._collect_queue_item(item, batch)
+            if len(batch) >= self._BATCH_SIZE:
+                self._flush_batch(batch)
 
-    def _drain_queue(self) -> None:
+    _BATCH_SIZE = 50
+    _BATCH_FLUSH_SECONDS = 0.2
+
+    def _drain_queue(self, batch: list) -> None:
         """Process all remaining items after stop signal."""
         while True:
             try:
                 item = self._event_queue.get_nowait()
                 if item is not _STOP_SENTINEL:
-                    self._process_queue_item(item)
+                    self._collect_queue_item(item, batch)
             except queue.Empty:
                 break
 
-    def _process_queue_item(self, item: Any) -> None:
+    def _collect_queue_item(self, item: Any, batch: list) -> None:
+        """Handle one queue item: buffer threat events, process others inline."""
         try:
             if isinstance(item, tuple) and len(item) == 2:
                 event, explanation = item
-                self._persist_threat_event(event, explanation)
+                event_data = self._build_event_data(event, explanation)
+                if event_data is not None:
+                    batch.append(event_data)
+                # System-log side effect stays per-event (low volume).
+                self._persist_detection_system_log(event)
             else:
                 self._err_log.warning("LoggingEngine: unexpected queue item type %s", type(item).__name__)
         except Exception as exc:  # noqa: BLE001
             import sys
-            print(f"[LoggingEngine._process_queue_item] Unhandled exception: {exc}", file=sys.stderr)
+            print(f"[LoggingEngine._collect_queue_item] Unhandled exception: {exc}", file=sys.stderr)
 
-    def _persist_threat_event(self, event: "ThreatEvent", explanation: "Explanation") -> None:
-        if self._event_repo is None:
+    def _flush_batch(self, batch: list) -> None:
+        """Persist buffered threat events in one transaction."""
+        if not batch:
             return
+        if self._event_repo is not None:
+            # Pass a snapshot: the caller clears `batch` after this returns.
+            to_insert = list(batch)
+            try:
+                self._event_repo.insert_many(to_insert)
+            except Exception as exc:  # noqa: BLE001
+                self._err_log.error("LoggingEngine: batch insert failed — %s", exc, exc_info=True)
+        batch.clear()
+
+    def _build_event_data(self, event: "ThreatEvent", explanation: "Explanation") -> Optional[dict]:
+        """Convert a ThreatEvent + Explanation into a plain dict for batch insert."""
         try:
-            event_data = {
+            return {
                 "event_id":         event.event_id,
                 "timestamp":        event.timestamp,
                 "attack_type":      event.attack_type,
@@ -255,7 +286,16 @@ class LoggingEngine:
                 "recommendation":   explanation.recommendation,
                 "blocked":          event.blocked,
             }
-            self._event_repo.insert(event_data)
+        except Exception as exc:  # noqa: BLE001
+            self._err_log.error(
+                "LoggingEngine: failed to build event data for %s — %s",
+                getattr(event, "event_id", "?"), exc, exc_info=True,
+            )
+            return None
+
+    def _persist_detection_system_log(self, event: "ThreatEvent") -> None:
+        """Write the per-event system_logs entry (kept out of the batch path)."""
+        try:
             self._persist_system_log(
                 level="INFO", module="DetectionEngine",
                 event=event.attack_type.upper().replace(" ", "_"),
@@ -272,7 +312,7 @@ class LoggingEngine:
             )
         except Exception as exc:  # noqa: BLE001
             self._err_log.error(
-                "LoggingEngine: failed to persist ThreatEvent %s — %s",
+                "LoggingEngine: failed to write system log for %s — %s",
                 getattr(event, "event_id", "?"), exc, exc_info=True,
             )
 

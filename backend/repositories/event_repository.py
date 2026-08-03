@@ -29,25 +29,7 @@ class EventRepository:
         """Insert a detection event. Returns True on success; queues for retry on failure."""
         try:
             with self._session_factory() as session:
-                record = Event(
-                    event_id=event_data["event_id"],
-                    timestamp=event_data["timestamp"],
-                    attack_type=event_data["attack_type"],
-                    source_ip=event_data["source_ip"],
-                    destination_ip=event_data.get("destination_ip", ""),
-                    source_port=event_data.get("source_port"),
-                    destination_port=event_data.get("destination_port"),
-                    protocol=event_data.get("protocol", "UNKNOWN"),
-                    rule_name=event_data["rule_name"],
-                    severity=event_data["severity"],
-                    confidence=max(0, min(100, int(event_data.get("confidence", 0)))),
-                    packet_count=event_data.get("packet_count", 0),
-                    evidence=json.dumps(event_data.get("evidence", {})),
-                    explanation=event_data.get("explanation", ""),
-                    recommendation=event_data.get("recommendation"),
-                    blocked=1 if event_data.get("blocked") else 0,
-                )
-                session.add(record)
+                session.add(self._to_record(event_data))
                 session.commit()
                 return True
         except Exception as exc:
@@ -57,6 +39,52 @@ class EventRepository:
             except queue.Full:
                 logger.error("EventRepository: retry queue full — event dropped.")
             return False
+
+    @staticmethod
+    def _to_record(event_data: dict) -> "Event":
+        """Build an Event ORM object from a plain event_data dict."""
+        return Event(
+            event_id=event_data["event_id"],
+            timestamp=event_data["timestamp"],
+            attack_type=event_data["attack_type"],
+            source_ip=event_data["source_ip"],
+            destination_ip=event_data.get("destination_ip", ""),
+            source_port=event_data.get("source_port"),
+            destination_port=event_data.get("destination_port"),
+            protocol=event_data.get("protocol", "UNKNOWN"),
+            rule_name=event_data["rule_name"],
+            severity=event_data["severity"],
+            confidence=max(0, min(100, int(event_data.get("confidence", 0)))),
+            packet_count=event_data.get("packet_count", 0),
+            evidence=json.dumps(event_data.get("evidence", {})),
+            explanation=event_data.get("explanation", ""),
+            recommendation=event_data.get("recommendation"),
+            blocked=1 if event_data.get("blocked") else 0,
+        )
+
+    def insert_many(self, events: list[dict]) -> int:
+        """Insert multiple detection events in a single transaction.
+
+        Returns the number of rows committed. On failure, falls back to
+        per-row insert() so one bad row does not discard the whole batch.
+        """
+        if not events:
+            return 0
+        try:
+            with self._session_factory() as session:
+                session.add_all([self._to_record(e) for e in events])
+                session.commit()
+                return len(events)
+        except Exception as exc:
+            logger.error(
+                "EventRepository.insert_many failed for batch of %d: %s — falling back to per-row insert",
+                len(events), exc, exc_info=True,
+            )
+            inserted = 0
+            for e in events:
+                if self.insert(e):
+                    inserted += 1
+            return inserted
 
     def get_by_id(self, event_id: str) -> Optional[dict]:
         """Return a single event by event_id, or None if not found."""

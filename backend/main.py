@@ -285,6 +285,8 @@ dependencies.register("scheduler_service", scheduler_service)
 from backend.api import create_app, socketio as _socketio
 
 app = create_app()
+# Enable JWT enforcement — the real auth_service is wired above.
+app.config["JWT_AUTH_ENABLED"] = True
 
 
 @_socketio.on("connect")

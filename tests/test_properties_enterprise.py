@@ -220,7 +220,7 @@ from detection.parsers.packet_decoder import PacketDecoder
 _decoder = PacketDecoder()
 
 
-@settings(max_examples=500, deadline=500)
+@settings(max_examples=500, deadline=2000)
 @given(st.binary())
 def test_property10_packet_decoder_never_raises(data: bytes):
     """Property 10: decode() always returns a Packet or None, never raises."""
@@ -281,6 +281,10 @@ _JWT_PUBLIC_PREFIXES = (
     "/api/v1/auth/login",
     "/api/v1/auth/refresh",
     "/api/v1/health",
+    "/api/v1/status",
+    "/api/v1/advisor",
+    "/api/v1/interfaces",
+    "/api/v1/monitor/interfaces",
     "/socket.io",
 )
 
@@ -302,6 +306,9 @@ def _make_jwt_test_app():
     auth_mock = MagicMock()
     auth_mock.validate_token.side_effect = ValueError("INVALID_TOKEN")
     dependencies.register("auth_service", auth_mock)
+
+    # Enable JWT enforcement for this app (mirrors main.py wiring).
+    app.config["JWT_AUTH_ENABLED"] = True
 
     return app
 

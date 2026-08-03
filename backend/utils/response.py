@@ -59,9 +59,9 @@ def created_response(data: Any = None, message: str = "Created"):
 
 def no_content_response(message: str = "Deleted successfully."):
     """
-    Returns HTTP 200 with a minimal JSON envelope.
+    Returns HTTP 204 No Content with an empty body.
 
-    HTTP 204 No Content breaks the frontend apiRequest wrapper which always
-    calls res.json() — returning a JSON 200 keeps the API envelope consistent.
+    Callers that need a JSON body should use success_response() directly.
     """
-    return success_response(data=None, message=message, status_code=200)
+    from flask import Response
+    return Response(status=204)

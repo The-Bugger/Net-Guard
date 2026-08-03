@@ -150,7 +150,10 @@ class RateLimiter:
     # ------------------------------------------------------------------
 
     def _client_ip(self) -> str:
-        forwarded = request.headers.get("X-Forwarded-For", "").strip()
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+        import os
+        trust_proxy = os.environ.get("TRUST_PROXY_HEADERS", "false").lower() == "true"
+        if trust_proxy:
+            forwarded = request.headers.get("X-Forwarded-For", "").strip()
+            if forwarded:
+                return forwarded.split(",")[0].strip()
         return request.remote_addr or "unknown"

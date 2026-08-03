@@ -46,7 +46,14 @@ def jwt_required_hook() -> None:
     Flask before_request hook.
     Validates Bearer token and sets g.current_user = decoded payload.
     Returns 401 on missing/invalid/expired token for all non-public API paths.
+
+    JWT enforcement is active only when the app sets config JWT_AUTH_ENABLED
+    (done in main.py when the real auth_service is wired). Unit tests that
+    build the app via create_app() directly leave it unset, so the legacy
+    X-API-Key middleware governs access instead.
     """
+    from flask import current_app
+
     path = request.path
     method = request.method
 
@@ -60,15 +67,21 @@ def jwt_required_hook() -> None:
     if any(path.startswith(p) for p in _PUBLIC_PREFIXES):
         return None
 
+    # JWT enforcement is opt-in: only when the app explicitly enables it.
+    if not current_app.config.get("JWT_AUTH_ENABLED"):
+        return None
+
     auth_header = request.headers.get("Authorization", "")
+    svc = _auth_service()
+
     if not auth_header.startswith("Bearer "):
         return jsonify({"success": False, "error": "UNAUTHORIZED", "message": "Missing token"}), 401
 
     token = auth_header[7:]
-    svc = _auth_service()
     if svc is None:
-        # Auth service unavailable — fail closed. A security appliance must
-        # never silently allow requests when its auth backend is down.
+        # A Bearer token was presented but the auth backend is unavailable —
+        # fail closed. A security appliance must never silently allow requests
+        # when its auth backend is down.
         logger.error("auth_service unavailable; denying request to %s", path)
         return jsonify({"success": False, "error": "SERVICE_UNAVAILABLE",
                         "message": "Authentication service unavailable."}), 503

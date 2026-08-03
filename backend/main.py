@@ -16,7 +16,6 @@ else:
     _os.environ.setdefault("SOCKETIO_ASYNC_MODE", "threading")
 
 import logging
-import os
 import queue
 import sys
 from contextlib import contextmanager
@@ -29,12 +28,14 @@ if str(_PROJECT_ROOT) not in sys.path:
 # Configuration
 from backend.services.config_service import ConfigurationManager
 from backend.services.log_service import setup_logging, LoggingEngine
+from backend.env_config import load_env
 
 config_manager = ConfigurationManager()
 settings = config_manager.load()
+env = load_env(_PROJECT_ROOT)
 
 # Logging
-log_level = os.environ.get("LOG_LEVEL", "INFO")
+log_level = env.log_level
 setup_logging()
 logger = logging.getLogger("netguard.main")
 logger.setLevel(log_level)
@@ -44,7 +45,7 @@ logger.info("NetGuard IDPS starting up...")
 from database.init_db import initialize_db, get_engine
 from sqlalchemy.orm import sessionmaker, Session
 
-db_url = os.environ.get("DATABASE_URL", f"sqlite:///{_PROJECT_ROOT}/database/netguard.db")
+db_url = env.database_url
 if db_url.startswith("sqlite:///") and not db_url.startswith("sqlite:////"):
     db_path = _PROJECT_ROOT / "database" / "netguard.db"
     db_url = f"sqlite:///{db_path}"
@@ -255,7 +256,7 @@ dependencies.register("threat_intel_service", threat_intel_service)
 
 from backend.services.anomaly_engine import AnomalyEngine
 anomaly_engine = AnomalyEngine(
-    baseline_window_seconds=float(os.environ.get("ANOMALY_BASELINE_WINDOW", "300"))
+    baseline_window_seconds=env.anomaly_baseline_window
 )
 dependencies.register("anomaly_engine", anomaly_engine)
 
@@ -338,13 +339,13 @@ if __name__ == "__main__":
         metadata={"db_url": db_url, "log_level": log_level},
     )
 
-    host = os.environ.get("FLASK_HOST", "0.0.0.0")
-    port = int(os.environ.get("FLASK_PORT", 5000))
+    host = env.flask_host
+    port = env.flask_port
     debug = settings.debug
 
     # TLS: when TLS_CERT_FILE and TLS_KEY_FILE are set, serve HTTPS (TLS 1.2+ minimum)
-    tls_cert = os.environ.get("TLS_CERT_FILE", "")
-    tls_key  = os.environ.get("TLS_KEY_FILE", "")
+    tls_cert = env.tls_cert_file
+    tls_key  = env.tls_key_file
     ssl_context = None
     if tls_cert and tls_key:
         import ssl as _ssl

@@ -81,8 +81,21 @@ graph TB
 
 ## Threading Model
 
-NetGuard uses five concurrent threads. All inter-thread communication is via
-`queue.Queue` (packet_queue, event_queue) or `threading.Event` (stop signals).
+NetGuard runs a main thread plus these background threads. All inter-thread
+communication is via `queue.Queue` (packet_queue, event_queue) or
+`threading.Event` (stop signals).
+
+| Thread | Owner | Purpose |
+|--------|-------|---------|
+| `Packet_Capture_Thread` | CaptureEngine | Scapy sniff loop → decode → packet_queue |
+| `Detection_Thread` | DetectionEngine | packet_queue → rules → on_event callback |
+| `Logging_Thread` | LoggingEngine | event_queue → SQLite + log files |
+| `Expiry_Thread` | ExpiryThread | Poll DB every 5s, remove expired blocks |
+| `SigmaWatcher` | DetectionEngine | Hot-reload Sigma rules on file mtime change |
+| `ThreatIntelWorker` | ThreatIntelService | Background feed refresh |
+| Attack-lab session threads | AttackLabService | One daemon thread per running simulation |
+| APScheduler pool (10) | SchedulerService | Scheduled attack jobs (when started) |
+| API thread(s) | Flask-SocketIO | HTTP + WebSocket (eventlet on Linux, threading on Windows) |
 
 ```mermaid
 graph LR
@@ -96,7 +109,7 @@ graph LR
     end
     subgraph DT["Detection_Thread"]
         DGET["packet_queue.get(timeout=1s)"]
-        DRULE["Run all 8 rules\nprocess_packet + evaluate"]
+        DRULE["Run all 8 built-in rules\n+ Sigma/YARA matching"]
         DCALL["on_event callback"]
     end
     subgraph LT["Logging_Thread"]
@@ -107,7 +120,7 @@ graph LR
         EPOLL["Poll DB every 5s\nget_expired()"]
         EREM["iptables -D\nset_inactive()"]
     end
-    subgraph AT["API_Thread (eventlet)"]
+    subgraph AT["API Thread(s)"]
         FLASK2["Flask HTTP + SocketIO"]
     end
 
@@ -254,6 +267,17 @@ DetectionEngine:
 | `SlowHttpRule` | `SLOW_HTTP_001` | Slow HTTP / Slowloris | Phase B |
 | `DnsTunnelRule` | `DNS_TUNNEL_001` | DNS Tunneling (heuristic) | Phase B |
 
+### Sigma and YARA Rules
+
+In addition to the 8 built-in Python rules, DetectionEngine loads:
+
+- **Sigma rules** — YAML files from `rules/sigma/` (or `ai.sigma_rules_dir`
+  config override). Matched against serialised events via a lightweight
+  condition evaluator (not full pySigma algebra). A `SigmaWatcher` daemon
+  thread polls file mtimes and hot-reloads on change.
+- **YARA rules** — compiled from the configured directory and matched against
+  packet payloads when the `yara` package is available.
+
 ---
 
 ## API Flow
@@ -287,6 +311,19 @@ Route handlers are intentionally thin. The pattern is:
 4. Return `success_response()` or `error_response()` from `response.py`
 
 No business logic lives in route handlers.
+
+### API Surface
+
+28 blueprints are registered under `/api/v1` in
+[backend/api/__init__.py](../backend/api/__init__.py):
+
+| Group | Blueprints |
+|-------|-----------|
+| Core IDPS | health, monitor, detection, block, blocks_v2, whitelist, evidence |
+| Visibility | dashboard, stats, logs, timeline, analytics, map, hunt |
+| Config & auth | settings, auth, audit, reset, plugins |
+| Reporting | export, reports, advisor, ai, ai_assistant |
+| Lab & LAN | lab, scheduler, lan_devices |
 
 ### Before-Request Chain
 
@@ -330,6 +367,14 @@ and makes it straightforward to swap the session factory in tests.
 
 ## Service Dependencies
 
+All services are instantiated in `main.py` and registered by name in
+`backend/api/dependencies.py`. Route blueprints retrieve them via
+`dependencies.get_*()` accessors. Services do not import each other — they
+communicate via constructor injection, callbacks (`on_event`, `socketio_emit`),
+or the shared queues.
+
+### Core pipeline (wired in main.py)
+
 ```mermaid
 graph TD
     MAIN2["main.py"]
@@ -343,17 +388,9 @@ graph TD
     ET3["ExpiryThread"]
     SS["StatsService"]
     CE2["CaptureEngine"]
+    BM["BlockManager"]
 
-    MAIN2 --> CM
-    MAIN2 --> WM
-    MAIN2 --> LE2
-    MAIN2 --> PE2
-    MAIN2 --> DE2
-    MAIN2 --> EE2
-    MAIN2 --> MS
-    MAIN2 --> ET3
-    MAIN2 --> SS
-    MAIN2 --> CE2
+    MAIN2 --> CM & WM & LE2 & PE2 & DE2 & EE2 & MS & ET3 & SS & CE2 & BM
 
     PE2 --> WM
     PE2 --> LE2
@@ -364,22 +401,56 @@ graph TD
     MS --> LE2
     ET3 --> LE2
     SS --> MS
+    BM --> WM
+    BM --> LE2
 ```
 
-All dependencies are wired in `main.py` and injected as constructor arguments.
-No service imports another service directly — they communicate via callbacks
-(`on_event`, `socketio_emit`) or injected instances.
+### Extended services (registered in dependencies.py)
+
+| Service | Depends on | Purpose |
+|---------|-----------|---------|
+| `AuditService` | session_factory | Audit trail of mutating API calls |
+| `AuthService` | settings_repo, audit_service | API-key / login authentication |
+| `AIExplainService` | — | LLM-assisted event explanation |
+| `LanScanService` | — | LAN device discovery |
+| `SecurityAdvisor` | — | Posture recommendations |
+| `ComplianceReporter` | — | Compliance report generation |
+| `ThreatSimulator` | whitelist set | Synthetic attack traffic generator |
+| `AttackLabService` | packet_queue, threat_simulator | Lab sessions; daemon thread per session |
+| `GeoIPEngine` | settings_repo | IP geolocation with cache + TTL |
+| `ThreatIntelService` | event_repo, settings_repo, log_engine | Feed refresh on a daemon worker thread |
+| `AnomalyEngine` | — | Statistical baseline anomaly detection |
+| `PluginRegistry` | settings_repo | Third-party widget/plugin loading |
+| `ExportService` | event_repo | Data export (CSV/JSON) |
+
+### Known wiring gaps
+
+These services exist and have routes, but are **not instantiated in main.py** —
+`dependencies.get()` returns `None` for them at runtime:
+
+- `SOAREngine` ([soar_engine.py](../backend/services/soar_engine.py)) — used by
+  [settings_routes.py](../backend/routes/settings_routes.py)
+- `SchedulerService` ([scheduler_service.py](../backend/services/scheduler_service.py)) —
+  used by [scheduler_routes.py](../backend/routes/scheduler_routes.py)
+
+Either wire them in `main.py` or make their routes degrade gracefully when the
+service is absent.
 
 ---
 
 ## Key Design Decisions
 
-### Why eventlet?
+### Why eventlet? (now platform-conditional)
 
 Flask-SocketIO requires an async worker to serve WebSocket connections alongside
-HTTP. Eventlet provides cooperative multitasking via green threads and monkey-patches
-the standard library at startup (`main.py` line 1). This is why eventlet's
-`monkey_patch()` must run before any other import.
+HTTP. On Linux, eventlet provides cooperative multitasking via green threads and
+monkey-patches the standard library at startup — which is why `monkey_patch()`
+must run before any other import.
+
+On Windows, eventlet's patching of select/socket corrupts Scapy's pcap fd
+handling and causes `monitor/start` to hang, so `main.py` forces
+`SOCKETIO_ASYNC_MODE=threading` there instead. The same fallback applies on
+Python 3.14+ where eventlet compatibility is not yet assumed.
 
 ### Why queue.Queue for inter-thread communication?
 

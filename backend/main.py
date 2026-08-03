@@ -263,6 +263,23 @@ from backend.services.plugin_registry import PluginRegistry
 plugin_registry = PluginRegistry(settings_repo)
 dependencies.register("plugin_registry", plugin_registry)
 
+from backend.services.soar_engine import SOAREngine
+soar_engine = SOAREngine(
+    settings_repo=settings_repo,
+    log_engine=log_engine,
+    socketio_emit=_emit_socketio,
+    geoip_engine=geoip_engine,
+)
+dependencies.register("soar_engine", soar_engine)
+
+from backend.services.scheduler_service import SchedulerService
+scheduler_service = SchedulerService(
+    attack_lab_service=attack_lab_service,
+    log_engine=log_engine,
+    socketio_emit=_emit_socketio,
+)
+dependencies.register("scheduler_service", scheduler_service)
+
 # Flask app
 from backend.api import create_app, socketio as _socketio
 
@@ -309,6 +326,9 @@ if __name__ == "__main__":
     log_engine.start()
     expiry_thread.start()
     detection_engine.start()
+
+    scheduler_service.wire_session(session_factory)
+    scheduler_service.start()
 
     _socketio.start_background_task(_background_live_stats)
 

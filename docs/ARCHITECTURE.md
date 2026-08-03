@@ -422,19 +422,13 @@ graph TD
 | `AnomalyEngine` | — | Statistical baseline anomaly detection |
 | `PluginRegistry` | settings_repo | Third-party widget/plugin loading |
 | `ExportService` | event_repo | Data export (CSV/JSON) |
+| `SOAREngine` | settings_repo, log_engine, geoip_engine | Multi-channel alerting / SIEM forwarding |
+| `SchedulerService` | attack_lab_service, log_engine | Scheduled attack jobs via APScheduler (SQLite jobstore) |
 
-### Known wiring gaps
-
-These services exist and have routes, but are **not instantiated in main.py** —
-`dependencies.get()` returns `None` for them at runtime:
-
-- `SOAREngine` ([soar_engine.py](../backend/services/soar_engine.py)) — used by
-  [settings_routes.py](../backend/routes/settings_routes.py)
-- `SchedulerService` ([scheduler_service.py](../backend/services/scheduler_service.py)) —
-  used by [scheduler_routes.py](../backend/routes/scheduler_routes.py)
-
-Either wire them in `main.py` or make their routes degrade gracefully when the
-service is absent.
+`SchedulerService` requires two extra startup steps in `main.py`:
+`wire_session(session_factory)` after DB init, then `start()` in the
+`__main__` block to launch APScheduler. Both scheduler and SOAR routes return
+503 when the service is not registered.
 
 ---
 

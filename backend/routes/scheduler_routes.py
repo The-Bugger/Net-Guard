@@ -21,9 +21,15 @@ def _svc():
     return dependencies.get("scheduler_service")
 
 
+def _unavailable():
+    return error_response("Scheduler service unavailable", 503)
+
+
 @scheduler_bp.post("/scheduler/jobs")
 @require_role("admin", "analyst")
 def create_job():
+    if _svc() is None:
+        return _unavailable()
     config = request.get_json(silent=True) or {}
     try:
         result = _svc().create_job(config)
@@ -35,6 +41,8 @@ def create_job():
 @scheduler_bp.post("/scheduler/jobs/batch")
 @require_role("admin", "analyst")
 def create_batch():
+    if _svc() is None:
+        return _unavailable()
     data = request.get_json(silent=True) or {}
     configs = data.get("jobs", [])
     try:
@@ -58,6 +66,8 @@ def list_jobs():
 
     status = request.args.get("status")
     attack_type = request.args.get("attack_type")
+    if _svc() is None:
+        return _unavailable()
     result = _svc().list_jobs(page=page, per_page=per_page, status=status, attack_type=attack_type)
     return success_response(result)
 
@@ -65,6 +75,8 @@ def list_jobs():
 @scheduler_bp.delete("/scheduler/jobs/<job_id>")
 @require_role("admin", "analyst")
 def cancel_job(job_id: str):
+    if _svc() is None:
+        return _unavailable()
     ok = _svc().cancel_job(job_id)
     if not ok:
         return error_response("Job not found", 404)

@@ -165,6 +165,11 @@ class LoggingEngine:
                 "LoggingEngine: event_queue full — dropping event %s",
                 getattr(event, "event_id", "?"),
             )
+            try:
+                from backend.services.drop_metrics import DropMetrics
+                DropMetrics.get().increment("event_log")
+            except Exception:
+                pass
 
     def log_block(self, ip: str, reason: str, duration: int) -> None:
         """Log an IP block to detections.log and system_logs."""

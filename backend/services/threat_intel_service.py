@@ -52,6 +52,11 @@ class ThreatIntelService:
             self._q.put_nowait({"event_id": event_id, "source_ip": source_ip})
         except queue.Full:
             logger.warning("ThreatIntelService: enrichment queue full — dropping %s", event_id)
+            try:
+                from backend.services.drop_metrics import DropMetrics
+                DropMetrics.get().increment("threat_intel")
+            except Exception:
+                pass
 
     @staticmethod
     def compute_risk_score(

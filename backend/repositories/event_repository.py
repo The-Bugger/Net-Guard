@@ -38,6 +38,11 @@ class EventRepository:
                 self._retry_queue.put_nowait(event_data)
             except queue.Full:
                 logger.error("EventRepository: retry queue full — event dropped.")
+                try:
+                    from backend.services.drop_metrics import DropMetrics
+                    DropMetrics.get().increment("event_retry")
+                except Exception:
+                    pass
             return False
 
     @staticmethod

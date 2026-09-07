@@ -83,7 +83,11 @@ class ThreatIntelService:
         offset = (page - 1) * per_page
         try:
             from database.schema import EnrichmentResult
-            from backend.main import session_factory
+            # DI registry, NOT backend.main — importing backend.main from a
+            # service creates a second module instance when main.py runs as
+            # __main__ (dual event queues, split state).
+            from backend.api import dependencies
+            session_factory = dependencies.get("session_factory")
             results: list[dict] = []
             with session_factory() as session:
                 # Search enrichment_results
@@ -112,7 +116,8 @@ class ThreatIntelService:
             step = max(1, step)
 
             from database.schema import Event as EventModel
-            from backend.main import session_factory
+            from backend.api import dependencies as _di
+            session_factory = _di.get("session_factory")
             with session_factory() as session:
                 ev = session.query(EventModel).filter_by(event_id=event_id).first()
                 if ev:
@@ -186,7 +191,8 @@ class ThreatIntelService:
     def _store_enrichment(self, event_id: str, source: str, result: dict) -> None:
         try:
             from database.schema import EnrichmentResult
-            from backend.main import session_factory
+            from backend.api import dependencies as _di
+            session_factory = _di.get("session_factory")
             with session_factory() as session:
                 row = EnrichmentResult(
                     event_id=event_id,
@@ -208,7 +214,8 @@ class ThreatIntelService:
     def _mark_failed(self, event_id: str) -> None:
         try:
             from database.schema import Event as EventModel
-            from backend.main import session_factory
+            from backend.api import dependencies as _di
+            session_factory = _di.get("session_factory")
             with session_factory() as session:
                 ev = session.query(EventModel).filter_by(event_id=event_id).first()
                 if ev:

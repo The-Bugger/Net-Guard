@@ -51,7 +51,8 @@ class SchedulerService:
             from apscheduler.schedulers.background import BackgroundScheduler
             from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
             from apscheduler.executors.pool import ThreadPoolExecutor
-            from backend.main import db_url
+            from backend.api import dependencies as _di
+            db_url = _di.get("db_url")
             jobstore = SQLAlchemyJobStore(url=db_url)
             self._scheduler = BackgroundScheduler(
                 jobstores={"default": jobstore},

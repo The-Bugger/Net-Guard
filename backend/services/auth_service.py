@@ -104,9 +104,15 @@ class AuthService:
             return new_secret
 
     def _session_factory(self):
-        # Pulled lazily to avoid circular import at module load
-        from backend.main import session_factory
-        return session_factory
+        # Pulled lazily from the DI registry. NEVER import backend.main
+        # here: when main.py runs as __main__ (python backend/main.py),
+        # importing backend.main creates a second module instance with its
+        # own session_factory/engine — two DB pools, split state.
+        from backend.api import dependencies
+        factory = dependencies.get("session_factory")
+        if factory is None:
+            raise RuntimeError("session_factory not registered in DI registry")
+        return factory
 
     # ------------------------------------------------------------------
     # Public API

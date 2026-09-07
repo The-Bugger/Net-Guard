@@ -18,6 +18,7 @@ import logging
 import queue
 import re
 import threading
+import time
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -125,27 +126,49 @@ class LoggingEngine:
         self._event_repo = event_repo
         self._log_repo = log_repo
         self._thread: Optional[threading.Thread] = None
+        self._running: bool = False
         self._stop_event = threading.Event()
         self._sys_log = get_system_logger()
         self._det_log = get_detection_logger()
         self._err_log = get_error_logger()
 
-    def start(self) -> None:
-        """Start the background Logging_Thread. Idempotent."""
+    def start(self, scheduler: Optional["callable"] = None) -> None:
+        """Start the background Logging_Thread. Idempotent.
+
+        Args:
+            scheduler: optional callable that receives the loop function and
+                runs it in the host's native background-task mechanism (e.g.
+                ``socketio.start_background_task``). Under eventlet,
+                ``threading.Thread`` becomes a greenlet that can be starved or
+                killed by the hub under detection flood — the host's background
+                task runner is the reliable scheduling primitive there. When
+                omitted, a plain daemon thread is used (tests, threading mode).
+        """
         if self._thread and self._thread.is_alive():
             return
+        if self._running:
+            return
         self._stop_event.clear()
-        self._thread = threading.Thread(target=self._logging_loop, name="Logging_Thread", daemon=True)
-        self._thread.start()
+        self._running = True
+        if scheduler is not None:
+            scheduler(self._logging_loop)
+            self._thread = None
+        else:
+            self._thread = threading.Thread(target=self._logging_loop, name="Logging_Thread", daemon=True)
+            self._thread.start()
         self._sys_log.info("LoggingEngine started.")
         self._persist_system_log("INFO", "LoggingEngine", "STARTUP", "LoggingEngine started.")
 
     def stop(self) -> None:
         """Signal the Logging_Thread to drain and stop (waits up to 5 s)."""
+        self._running = False
         if self._thread and self._thread.is_alive():
             self._event_queue.put(_STOP_SENTINEL)
             self._thread.join(timeout=5.0)
             self._thread = None
+        elif self._running:
+            # Scheduler-managed loop: sentinel makes it drain and exit.
+            self._event_queue.put(_STOP_SENTINEL)
         self._sys_log.info("LoggingEngine stopped.")
         self._persist_system_log("INFO", "LoggingEngine", "SHUTDOWN", "LoggingEngine stopped.")
 
@@ -213,22 +236,44 @@ class LoggingEngine:
         no new arrivals) to avoid one transaction per event under flood load.
         Per-event system_logs rows ride the same batch via
         LogRepository.insert_many — one transaction per batch, not per event.
+
+        The whole loop body is guarded: if any unexpected exception escapes
+        the helpers, log it and keep looping. A dead consumer thread silently
+        fills the queue and drops every subsequent detection (observed in
+        production: 494 dropped events before the cause was found).
         """
         batch: list[dict] = []
         sys_batch: list[dict] = []
         while not self._stop_event.is_set():
             try:
-                item = self._event_queue.get(timeout=self._BATCH_FLUSH_SECONDS)
-            except queue.Empty:
-                self._flush_batch(batch, sys_batch)
-                continue
-            if item is _STOP_SENTINEL:
-                self._drain_queue(batch, sys_batch)
-                self._flush_batch(batch, sys_batch)
-                break
-            self._collect_queue_item(item, batch, sys_batch)
-            if len(batch) >= self._BATCH_SIZE:
-                self._flush_batch(batch, sys_batch)
+                try:
+                    item = self._event_queue.get(timeout=self._BATCH_FLUSH_SECONDS)
+                except queue.Empty:
+                    self._flush_batch(batch, sys_batch)
+                    continue
+                if item is _STOP_SENTINEL:
+                    self._drain_queue(batch, sys_batch)
+                    self._flush_batch(batch, sys_batch)
+                    break
+                self._collect_queue_item(item, batch, sys_batch)
+                if len(batch) >= self._BATCH_SIZE:
+                    self._flush_batch(batch, sys_batch)
+                # Yield to the eventlet hub. Under eventlet, threading.Thread
+                # runs as a greenlet in the main OS thread; during a detection
+                # flood queue.get() returns immediately every iteration and
+                # this loop would never yield, starving other greenlets (and
+                # delaying its own DB flushes). time.sleep is monkey-patched
+                # by eventlet into a hub yield; on plain threading it's a no-op
+                # cost of ~0ms.
+                time.sleep(0)
+            except Exception as exc:  # noqa: BLE001
+                # Never let the consumer thread die — that silently drops
+                # every future detection once the queue fills.
+                self._err_log.error(
+                    "LoggingEngine: logging loop error (continuing) — %s",
+                    exc, exc_info=True,
+                )
+                time.sleep(1.0)
 
     _BATCH_SIZE = 50
     _BATCH_FLUSH_SECONDS = 0.2

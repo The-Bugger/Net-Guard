@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import logging
 import queue
+import random
 import threading
 import time
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+
+from detection.parsers.packet_decoder import Packet
 
 logger = logging.getLogger("netguard.attack_lab_service")
 
@@ -218,16 +221,54 @@ class AttackLabService:
             self._semaphore.release()
 
     def _push_synthetic_packet(self, profile: dict, attack_type: str) -> None:
-        """Push a lightweight synthetic 'packet' dict into the packet_queue."""
-        pkt = {
-            "src_ip": profile.get("ip", "1.2.3.4"),
-            "attack_type": attack_type,
-            "synthetic": True,
-        }
+        """Push a synthetic Packet into the packet_queue.
+
+        DetectionEngine only evaluates ``Packet`` instances — raw dicts are
+        silently dropped by its isinstance guard, so simulations must build
+        real Packet objects shaped to trigger the matching rule.
+        """
+        src_ip = profile.get("ip", "1.2.3.4")
+        pkt = self._synthesise_packet(src_ip, attack_type)
         try:
             self._packet_queue.put_nowait(pkt)
         except queue.Full:
             pass  # drop if queue full
+
+    @staticmethod
+    def _synthesise_packet(src_ip: str, attack_type: str) -> Packet:
+        """Build a Packet whose shape triggers the rule for attack_type."""
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        base = dict(
+            src_ip=src_ip, dst_ip="192.168.1.10", src_port=None, dst_port=None,
+            protocol="TCP", flags=None, timestamp=now, length=60,
+            payload=None, hw_src=None, arp_op=None, icmp_type=None,
+        )
+        if attack_type == "Port Scan":
+            base.update(dst_port=random.randint(1, 65535), flags="S")
+        elif attack_type == "SYN Flood":
+            base.update(dst_port=80, flags="S")
+        elif attack_type in ("UDP Flood", "DNS Amplification"):
+            base.update(protocol="UDP", dst_port=53 if attack_type == "DNS Amplification" else random.randint(1024, 65535))
+        elif attack_type == "ICMP Flood":
+            base.update(protocol="ICMP", icmp_type=8)
+        elif attack_type == "ARP Spoofing":
+            base.update(protocol="ARP", hw_src="00:11:22:33:44:55", arp_op=2)
+        elif attack_type in ("SQL Injection", "XSS", "Directory Traversal", "HTTP Flood"):
+            payload_path = {
+                "SQL Injection": "/profile?id=1%27%20OR%20%271%27%3D%271",
+                "XSS": "/search?q=%3Cscript%3Ealert(1)%3C/script%3E",
+                "Directory Traversal": "/file?name=../../etc/passwd",
+            }.get(attack_type, "/")
+            base.update(dst_port=80, flags="PA", length=200,
+                        payload=f"GET {payload_path} HTTP/1.1\r\nHost: target\r\n\r\n".encode())
+        elif attack_type in ("Brute Force", "SSH Attack"):
+            base.update(dst_port=22, flags="S")
+        elif attack_type == "FTP Attack":
+            base.update(dst_port=21, flags="S")
+        else:
+            # Generic TCP session traffic for the remaining types.
+            base.update(dst_port=random.choice([80, 443, 8080]), flags=random.choice(["S", "PA"]))
+        return Packet(**base)
 
     def mark_detected(self, session_id: str, latency_ms: float) -> None:
         """Called by detection engine when a simulated attack is detected."""

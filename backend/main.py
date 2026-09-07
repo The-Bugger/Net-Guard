@@ -189,6 +189,8 @@ expiry_thread = ExpiryThread(
 # Register all services in the dependency container
 from backend.api import dependencies
 dependencies.register("config",            config_manager)
+dependencies.register("session_factory",   session_factory)
+dependencies.register("db_url",            db_url)
 dependencies.register("monitoring_state",  monitoring_state)
 dependencies.register("monitor_service",   monitor_service)
 dependencies.register("detection_engine",  detection_engine)
@@ -326,7 +328,11 @@ def _background_live_stats():
 
 if __name__ == "__main__":
     logger.info("Starting background services...")
-    log_engine.start()
+    # Under eventlet, threading.Thread runs as a greenlet that can be starved
+    # or killed by the hub under detection flood (observed: 1000-event queue
+    # fill + drops). socketio.start_background_task is the native, reliable
+    # scheduling primitive there; in threading mode it spawns a real thread.
+    log_engine.start(scheduler=_socketio.start_background_task)
     expiry_thread.start()
     detection_engine.start()
 

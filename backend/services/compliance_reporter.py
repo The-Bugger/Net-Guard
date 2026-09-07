@@ -202,7 +202,8 @@ class ComplianceReporter:
     def _cache(self, framework: str, report: dict) -> None:
         try:
             from database.schema import ComplianceReport
-            from backend.main import session_factory
+            from backend.api import dependencies as _di
+            session_factory = _di.get("session_factory")
             with session_factory() as session:
                 row = ComplianceReport(
                     framework=framework,
@@ -217,7 +218,8 @@ class ComplianceReporter:
     def _load_cached(self, framework: str) -> dict | None:
         try:
             from database.schema import ComplianceReport
-            from backend.main import session_factory
+            from backend.api import dependencies as _di
+            session_factory = _di.get("session_factory")
             with session_factory() as session:
                 row = (
                     session.query(ComplianceReport)

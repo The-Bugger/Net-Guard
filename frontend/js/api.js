@@ -83,6 +83,10 @@ const NetGuardAPI = {
   getDashboard:     ()      => api.get('/dashboard'),
   getLiveStats:     ()      => api.get('/dashboard/live'),
 
+  // Analytics
+  getAnalytics:    (period) =>
+    api.get(`/analytics${period ? '?period=' + encodeURIComponent(period) : ''}`),
+
   // Detections
   getDetections:    (params = {}) => {
     const qs = new URLSearchParams(params).toString();

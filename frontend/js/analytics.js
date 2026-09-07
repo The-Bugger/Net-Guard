@@ -484,10 +484,10 @@ function updateAll(data) {
 
 async function loadAnalytics(period) {
   try {
-    const res  = await fetch(`/api/v1/analytics?period=${encodeURIComponent(period)}`);
-    const json = await res.json();
-    if (!json.success) throw new Error(json.message || 'API error');
-    updateAll(json.data);
+    // Route through the API wrapper so the Bearer token is attached —
+    // a raw fetch() here got 401 for every logged-in user.
+    const data = await NetGuardAPI.getAnalytics(period);
+    updateAll(data);
   } catch (err) {
     showToast('Failed to load analytics: ' + err.message, 'error');
   }

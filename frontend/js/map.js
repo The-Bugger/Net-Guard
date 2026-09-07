@@ -141,10 +141,14 @@ async function resolveIP() {
   resultEl.innerHTML = '<span style="color:var(--text-muted)">Resolving…</span>';
 
   try {
-    // apiRequest throws on non-success envelope; for GeoIPError the backend
-    // returns HTTP 503 without the success wrapper, so catch via raw fetch.
+    // Raw fetch (not the api wrapper) because GeoIPError returns HTTP 503
+    // without the success envelope — but the Bearer token is still required.
+    const token = sessionStorage.getItem('ng_access_token');
     const res = await fetch(`/api/v1/map/resolve?ip=${encodeURIComponent(ip)}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
     });
     const json = await res.json();
 

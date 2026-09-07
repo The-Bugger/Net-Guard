@@ -138,3 +138,38 @@ function escHtml(str) {
 // Expose globally — the single canonical escaper for every page.
 // (Previously each page defined its own copy; several had none at all.)
 window.escHtml = escHtml;
+
+// ── Logout ──────────────────────────────────────────────────────────────────
+// The backend exposes POST /api/v1/auth/logout but nothing in the UI ever
+// called it — tokens lived in sessionStorage until the tab closed. This
+// auto-injects a Sign Out button into the page header on every
+// authenticated page (headers are inline in 14 HTML files; api.js is
+// loaded on all of them, so this is the one place to wire it).
+async function handleLogout() {
+  try {
+    await api.post('/auth/logout', {});
+  } catch (_) {
+    // Best-effort: clear local session even if the call fails.
+  }
+  sessionStorage.clear();
+  window.location.href = '/frontend/login.html';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const header = document.querySelector('.header');
+  if (!header || document.getElementById('btn-logout')) return;
+  // Only show on authenticated pages (login/landing have no token)
+  if (!sessionStorage.getItem('ng_access_token')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'btn-logout';
+  btn.textContent = 'Sign Out';
+  btn.title = 'Sign out';
+  btn.style.cssText = 'background:none;border:1px solid var(--border,#333);'
+    + 'color:inherit;border-radius:6px;padding:4px 10px;font-size:12px;'
+    + 'cursor:pointer;margin-right:8px';
+  btn.addEventListener('click', handleLogout);
+  const timeEl = header.querySelector('.header-time');
+  if (timeEl) header.insertBefore(btn, timeEl);
+  else header.appendChild(btn);
+});

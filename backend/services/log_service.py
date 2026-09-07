@@ -301,8 +301,10 @@ class LoggingEngine:
             else:
                 self._err_log.warning("LoggingEngine: unexpected queue item type %s", type(item).__name__)
         except Exception as exc:  # noqa: BLE001
-            import sys
-            print(f"[LoggingEngine._collect_queue_item] Unhandled exception: {exc}", file=sys.stderr)
+            self._err_log.error(
+                "LoggingEngine._collect_queue_item unhandled exception: %s",
+                exc, exc_info=True,
+            )
 
     def _flush_batch(self, batch: list, sys_batch: list) -> None:
         """Persist buffered threat events and system logs in one pass."""
@@ -400,5 +402,7 @@ class LoggingEngine:
                 metadata=safe_meta,
             )
         except Exception as exc:  # noqa: BLE001
-            import sys
-            print(f"[LoggingEngine._persist_system_log] DB insert failed: {exc}", file=sys.stderr)
+            self._err_log.error(
+                "LoggingEngine._persist_system_log DB insert failed: %s",
+                exc, exc_info=True,
+            )

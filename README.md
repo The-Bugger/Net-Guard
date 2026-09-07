@@ -3,7 +3,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![Tests](https://img.shields.io/badge/tests-678%20passing-brightgreen.svg)](#testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Flask](https://img.shields.io/badge/flask-3.0.3-lightgrey.svg)](https://flask.palletsprojects.com)
+[![Flask](https://img.shields.io/badge/flask-3.1.3-lightgrey.svg)](https://flask.palletsprojects.com)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-orange.svg)](https://sqlalchemy.org)
 [![GitHub](https://img.shields.io/badge/github-The--Bugger-181717.svg?logo=github)](https://github.com/The-Bugger)
 
@@ -561,15 +561,15 @@ sudo bash demo/attack_arp.sh       # ARP spoof  (requires dsniff)
 
 | Component | Technology | Version |
 |-----------|------------|---------|
-| REST API | Flask | 3.0.3 |
-| WebSocket | Flask-SocketIO + eventlet | 5.3.6 + 0.36.1 |
-| Packet capture | Scapy | 2.5.0 |
-| Database ORM | SQLAlchemy | 2.0.51 |
+| REST API | Flask | 3.1.3 |
+| WebSocket | Flask-SocketIO + eventlet | 5.6.1 + 0.41.2 |
+| Packet capture | Scapy | 2.7.0 |
+| Database ORM | SQLAlchemy | 2.0.52 |
 | Database | SQLite | (stdlib) |
-| Config | PyYAML | 6.0.2 |
-| Environment | python-dotenv | 1.0.1 |
-| System info | psutil | 6.1.0 |
-| Testing | pytest + Hypothesis | 8.3.3 + 6.115.6 |
+| Config | PyYAML | 6.0.3 |
+| Environment | python-dotenv | 1.2.3 |
+| System info | psutil | 7.2.2 |
+| Testing | pytest + Hypothesis | 9.1.1 + 6.167.1 |
 | Frontend | Vanilla JS ES6 + Chart.js + Socket.IO client | — |
 
 ---

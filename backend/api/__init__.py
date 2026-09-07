@@ -53,7 +53,9 @@ def create_app(config: dict | None = None) -> Flask:
 
     # Default configuration
     app.config["SECRET_KEY"] = _env_secret
-    app.config["JSON_SORT_KEYS"] = False
+    # Flask >= 2.3: JSON_SORT_KEYS config key is gone — set it on the
+    # JSON provider instead. Keeps key order stable in API responses.
+    app.json.sort_keys = False
 
     if config:
         app.config.update(config)

@@ -38,13 +38,13 @@ def reset_data():
 
     # Delete all events
     try:
-        events_deleted = _delete_all_events(event_repo)
+        events_deleted = event_repo.delete_all()
     except Exception as exc:
         errors.append(f"events: {exc}")
 
     # Deactivate all blocks
     try:
-        blocks_deleted = _deactivate_all_blocks(block_repo)
+        blocks_deleted = block_repo.deactivate_all()
     except Exception as exc:
         errors.append(f"blocks: {exc}")
 
@@ -65,34 +65,3 @@ def reset_data():
         data={"events_deleted": events_deleted, "blocks_deleted": blocks_deleted},
         message=f"Reset complete: {events_deleted} event(s) and {blocks_deleted} block(s) cleared.",
     )
-
-
-def _delete_all_events(event_repo) -> int:
-    """Truncate the events table. Returns row count."""
-    try:
-        with event_repo._session_factory() as session:
-            from database.schema import Event
-            count = session.query(Event).count()
-            session.query(Event).delete()
-            session.commit()
-            return count
-    except Exception as exc:
-        raise RuntimeError(f"Failed to delete events: {exc}") from exc
-
-
-def _deactivate_all_blocks(block_repo) -> int:
-    """Mark all active blocks inactive. Returns count."""
-    try:
-        with block_repo._session_factory() as session:
-            from database.schema import BlockedIP
-            from datetime import datetime, timezone
-            now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-            rows = session.query(BlockedIP).filter_by(active=1).all()
-            count = len(rows)
-            for r in rows:
-                r.active = 0
-                r.unblock_time = now
-            session.commit()
-            return count
-    except Exception as exc:
-        raise RuntimeError(f"Failed to deactivate blocks: {exc}") from exc

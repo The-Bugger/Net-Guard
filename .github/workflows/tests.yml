@@ -1,0 +1,67 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests (${{ matrix.os }}, Py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        python-version: [ "3.11", "3.12" ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      # Linux: libpcap headers for scapy packet capture tests.
+      # Windows/macOS runners already ship with Npcap/libpcap equivalents.
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Show environment
+        run: |
+          python --version
+          pip list
+        shell: bash
+
+      - name: Verify imports (all platforms)
+        run: python -c "import backend.main" || python -c "import sys; sys.path.insert(0, '.'); import backend.api"
+        shell: bash
+
+      # Unit + property tests run everywhere. Integration tests
+      # (tests/integration/) self-skip off Linux/root via pytestmark —
+      # they exercise iptables and live packet capture.
+      - name: Run test suite
+        run: pytest tests/ -q --tb=short -p no:cacheprovider
+        shell: bash
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            .pytest_cache/
+          retention-days: 7

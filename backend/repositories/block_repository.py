@@ -84,6 +84,21 @@ class BlockRepository:
             logger.error("BlockRepository.set_inactive(%s) failed: %s", ip_address, exc)
             return False
 
+    def deactivate_all(self) -> int:
+        """Mark every active block inactive. Returns the number of rows updated."""
+        try:
+            with self._session_factory() as session:
+                now = _utc_now()
+                rows = session.query(BlockedIP).filter_by(active=1).all()
+                for r in rows:
+                    r.active = 0
+                    r.unblock_time = now
+                session.commit()
+                return len(rows)
+        except Exception as exc:
+            logger.error("BlockRepository.deactivate_all failed: %s", exc)
+            raise
+
     def extend_expiry(self, ip_address: str, new_expires_at: str) -> bool:
         """Extend the expiry time of the active block for an IP."""
         try:

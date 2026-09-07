@@ -134,7 +134,8 @@ class TestPrivilegedRolesAllowed:
 
     def test_reset_data_allowed_for_admin(self, admin_client):
         client, mocks = admin_client
-        mocks["event_repo"].count.return_value = 0
+        mocks["event_repo"].delete_all.return_value = 0
+        mocks["block_repo"].deactivate_all.return_value = 0
         resp = client.post("/api/v1/reset-data", json={})
         assert resp.status_code == 200
 

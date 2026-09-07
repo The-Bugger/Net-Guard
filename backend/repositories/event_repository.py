@@ -141,6 +141,18 @@ class EventRepository:
         except Exception:
             return 0
 
+    def delete_all(self) -> int:
+        """Delete every detection event. Returns the number of rows removed."""
+        try:
+            with self._session_factory() as session:
+                count = session.query(Event).count()
+                session.query(Event).delete()
+                session.commit()
+                return count
+        except Exception as exc:
+            logger.error("EventRepository.delete_all failed: %s", exc)
+            raise
+
     def count_today(self) -> int:
         """Return number of events detected today (UTC date)."""
         try:

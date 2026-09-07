@@ -34,7 +34,22 @@ async function apiRequest(path, options = {}) {
     config.body = JSON.stringify(config.body);
   }
 
-  const res = await fetch(url, config);
+  let res = await fetch(url, config);
+
+  // ── Token refresh on 401 ──────────────────────────────────────────────────
+  // The access token expires after 8h; a refresh token is stored at login
+  // but was never used — users were hard-dropped to login mid-session.
+  // On 401 (and not already retrying), try one refresh, then replay the
+  // original request with the new token.
+  if (res.status === 401 && !config._isRetry && sessionStorage.getItem('ng_refresh_token')) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      config._isRetry = true;
+      config.headers['Authorization'] = `Bearer ${sessionStorage.getItem('ng_access_token')}`;
+      res = await fetch(url, config);
+    }
+  }
+
   let json;
   try {
     json = await res.json();
@@ -46,7 +61,7 @@ async function apiRequest(path, options = {}) {
     const msg = json.error || json.message || 'Unknown API error';
     const err = new Error(msg);
     err.code = json.error_code || json.code || res.status;
-    // Redirect to login on auth failure
+    // Redirect to login on auth failure (refresh already attempted above)
     if (res.status === 401) {
       sessionStorage.clear();
       window.location.href = '/frontend/login.html';
@@ -56,6 +71,35 @@ async function apiRequest(path, options = {}) {
   }
 
   return json.data;
+}
+
+// Single-flight refresh: concurrent 401s share one refresh call.
+let _refreshInFlight = null;
+
+async function tryRefreshToken() {
+  if (_refreshInFlight) return _refreshInFlight;
+  _refreshInFlight = (async () => {
+    try {
+      const refresh = sessionStorage.getItem('ng_refresh_token');
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.data?.access_token) return false;
+      sessionStorage.setItem('ng_access_token', json.data.access_token);
+      if (json.data.refresh_token) {
+        sessionStorage.setItem('ng_refresh_token', json.data.refresh_token);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      _refreshInFlight = null;
+    }
+  })();
+  return _refreshInFlight;
 }
 
 // ── Convenience methods ────────────────────────────────────────────────────

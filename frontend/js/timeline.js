@@ -80,13 +80,7 @@
     });
   }
 
-  function escHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
+  // escHtml is provided globally by api.js (loaded before this script).
 
   function init() {
     const params = new URLSearchParams(window.location.search);

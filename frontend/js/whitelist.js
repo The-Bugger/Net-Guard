@@ -35,11 +35,11 @@ function renderTable(entries) {
 
   tableBody.innerHTML = entries.map(e => `
     <tr>
-      <td>${e.ip_address}</td>
-      <td>${e.description || '—'}</td>
+      <td>${escHtml(e.ip_address)}</td>
+      <td>${escHtml(e.description || '—')}</td>
       <td>${formatTime(e.created_at)}</td>
       <td>
-        <button class="btn-remove" data-ip="${e.ip_address}">Remove</button>
+        <button class="btn-remove" data-ip="${escHtml(e.ip_address)}">Remove</button>
       </td>
     </tr>
   `).join('');

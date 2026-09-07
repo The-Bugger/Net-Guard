@@ -39,15 +39,15 @@ function renderTable(blocks) {
   }
 
   tableBody.innerHTML = blocks.map(b => `
-    <tr data-expires="${b.expires_at}" data-ip="${b.ip_address}">
-      <td>${b.ip_address}</td>
-      <td>${b.reason || '—'}</td>
+    <tr data-expires="${escHtml(b.expires_at)}" data-ip="${escHtml(b.ip_address)}">
+      <td>${escHtml(b.ip_address)}</td>
+      <td>${escHtml(b.reason || '—')}</td>
       <td>${formatTime(b.blocked_at)}</td>
-      <td class="countdown" data-expires="${b.expires_at}">
+      <td class="countdown" data-expires="${escHtml(b.expires_at)}">
         ${formatCountdown(b.expires_in ?? 0)}
       </td>
       <td>
-        <button class="btn-unblock" data-ip="${b.ip_address}">Unblock</button>
+        <button class="btn-unblock" data-ip="${escHtml(b.ip_address)}">Unblock</button>
       </td>
     </tr>
   `).join('');

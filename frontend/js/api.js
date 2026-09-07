@@ -130,3 +130,7 @@ function escHtml(str) {
   d.appendChild(document.createTextNode(String(str ?? '')));
   return d.innerHTML;
 }
+
+// Expose globally — the single canonical escaper for every page.
+// (Previously each page defined its own copy; several had none at all.)
+window.escHtml = escHtml;

@@ -48,12 +48,12 @@ function renderTable(events) {
   }
 
   tableBody.innerHTML = events.map(e => `
-    <tr class="threat-row" data-event-id="${e.event_id}" tabindex="0">
+    <tr class="threat-row" data-event-id="${escHtml(e.event_id)}" tabindex="0">
       <td>${formatTime(e.timestamp)}</td>
-      <td>${e.attack_type}</td>
-      <td>${e.source_ip}</td>
-      <td><span class="badge badge-${SEVERITY_COLORS[e.severity] || 'info'}">${e.severity}</span></td>
-      <td>${e.confidence}%</td>
+      <td>${escHtml(e.attack_type)}</td>
+      <td>${escHtml(e.source_ip)}</td>
+      <td><span class="badge badge-${SEVERITY_COLORS[e.severity] || 'info'}">${escHtml(e.severity)}</span></td>
+      <td>${escHtml(e.confidence)}%</td>
     </tr>
   `).join('');
 

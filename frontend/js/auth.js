@@ -88,18 +88,14 @@
 
   function showAlert(message, type) {
     const cls = type === 'error' ? 'alert-error' : 'alert-info';
-    alertContainer.innerHTML = `<div class="alert ${cls}">${escapeHtml(message)}</div>`;
+    alertContainer.innerHTML = `<div class="alert ${cls}">${escHtml(message)}</div>`;
   }
 
   function clearAlert() {
     alertContainer.innerHTML = '';
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
+  // escapeHtml is provided globally as escHtml by api.js (loaded before this script).
 
   // Check if already logged in — redirect to dashboard
   if (sessionStorage.getItem('ng_access_token')) {

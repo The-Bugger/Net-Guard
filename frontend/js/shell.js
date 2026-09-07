@@ -18,11 +18,7 @@
     { href: '/about.html', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>', label: 'About' },
   ];
 
-  function escHtml(str) {
-    const d = document.createElement('div');
-    d.appendChild(document.createTextNode(String(str ?? '')));
-    return d.innerHTML;
-  }
+  // escHtml is provided globally by api.js (loaded before this script).
 
   function getCurrentPath() {
     return window.location.pathname.replace(/\/$/, '');

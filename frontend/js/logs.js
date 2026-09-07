@@ -106,13 +106,7 @@ function formatTime(iso) {
   try { return new Date(iso).toLocaleString(); } catch { return iso; }
 }
 
-function escHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+// escHtml is provided globally by api.js (loaded before this script).
 
 // ---------------------------------------------------------------------------
 // Init

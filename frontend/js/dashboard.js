@@ -648,11 +648,7 @@ function fmtTime(ts) {
   } catch (_) { return ts; }
 }
 
-function escHtml(str) {
-  const d = document.createElement('div');
-  d.appendChild(document.createTextNode(String(str || '')));
-  return d.innerHTML;
-}
+// escHtml is provided globally by api.js (loaded before this script).
 
 function startClock() {
   const el = document.getElementById('system-time');

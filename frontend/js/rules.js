@@ -31,20 +31,20 @@ function renderRules(rules) {
   }
 
   rulesContainer.innerHTML = rules.map(r => `
-    <div class="rule-card" id="rule-${r.rule_name}">
+    <div class="rule-card" id="rule-${escHtml(r.rule_name)}">
       <div class="rule-header">
-        <h3>${r.attack_type || r.rule_name}</h3>
+        <h3>${escHtml(r.attack_type || r.rule_name)}</h3>
         <label class="toggle" title="${r.enabled ? 'Enabled' : 'Disabled'}">
           <input type="checkbox" class="rule-toggle"
-            data-rule="${r.rule_name}"
+            data-rule="${escHtml(r.rule_name)}"
             ${r.enabled ? 'checked' : ''}>
           <span class="toggle-slider"></span>
         </label>
       </div>
       <dl class="rule-stats">
-        <dt>Rule ID</dt><dd>${r.rule_name}</dd>
-        <dt>Detections</dt><dd>${r.detection_count ?? 0}</dd>
-        <dt>Threshold</dt><dd>${r.threshold ?? '—'}</dd>
+        <dt>Rule ID</dt><dd>${escHtml(r.rule_name)}</dd>
+        <dt>Detections</dt><dd>${escHtml(r.detection_count ?? 0)}</dd>
+        <dt>Threshold</dt><dd>${escHtml(r.threshold ?? '—')}</dd>
         <dt>Status</dt><dd class="${r.enabled ? 'status-active' : 'status-inactive'}">${r.enabled ? 'Active' : 'Disabled'}</dd>
       </dl>
     </div>

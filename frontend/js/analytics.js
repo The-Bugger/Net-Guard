@@ -464,8 +464,8 @@ function updateAll(data) {
   tbody.innerHTML = data.top_ips.map((row, i) =>
     `<tr>
       <td>${i + 1}</td>
-      <td style="font-family:monospace">${row.source_ip}</td>
-      <td>${row.count}</td>
+      <td style="font-family:monospace">${escHtml(row.source_ip)}</td>
+      <td>${escHtml(row.count)}</td>
     </tr>`
   ).join('');
 

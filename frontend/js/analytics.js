@@ -504,8 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
   loadAnalytics(sel.value);
   sel.addEventListener('change', () => loadAnalytics(sel.value));
 
-  setInterval(() => {
-    const el = document.getElementById('system-time');
-    if (el) el.textContent = new Date().toLocaleTimeString();
-  }, 1000);
+  // Clock — guarded so a re-init can't stack intervals
+  const clockEl = document.getElementById('system-time');
+  if (clockEl && !clockEl.dataset.clockStarted) {
+    clockEl.dataset.clockStarted = '1';
+    setInterval(() => {
+      clockEl.textContent = new Date().toLocaleTimeString();
+    }, 1000);
+  }
 });

@@ -532,10 +532,15 @@ function _hideReconnectingBanner() {
 }
 
 // ── Fallback polling ───────────────────────────────────────────────────────
+let _fallbackPollTimeout = null;
+
 function startFallbackPolling() {
   // Start polling after 3s in case SocketIO doesn't connect (Req 3.9 — 2-second interval)
-  setTimeout(() => {
-    if (!pollingInterval) {
+  // Guarded: only one pending timer + one interval ever exist.
+  if (_fallbackPollTimeout || pollingInterval) return;
+  _fallbackPollTimeout = setTimeout(() => {
+    _fallbackPollTimeout = null;
+    if (!pollingInterval && !socketConnected) {
       pollingInterval = setInterval(async () => {
         try {
           const data = await NetGuardAPI.getLiveStats();
@@ -547,6 +552,7 @@ function startFallbackPolling() {
 }
 
 function stopFallbackPolling() {
+  if (_fallbackPollTimeout) { clearTimeout(_fallbackPollTimeout); _fallbackPollTimeout = null; }
   if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
 }
 
@@ -653,6 +659,8 @@ function fmtTime(ts) {
 function startClock() {
   const el = document.getElementById('system-time');
   if (!el) return;
+  if (el.dataset.clockStarted) return;   // guard: never double-start
+  el.dataset.clockStarted = '1';
   const tick = () => { el.textContent = new Date().toLocaleTimeString(); };
   tick();
   setInterval(tick, 1000);

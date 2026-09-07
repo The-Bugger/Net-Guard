@@ -92,7 +92,6 @@ class LanScanService:
         """
         from scapy.layers.l2 import ARP, Ether
         from scapy.sendrecv import srp
-        import scapy.config
 
         # Determine target subnet from the active interface
         target = _get_scan_target(interface)
@@ -199,7 +198,6 @@ def _get_scan_target(interface: Optional[str]) -> Optional[str]:
         iface_list = [interface] if interface else list(addrs.keys())
         for iface in iface_list:
             for snic in addrs.get(iface, []):
-                import psutil
                 if snic.family == socket.AF_INET and snic.address and not snic.address.startswith("127."):
                     # Build /24 CIDR from IP
                     parts = snic.address.split(".")

@@ -23,13 +23,14 @@ import hmac
 import os
 
 from flask import request
+from flask import Response
 
 from backend.utils.response import error_response
 
 _MUTATING = {"POST", "PUT", "DELETE", "PATCH"}
 
 
-def check_api_key() -> "Response | None":
+def check_api_key() -> Response | None:
     """
     Flask before_request hook — enforce API key auth on mutating endpoints.
 

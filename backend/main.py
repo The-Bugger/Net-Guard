@@ -27,7 +27,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 # Configuration
 from backend.services.config_service import ConfigurationManager
-from backend.services.log_service import setup_logging, LoggingEngine
+from backend.services.log_service import setup_logging
 from backend.env_config import load_env
 
 config_manager = ConfigurationManager()
@@ -43,7 +43,7 @@ logger.info("NetGuard IDPS starting up...")
 
 # Database
 from database.init_db import initialize_db, get_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
 db_url = env.database_url
 if db_url.startswith("sqlite:///") and not db_url.startswith("sqlite:////"):

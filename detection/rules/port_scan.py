@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from detection.parsers.packet_decoder import Packet
-from detection.rules.base_rule import BaseRule, Explanation, FlowData, ThreatEvent
+from detection.rules.base_rule import BaseRule, Explanation, ThreatEvent
 
 logger = logging.getLogger("netguard.rule.port_scan")
 

@@ -19,7 +19,6 @@ import pyotp
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.schema import UserAccount
-from sqlalchemy.orm import Session
 
 logger = logging.getLogger("netguard.auth_service")
 
@@ -123,7 +122,7 @@ class AuthService:
         with self._session_factory()() as session:
             user = session.query(UserAccount).filter_by(username=username, active=1).first()
             if not user or not check_password_hash(user.password_hash, password):
-                self._audit.log("anonymous", "LOGIN_FAILED", f"/api/v1/auth/login", {"username": username})
+                self._audit.log("anonymous", "LOGIN_FAILED", "/api/v1/auth/login", {"username": username})
                 raise ValueError("LOGIN_FAILED")
 
             if user.mfa_enabled:

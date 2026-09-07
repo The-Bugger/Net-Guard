@@ -14,7 +14,6 @@ import importlib
 import json
 import logging
 from datetime import datetime, timezone
-from typing import Any
 
 logger = logging.getLogger("netguard.compliance_reporter")
 

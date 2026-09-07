@@ -26,7 +26,6 @@ def get_logs():
     date = request.args.get("date")
     module = request.args.get("module")
     attack_type = request.args.get("attack_type")
-    source_ip = request.args.get("source_ip")
 
     if severity:
         if severity.upper() not in _VALID_LEVELS:

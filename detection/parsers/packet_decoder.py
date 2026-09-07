@@ -49,7 +49,7 @@ class PacketDecoder:
         try:
             from scapy.layers.inet import IP, TCP, UDP, ICMP
             from scapy.layers.inet6 import IPv6
-            from scapy.layers.l2 import ARP, Ether
+            from scapy.layers.l2 import ARP
         except ImportError:
             logger.error("Scapy is not installed — packet decoding unavailable.")
             return None

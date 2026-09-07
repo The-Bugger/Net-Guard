@@ -13,7 +13,6 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import logging
-import sys
 from pathlib import Path
 
 logger = logging.getLogger("netguard.plugin_registry")

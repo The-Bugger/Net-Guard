@@ -18,7 +18,6 @@ import io
 import json
 import os
 import secrets
-import socket
 import zipfile
 from dataclasses import asdict
 from datetime import datetime, timezone

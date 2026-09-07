@@ -7,7 +7,6 @@ Requirements: 13.1, 13.2, 13.3, 13.4, 13.5
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
 
 from flask import Blueprint
 

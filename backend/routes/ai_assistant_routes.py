@@ -154,7 +154,7 @@ def _answer_attack(attack_type: str, events, sev_counts, attack_types) -> str:
         latest = matching[0]
         lines += [
             "",
-            f"Latest event:",
+            "Latest event:",
             f"  Source IP : {latest.get('source_ip', '?')}",
             f"  Severity  : {latest.get('severity', '?')}",
             f"  Time      : {latest.get('timestamp', '?')}",

@@ -14,7 +14,6 @@ Requirements: 5.1, 5.2, 5.8, 5.9
 
 from __future__ import annotations
 
-import functools
 import logging
 import time
 from dataclasses import dataclass

@@ -28,6 +28,10 @@ from database.schema import Base
 from detection.parsers.packet_decoder import Packet
 from detection.rules.base_rule import ThreatEvent, Explanation
 
+# Standalone smoke scripts (run against a live server) — not pytest tests.
+# Exclude from collection so `pytest tests/` doesn't try to import them.
+collect_ignore = ["final_test.py", "integration_test.py"]
+
 
 # ---------------------------------------------------------------------------
 # Database fixtures

@@ -7,10 +7,9 @@ import logging
 import queue
 import threading
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 from sqlalchemy import func, or_
-from sqlalchemy.orm import Session
 
 from database.schema import Event
 

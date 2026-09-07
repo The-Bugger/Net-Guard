@@ -20,7 +20,7 @@ import socket
 import time
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
-from typing import Callable, Optional
+from typing import Optional
 
 import requests
 
@@ -156,7 +156,7 @@ class SOAREngine:
 
     def _send_email(self, config: dict, body: str) -> dict:
         msg = MIMEText(body)
-        msg["Subject"] = f"[NetGuard] Security Alert"
+        msg["Subject"] = "[NetGuard] Security Alert"
         msg["From"] = config.get("from", "netguard@localhost")
         msg["To"] = config["to"]
         with smtplib.SMTP(config.get("host", "localhost"), int(config.get("port", 587))) as s:

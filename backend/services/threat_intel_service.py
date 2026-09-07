@@ -82,8 +82,7 @@ class ThreatIntelService:
         per_page = min(per_page, 100)
         offset = (page - 1) * per_page
         try:
-            from database.schema import EnrichmentResult, IOCStore
-            from sqlalchemy.orm import Session
+            from database.schema import EnrichmentResult
             from backend.main import session_factory
             results: list[dict] = []
             with session_factory() as session:

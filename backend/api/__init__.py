@@ -193,7 +193,7 @@ def _register_blueprints(app: Flask) -> None:
 
 def _register_frontend_routes(app: Flask) -> None:
     """Serve the frontend HTML pages."""
-    from flask import render_template, send_from_directory
+    from flask import send_from_directory
     import os
 
     frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")

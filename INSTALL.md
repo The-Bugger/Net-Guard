@@ -3,9 +3,9 @@
 ## Table of Contents
 
 1. [System Requirements](#system-requirements)
-2. [Quick Install (Linux)](#quick-install-linux)
-3. [Manual Install](#manual-install)
-4. [Windows / macOS (Development Only)](#windows--macos-development-only)
+2. [Quick Install (One Script — All Platforms)](#quick-install-one-script--all-platforms)
+3. [Platform Notes](#platform-notes)
+4. [Manual Install](#manual-install)
 5. [Virtual Environment Setup](#virtual-environment-setup)
 6. [Database Initialization](#database-initialization)
 7. [Verifying the Installation](#verifying-the-installation)
@@ -18,13 +18,13 @@
 
 | Requirement | Minimum | Recommended |
 |-------------|---------|-------------|
-| OS | Linux (any distro) | Ubuntu 22.04 LTS |
+| OS | Linux, macOS, or Windows | Ubuntu 22.04 LTS |
 | Python | 3.11 | 3.12 |
 | RAM | 512 MB | 2 GB |
 | CPU | 1 core | 2+ cores |
 | Disk | 100 MB | 1 GB |
 | Network | Any interface | Dedicated NIC |
-| Privileges | root/sudo | root |
+| Privileges | root/sudo (Linux blocking) | root |
 
 > **Note:** iptables-based blocking requires Linux + root. Detection, API, and
 > dashboard work on Windows/macOS for development purposes.
@@ -44,29 +44,96 @@ sudo apt install -y hping3 nmap hydra dsniff curl
 
 ---
 
-## Quick Install (Linux)
+## Quick Install (One Script — All Platforms)
 
-The fastest path — runs the automated setup script:
+The fastest path — a single installer detects your OS and handles
+prerequisites, virtualenv, dependencies, config, and database init.
+
+### Linux
 
 ```bash
 git clone https://github.com/The-Bugger/Net-Guard.git netguard
 cd netguard
-sudo bash scripts/setup.sh
+./install.sh
 ```
 
-The setup script:
-1. Checks Python 3.11+ is available
-2. Creates a virtual environment at `.venv/`
-3. Installs all pip dependencies from `requirements.txt`
-4. Creates required directories
-5. Initializes the SQLite database
-6. Verifies iptables is available
+The installer:
+1. Verifies Python 3.11+ (auto-detects 3.11–3.14)
+2. Installs missing system packages via `apt` (`python3-venv`, `libpcap-dev`)
+3. Creates a virtual environment at `.venv/`
+4. Installs all pip dependencies from `requirements.txt`
+5. Creates `.env` from `.env.example` (if absent)
+6. Initialises the SQLite database
 
-After setup:
+### macOS
+
 ```bash
-sudo python backend/main.py
-# Dashboard: http://localhost:5000
+git clone https://github.com/The-Bugger/Net-Guard.git netguard
+cd netguard
+./install.sh
 ```
+
+macOS specifics handled automatically:
+- Installs `libpcap` via Homebrew (skips gracefully if brew is absent)
+- Uses `python3` from Xcode Command Line Tools or Homebrew
+- Prints dev-mode start instructions (PF/firewall blocking is Linux-only)
+
+If you don't have Python 3.11+:
+
+```bash
+brew install python@3.12
+```
+
+### Windows
+
+**Option A — PowerShell (native):**
+
+```powershell
+git clone https://github.com/The-Bugger/Net-Guard.git netguard
+cd netguard
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+**Option B — Git Bash / WSL / MSYS2 (uses install.sh):**
+
+```bash
+git clone https://github.com/The-Bugger/Net-Guard.git netguard
+cd netguard
+./install.sh
+```
+
+Windows specifics:
+- Checks for Npcap (packet capture — install from https://npcap.com/)
+- Creates `.venv\` with `Scripts\` layout
+- Prints dev-mode start instructions (`.venv\Scripts\activate`)
+
+### After install (all platforms)
+
+```bash
+# Linux (full features — root for iptables blocking)
+source .venv/bin/activate
+sudo $(which python) backend/main.py
+
+# macOS / Windows (dev mode)
+source .venv/bin/activate      # Windows Git Bash/WSL
+# .\.venv\Scripts\activate      # Windows PowerShell
+python backend/main.py
+```
+
+Dashboard: http://localhost:5000 — login `admin` / `Admin@NetGuard1` (change immediately).
+
+---
+
+## Platform Notes
+
+| Feature | Linux | macOS | Windows |
+|---------|-------|-------|---------|
+| Detection engine | ✅ | ✅ | ✅ |
+| REST API + dashboard | ✅ | ✅ | ✅ |
+| Live packet capture | ✅ (libpcap) | ✅ (libpcap) | ✅ (Npcap) |
+| IP blocking (iptables) | ✅ (root) | ❌ | ❌ |
+| Attack Lab simulation | ✅ | ✅ | ✅ |
+| Demo attack scripts | ✅ (hping3/nmap) | partial | partial |
 
 ---
 
@@ -114,9 +181,10 @@ sudo python backend/main.py
 
 ---
 
-## Windows / macOS (Development Only)
+## Windows / macOS Manual Steps (Development Only)
 
-Detection and API testing work without iptables:
+Prefer the [quick installer](#quick-install-one-script--all-platforms) above.
+Manual steps if you need them — detection and API testing work without iptables:
 
 ```powershell
 # Windows (PowerShell)

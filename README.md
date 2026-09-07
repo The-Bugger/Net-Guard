@@ -238,8 +238,10 @@ NetGuard/
 │   ├── TROUBLESHOOTING.md          # Common problems and solutions
 │   └── ROADMAP.md                  # Feature roadmap
 ├── logs/                           # Rotating log files (auto-created)
+├── install.sh                      # Cross-platform installer (Linux/macOS/Win Git Bash)
+├── install.ps1                     # Windows PowerShell installer
 ├── scripts/
-│   └── setup.sh                    # One-shot setup script
+│   └── setup.sh                    # Legacy Linux-only setup script
 ├── tests/                          # 678+ unit + property-based + integration tests
 ├── .env                            # Environment variables (not committed)
 ├── .env.example                    # Environment variable documentation
@@ -279,22 +281,25 @@ NetGuard/
 git clone https://github.com/The-Bugger/Net-Guard.git
 cd Net-Guard
 
-# 2. Create a virtual environment
+# 2. One-shot installer (Linux / macOS / Windows Git Bash)
+./install.sh
+
+#    Windows PowerShell
+powershell -ExecutionPolicy Bypass -File install.ps1
+
+# ── OR install manually ────────────────────────────────────────────────────
 python -m venv .venv
 source .venv/bin/activate        # Linux/macOS
 # .venv\Scripts\activate         # Windows
-
-# 3. Automated setup (Linux, requires sudo)
-sudo bash scripts/setup.sh
-
-# ── OR install manually ────────────────────────────────────────────────────
 pip install -r requirements.txt
 python -c "from database.init_db import initialize_db; initialize_db()"
-
-# 4. Copy and edit environment variables
 cp .env.example .env
 # Edit .env — at minimum set SECRET_KEY and optionally NETGUARD_API_KEY
 ```
+
+The installer auto-detects your OS, installs system prerequisites
+(libpcap on Linux/macOS, Npcap check on Windows), creates `.venv/`,
+installs dependencies, writes `.env`, and initialises the database.
 
 See [INSTALL.md](INSTALL.md) for full platform-specific installation instructions.
 

@@ -106,7 +106,7 @@ function renderSessionsTable(sessions) {
     const det = (s.detection_status || 'PENDING').toUpperCase();
     const style = STATUS_STYLE[det] || '';
     return `
-      <tr style="cursor:pointer" onclick="showSessionDetail(${JSON.stringify(s.session_id)})">
+      <tr style="cursor:pointer" data-session-id="${escHtml(s.session_id)}">
         <td><code>${escHtml(s.session_id)}</code></td>
         <td>${escHtml(s.attack_type)}</td>
         <td style="text-transform:capitalize">${escHtml(s.difficulty || '—')}</td>
@@ -114,13 +114,25 @@ function renderSessionsTable(sessions) {
         <td>${escHtml(s.packets_sent ?? 0)}</td>
         <td><span style="font-weight:600;font-size:12px;${style}">${escHtml(det)}</span></td>
         <td>
-          <button class="btn btn-ghost btn-sm" style="padding:3px 8px;color:var(--danger)"
-                  onclick="event.stopPropagation();cancelSession(${JSON.stringify(s.session_id)})">
+          <button class="btn btn-ghost btn-sm btn-cancel-session" style="padding:3px 8px;color:var(--danger)"
+                  data-session-id="${escHtml(s.session_id)}">
             Cancel
           </button>
         </td>
       </tr>`;
   }).join('');
+
+  // Event delegation — replaces JSON.stringify-into-onclick interpolation,
+  // which does not make a value safe inside an HTML attribute.
+  tbody.querySelectorAll('tr[data-session-id]').forEach(tr => {
+    tr.addEventListener('click', () => showSessionDetail(tr.dataset.sessionId));
+  });
+  tbody.querySelectorAll('.btn-cancel-session').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      cancelSession(btn.dataset.sessionId);
+    });
+  });
 }
 
 function renderDetailPanel(s) {

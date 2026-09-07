@@ -48,6 +48,7 @@ class RateLimiter:
         self._ip_windows:   dict[str, deque] = defaultdict(deque)
         self._user_windows: dict[str, deque] = defaultdict(deque)
         self._lock = threading.Lock()
+        self._last_prune = 0.0
 
     # ------------------------------------------------------------------
     # Flask before_request hook
@@ -67,6 +68,7 @@ class RateLimiter:
                 return None
 
             now = time.monotonic()
+            self._prune_stale(now)
 
             # ── per-IP check ──────────────────────────────────────────
             ip = self._client_ip()
@@ -148,6 +150,23 @@ class RateLimiter:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _prune_stale(self, now: float) -> None:
+        """Drop windows whose owner has been idle past the window.
+
+        Without this, every unique IP that ever hit the API stays in the
+        dict forever — unbounded memory under scan/spoof load. Sweep at
+        most once per window; O(tracked) once a minute, not per request.
+        """
+        if now - self._last_prune < self._IP_WINDOW:
+            return
+        self._last_prune = now
+        cutoff = now - self._IP_WINDOW
+        with self._lock:
+            for store in (self._ip_windows, self._user_windows):
+                stale = [k for k, dq in store.items() if not dq or dq[-1] <= cutoff]
+                for k in stale:
+                    store.pop(k, None)
 
     def _client_ip(self) -> str:
         import os

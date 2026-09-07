@@ -7,10 +7,30 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.orm import Session
 
 from database.schema import Base, DetectionRule, Setting, UserAccount
+
+
+def _tune_sqlite(engine):
+    """Attach per-connection PRAGMAs for SQLite engines.
+
+    WAL journal mode is persistent (stored in the DB file), but synchronous
+    and cache_size are per-connection — set them on every new pooled
+    connection. WAL + synchronous=NORMAL is the standard high-throughput,
+    crash-safe combo (only a power loss can lose the last transaction).
+    """
+    if not engine.url.get_backend_name() == "sqlite":
+        return
+
+    @event.listens_for(engine, "connect")
+    def _set_pragmas(dbapi_conn, _record):  # noqa: W0612
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA cache_size=-8000")   # 8 MB page cache
+        cursor.execute("PRAGMA temp_store=MEMORY")
+        cursor.close()
 
 _PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 _DB_PATH: Path = _PROJECT_ROOT / "database" / "netguard.db"
@@ -118,6 +138,7 @@ def initialize_db(db_url: str | None = None) -> None:
 
     try:
         engine = create_engine(url, connect_args={"check_same_thread": False}, echo=False)
+        _tune_sqlite(engine)
 
         with engine.connect() as conn:
             conn.execute(text("PRAGMA journal_mode=WAL"))
@@ -146,7 +167,9 @@ def initialize_db(db_url: str | None = None) -> None:
 def get_engine(db_url: str | None = None):
     """Return a configured SQLAlchemy engine for the NetGuard database."""
     url = db_url or _DB_URL
-    return create_engine(url, connect_args={"check_same_thread": False}, echo=False)
+    engine = create_engine(url, connect_args={"check_same_thread": False}, echo=False)
+    _tune_sqlite(engine)
+    return engine
 
 
 def _tables_were_populated(engine) -> bool:

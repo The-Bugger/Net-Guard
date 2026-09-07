@@ -211,37 +211,39 @@ class LoggingEngine:
         Threat events are buffered and written via EventRepository.insert_many
         in batches (up to _BATCH_SIZE rows, or after _BATCH_FLUSH_SECONDS with
         no new arrivals) to avoid one transaction per event under flood load.
-        System-log side effects still run per event.
+        Per-event system_logs rows ride the same batch via
+        LogRepository.insert_many — one transaction per batch, not per event.
         """
         batch: list[dict] = []
+        sys_batch: list[dict] = []
         while not self._stop_event.is_set():
             try:
                 item = self._event_queue.get(timeout=self._BATCH_FLUSH_SECONDS)
             except queue.Empty:
-                self._flush_batch(batch)
+                self._flush_batch(batch, sys_batch)
                 continue
             if item is _STOP_SENTINEL:
-                self._drain_queue(batch)
-                self._flush_batch(batch)
+                self._drain_queue(batch, sys_batch)
+                self._flush_batch(batch, sys_batch)
                 break
-            self._collect_queue_item(item, batch)
+            self._collect_queue_item(item, batch, sys_batch)
             if len(batch) >= self._BATCH_SIZE:
-                self._flush_batch(batch)
+                self._flush_batch(batch, sys_batch)
 
     _BATCH_SIZE = 50
     _BATCH_FLUSH_SECONDS = 0.2
 
-    def _drain_queue(self, batch: list) -> None:
+    def _drain_queue(self, batch: list, sys_batch: list) -> None:
         """Process all remaining items after stop signal."""
         while True:
             try:
                 item = self._event_queue.get_nowait()
                 if item is not _STOP_SENTINEL:
-                    self._collect_queue_item(item, batch)
+                    self._collect_queue_item(item, batch, sys_batch)
             except queue.Empty:
                 break
 
-    def _collect_queue_item(self, item: Any, batch: list) -> None:
+    def _collect_queue_item(self, item: Any, batch: list, sys_batch: list) -> None:
         """Handle one queue item: buffer threat events, process others inline."""
         try:
             if isinstance(item, tuple) and len(item) == 2:
@@ -249,26 +251,31 @@ class LoggingEngine:
                 event_data = self._build_event_data(event, explanation)
                 if event_data is not None:
                     batch.append(event_data)
-                # System-log side effect stays per-event (low volume).
-                self._persist_detection_system_log(event)
+                # Buffer the per-event system_logs row into the same batch.
+                self._buffer_detection_system_log(event, sys_batch)
             else:
                 self._err_log.warning("LoggingEngine: unexpected queue item type %s", type(item).__name__)
         except Exception as exc:  # noqa: BLE001
             import sys
             print(f"[LoggingEngine._collect_queue_item] Unhandled exception: {exc}", file=sys.stderr)
 
-    def _flush_batch(self, batch: list) -> None:
-        """Persist buffered threat events in one transaction."""
-        if not batch:
-            return
-        if self._event_repo is not None:
+    def _flush_batch(self, batch: list, sys_batch: list) -> None:
+        """Persist buffered threat events and system logs in one pass."""
+        if batch and self._event_repo is not None:
             # Pass a snapshot: the caller clears `batch` after this returns.
             to_insert = list(batch)
             try:
                 self._event_repo.insert_many(to_insert)
             except Exception as exc:  # noqa: BLE001
                 self._err_log.error("LoggingEngine: batch insert failed — %s", exc, exc_info=True)
+        if sys_batch and self._log_repo is not None:
+            to_insert_logs = list(sys_batch)
+            try:
+                self._log_repo.insert_many(to_insert_logs)
+            except Exception as exc:  # noqa: BLE001
+                self._err_log.error("LoggingEngine: system-log batch insert failed — %s", exc, exc_info=True)
         batch.clear()
+        sys_batch.clear()
 
     def _build_event_data(self, event: "ThreatEvent", explanation: "Explanation") -> Optional[dict]:
         """Convert a ThreatEvent + Explanation into a plain dict for batch insert."""
@@ -298,26 +305,28 @@ class LoggingEngine:
             )
             return None
 
-    def _persist_detection_system_log(self, event: "ThreatEvent") -> None:
-        """Write the per-event system_logs entry (kept out of the batch path)."""
+    def _buffer_detection_system_log(self, event: "ThreatEvent", sys_batch: list) -> None:
+        """Buffer the per-event system_logs entry for the next batch flush."""
         try:
-            self._persist_system_log(
-                level="INFO", module="DetectionEngine",
-                event=event.attack_type.upper().replace(" ", "_"),
-                message=(
+            sys_batch.append({
+                "timestamp": _utc_now(),
+                "level":     "INFO",
+                "module":    "DetectionEngine",
+                "event":     event.attack_type.upper().replace(" ", "_"),
+                "message": (
                     f"Detected {event.attack_type} from {event.source_ip} — "
                     f"severity={event.severity} confidence={event.confidence}"
                 ),
-                metadata={
+                "metadata": {
                     "event_id":  event.event_id,
                     "source_ip": event.source_ip,
                     "rule_name": event.rule_name,
                     "blocked":   event.blocked,
                 },
-            )
+            })
         except Exception as exc:  # noqa: BLE001
             self._err_log.error(
-                "LoggingEngine: failed to write system log for %s — %s",
+                "LoggingEngine: failed to buffer system log for %s — %s",
                 getattr(event, "event_id", "?"), exc, exc_info=True,
             )
 

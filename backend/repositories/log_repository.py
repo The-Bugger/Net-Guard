@@ -58,6 +58,33 @@ class LogRepository:
             logger.error("LogRepository.insert failed: %s", exc)
             return False
 
+    def insert_many(self, records: list[dict]) -> int:
+        """Insert multiple system log entries in a single transaction.
+
+        Each record dict carries the same keys as insert()'s kwargs.
+        Returns the number of rows committed; 0 on failure.
+        """
+        if not records:
+            return 0
+        try:
+            with self._session_factory() as session:
+                session.add_all([
+                    SystemLog(
+                        timestamp=r["timestamp"],
+                        level=r["level"],
+                        module=r["module"],
+                        event=r["event"],
+                        message=r["message"],
+                        meta=json.dumps(r["metadata"]) if r.get("metadata") else None,
+                    )
+                    for r in records
+                ])
+                session.commit()
+                return len(records)
+        except Exception as exc:
+            logger.error("LogRepository.insert_many failed for batch of %d: %s", len(records), exc)
+            return 0
+
     def get_all(self, filters: Optional[dict] = None,
                 limit: int = 50, offset: int = 0) -> list[dict]:
         """

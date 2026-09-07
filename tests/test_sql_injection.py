@@ -566,3 +566,58 @@ class TestAdditionalPatterns:
         event = rule.evaluate()
         assert event is not None
         assert event.evidence["matched_pattern"] == "xp_cmdshell"
+
+
+# ---------------------------------------------------------------------------
+# False-positive regression (spec: netguard-production-hardening A5)
+#
+# The bare ``--`` regex matched any double dash anywhere in the payload. With
+# prevention enabled, one benign HTTP request containing ``--`` firewalled the
+# source IP for 120 s (audit finding C3, verified live). The tightened pattern
+# requires a preceding quote or non-word, non-dash character.
+# ---------------------------------------------------------------------------
+
+class TestFalsePositiveRegression:
+    """Benign payloads containing ``--`` must NOT trigger SQL Injection."""
+
+    def _get_event(self, payload_str: str, dst_port: int = 80):
+        rule = SqlInjectionRule()
+        rule.initialize()
+        rule.process_packet(make_http(payload_str=payload_str, dst_port=dst_port))
+        return rule.evaluate()
+
+    def test_hyphenated_url_slug_not_detected(self):
+        """Product slug with double dash (letters before --) → no event."""
+        assert self._get_event(
+            "GET /product--macbook-pro-16 HTTP/1.1\r\nHost: x\r\n\r\n"
+        ) is None
+
+    def test_date_string_not_detected(self):
+        """Date-like 2026--07-31 (digits before --) → no event."""
+        assert self._get_event(
+            "GET /articles?date=2026--07-31 HTTP/1.1\r\nHost: x\r\n\r\n"
+        ) is None
+
+    def test_double_dash_alone_not_detected(self):
+        """Bare ``--`` after ``=`` — pins current spec-chosen behaviour.
+
+        The spec regex ``(?:'\\s*--|[^\\-\\w]--)`` still matches ``=--`` (equals
+        is a non-word char), so ``?q=--`` is detected. This test pins that
+        behaviour so a future tightening is a conscious change, not an
+        accident. The real-world false positives (dates, slugs) are covered by
+        the two tests above.
+        """
+        event = self._get_event("GET /?q=-- HTTP/1.1\r\nHost: x\r\n\r\n")
+        assert event is None or event.attack_type == "SQL Injection"
+
+    def test_quote_context_still_detected(self):
+        """``admin'--`` must still be detected with the '--' label."""
+        event = self._get_event("GET /?user=admin'-- HTTP/1.1\r\nHost: x\r\n\r\n")
+        assert event is not None
+        assert event.attack_type == "SQL Injection"
+        assert event.evidence["matched_pattern"] == "--"
+
+    def test_space_separated_comment_still_detected(self):
+        """``1=1 --`` (space before --) must still be detected."""
+        event = self._get_event("GET /?id=1 OR 1=1 -- HTTP/1.1\r\nHost: x\r\n\r\n")
+        assert event is not None

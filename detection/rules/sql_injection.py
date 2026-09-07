@@ -9,12 +9,19 @@ Module purpose:
 Detection logic:
     - Inspect TCP payload of HTTP packets using pre-compiled regex patterns
     - Five canonical patterns: ``' OR``, ``UNION SELECT``, ``DROP TABLE``,
-      ``--``, ``xp_cmdshell``
+      ``--`` (requires a preceding quote or non-word, non-dash character),
+      ``xp_cmdshell``
     - Match is performed against the URL path, query string, and request body
     - First detection from a source IP → severity ``High``
     - Subsequent detections from the same source IP → severity ``Critical``
     - Confidence is always ``100`` — a single matching payload is definitive
     - No minimum packet count; a single matching payload triggers detection
+
+Trade-off (spec: netguard-production-hardening A5): the ``--`` pattern requires a
+preceding quote or non-word, non-dash character to avoid matching date strings and
+path components. This may miss obfuscated payloads where the injector omits the
+preceding space, but reduces false positives on routine URLs. The other four
+patterns provide overlapping coverage of common SQL injection forms.
 
 Architecture role:
     One of five detection rules consumed by ``DetectionEngine``.  Implements
@@ -68,11 +75,19 @@ _HTTP_PORTS = {80, 443, 8080, 8443}
 
 # SQL injection detection patterns (case-insensitive) as (label, compiled_pattern) pairs.
 # Pattern labels are the exact strings referenced in Requirement 6.1.
+#
+# ponytail (spec: netguard-production-hardening A5): the bare ``--`` regex matched any
+# double dash anywhere (date strings like 2026--07-31, path segments like
+# /articles--latest). The tightened pattern requires a preceding quote or a non-word,
+# non-dash character, reflecting SQL comment syntax ``<expression> -- comment``. This
+# may miss obfuscated payloads where the injector omits the preceding space, but
+# reduces false positives on routine URLs. The other four patterns provide
+# overlapping coverage of common SQL injection forms.
 _SQL_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("' OR", re.compile(r"'\s*or\b", re.IGNORECASE)),
     ("UNION SELECT", re.compile(r"\bunion\s+select\b", re.IGNORECASE)),
     ("DROP TABLE", re.compile(r"\bdrop\s+table\b", re.IGNORECASE)),
-    ("--", re.compile(r"--", re.IGNORECASE)),
+    ("--", re.compile(r"(?:'\s*--|[^\-\w]--)", re.IGNORECASE)),
     ("xp_cmdshell", re.compile(r"\bxp_cmdshell\b", re.IGNORECASE)),
 ]
 

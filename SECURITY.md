@@ -90,9 +90,18 @@ Integer settings (thresholds, durations) are range-checked by
 
 ### Secrets
 
-- `SECRET_KEY` is the Flask session secret. Change it before any production or
-  public deployment. The default value `change-me-before-production` is
-  intentionally obvious.
+- `SECRET_KEY` is the Flask session-signing secret. When unset (or still set to
+  the `.env.example` placeholder `change-me-before-production`), the app
+  generates a random per-process secret at startup — it never falls back to a
+  publicly-known constant. Set a stable value in production so sessions
+  survive restarts.
+- The JWT signing secret is **not** the Flask `SECRET_KEY`: it is generated
+  automatically on first use and persisted to the settings database as
+  `jwt_secret`. It is never signed with a known default; if a legacy
+  `netguard-change-in-production` value is found it is rotated automatically
+  and all previously issued tokens become invalid. The JWT secret cannot be
+  modified through `PUT /settings` — unknown `enterprise.*` keys are rejected
+  with `422 UNKNOWN_SETTING`.
 - The `.env` file is excluded from version control via `.gitignore`.
 - The `LoggingEngine` redacts any metadata key matching `password`, `passwd`,
   `secret`, `token`, `private_key`, `api_key`, `auth`, or `credential` before

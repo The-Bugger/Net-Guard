@@ -14,12 +14,14 @@ from __future__ import annotations
 from flask import Blueprint, request
 
 from backend.api.dependencies import get_monitor_service
+from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response
 
 monitor_bp = Blueprint("monitor", __name__)
 
 
 @monitor_bp.post("/monitor/start")
+@require_role("admin", "analyst")
 def start_monitoring():
     body = request.get_json(silent=True) or {}
     interface = body.get("interface", "").strip()
@@ -49,6 +51,7 @@ def start_monitoring():
 
 
 @monitor_bp.post("/monitor/stop")
+@require_role("admin", "analyst")
 def stop_monitoring():
     svc = get_monitor_service()
     if svc is None:

@@ -23,10 +23,18 @@ def _utc_future(s: int = 120) -> str:
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def make_test_app() -> tuple:
+def make_test_app(config: dict | None = None, auth_role: str | None = "admin") -> tuple:
     """
     Build a minimal Flask test app with all services mocked.
     Returns (app, mocks_dict).
+
+    Args:
+        config: Optional Flask config overrides.
+        auth_role: Role injected into ``g.current_user`` for every request
+            (RBAC decorators consult it). Defaults to "admin" so existing
+            handler-level tests keep exercising route logic without wiring
+            real JWTs. Pass None to leave the request anonymous — used by
+            tests that assert 401/403 enforcement on protected routes.
     """
     # Must import after any eventlet patching is NOT in effect
     from backend.api import create_app
@@ -80,5 +88,15 @@ def make_test_app() -> tuple:
     # Override async_mode to threading for test compatibility (eventlet breaks on Python 3.14)
     app = create_app({"TESTING": True, "SECRET_KEY": "test-secret", "SOCKETIO_ASYNC_MODE": "threading"})
     app.config["TESTING"] = True
+
+    # Test identity injection — production authn is covered by the JWT
+    # before_request hook (test_auth_middleware.py); here we simulate a fully
+    # authenticated principal so @require_role decorators see a user.
+    if auth_role is not None:
+        from flask import g as _flask_g
+
+        @app.before_request
+        def _inject_test_user():  # pragma: no cover — test scaffolding
+            _flask_g.current_user = {"sub": "tester", "role": auth_role}
 
     return app, mocks

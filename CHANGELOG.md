@@ -7,6 +7,51 @@ This project uses [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.0] — 2026-09-06
+
+### Security
+
+- **JWT signing secret can no longer be known or attacker-set (Critical).**
+  `AuthService` now generates a cryptographically random secret on first use
+  and persists it (`settings.jwt_secret`); the legacy default
+  `netguard-change-in-production` is rotated automatically if found. Flask
+  `SECRET_KEY` likewise never falls back to a hardcoded constant.
+- **Privilege-escalation chain via `PUT /settings` closed (Critical).**
+  The `enterprise` sub-dict is now validated against the documented
+  `_enterprise_defaults()` allowlist (unknown keys → `422 UNKNOWN_SETTING`),
+  and `security.*`/`firewall.*`/`ai.*`/`roles.*`/`licensing.*` keys inside it
+  require the `admin` role. `PUT /settings` now requires `admin` or `analyst`.
+- **RBAC added to legacy mutation routes (High).** `POST /block`,
+  `POST /unblock`, `POST /whitelist`, `DELETE /whitelist/<ip>`,
+  `POST /monitor/start`, `POST /monitor/stop`, `POST /detect`,
+  `GET /events/<id>/replay`, `POST /lan-devices/refresh` now require
+  `admin`/`analyst`; `POST /reset-data` requires `admin`. Previously any
+  authenticated viewer could firewall IPs, whitelist attackers, stop
+  monitoring, or wipe all events and blocks.
+- **SQL injection rule false positive fixed (Critical, spec A5).** The bare
+  `--` regex matched any double dash (URL slugs like `/product--macbook-pro-16`,
+  dates like `2026--07-31`), auto-firewall-blocking benign visitors for 120 s.
+  The pattern now requires a preceding quote or non-word, non-dash character.
+
+### Fixed
+
+- `POST /block` no longer mutates shared `PreventionEngine` state to apply a
+  manual duration — the duration is passed per-call (`block_ip(duration=...)`),
+  removing a race where concurrent auto-blocks inherited the manual duration.
+- Non-integer `duration` on `POST /block` returns `422` instead of a 500.
+- `demo/attack_sql.sh` pattern 4 updated to `?id=1'--` so it still demonstrates
+  detection with the tightened `--` pattern.
+
+### Tests
+
+- `tests/test_rbac_enforcement.py` — 401/403 enforcement matrix for all
+  newly protected routes, enterprise-settings allowlist/section RBAC tests,
+  and block-duration race regressions.
+- False-positive regression tests for the SQLi rule in
+  `tests/test_sql_injection.py` and `tests/test_properties_detection_sqli.py`.
+- `conftest_app.make_test_app()` gained an `auth_role` parameter (default
+  `"admin"` keeps existing API tests green; `None` simulates anonymous callers).
+
 ## [1.1.0] — 2026-08-01
 
 ### Added

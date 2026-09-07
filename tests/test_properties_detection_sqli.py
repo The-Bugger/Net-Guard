@@ -314,3 +314,46 @@ def test_property_14_evidence_matched_pattern_is_canonical(src_ip, pattern):
         f"Expected matched_pattern in {_SQL_PATTERNS}, "
         f"got '{event.evidence['matched_pattern']}'"
     )
+
+
+# ---------------------------------------------------------------------------
+# False-positive regression (spec: netguard-production-hardening A5)
+#
+# The bare ``--`` regex used to match any double dash anywhere in the payload,
+# auto-firewall-blocking benign visitors (URL slugs, date strings, base64…).
+# The tightened pattern requires a preceding quote or non-word, non-dash char.
+# ---------------------------------------------------------------------------
+
+@given(src_ip=_ipv4)
+@settings(max_examples=30, deadline=2000)
+def test_double_dash_date_string_no_event(src_ip):
+    """Date-like strings (digit before ``--``) must not trigger a detection."""
+    rule = SqlInjectionRule()
+    rule.initialize()
+    pkt = _make_http_packet(src_ip, "GET /articles?date=2026--07-31 HTTP/1.1\r\nHost: x\r\n\r\n")
+    rule.process_packet(pkt)
+    assert rule.evaluate() is None
+
+
+@given(src_ip=_ipv4)
+@settings(max_examples=30, deadline=2000)
+def test_double_dash_hyphenated_path_no_event(src_ip):
+    """Hyphenated URL slugs (letter before ``--``) must not trigger a detection."""
+    rule = SqlInjectionRule()
+    rule.initialize()
+    pkt = _make_http_packet(src_ip, "GET /product--macbook-pro-16 HTTP/1.1\r\nHost: x\r\n\r\n")
+    rule.process_packet(pkt)
+    assert rule.evaluate() is None
+
+
+@given(src_ip=_ipv4)
+@settings(max_examples=30, deadline=2000)
+def test_quote_comment_still_detected(src_ip):
+    """SQL comment in quote context (``admin'--``) must still be detected."""
+    rule = SqlInjectionRule()
+    rule.initialize()
+    pkt = _make_http_packet(src_ip, "GET /?user=admin'-- HTTP/1.1\r\nHost: x\r\n\r\n")
+    rule.process_packet(pkt)
+    event = rule.evaluate()
+    assert event is not None
+    assert event.severity in ("High", "Critical")

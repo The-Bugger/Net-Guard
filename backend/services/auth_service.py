@@ -9,7 +9,9 @@ Requirements: 14.1, 14.4, 14.6
 from __future__ import annotations
 
 import logging
+import secrets
 import string
+import threading
 from datetime import datetime, timezone, timedelta
 
 import jwt
@@ -26,6 +28,10 @@ _JWT_ALGORITHM = "HS256"
 _ACCESS_EXPIRY_HOURS = 8
 _REFRESH_EXPIRY_DAYS = 30
 
+# Known insecure default from earlier releases — never sign with this.
+# If found in the settings DB it is rotated automatically on next use.
+_LEGACY_DEFAULT_SECRET = "netguard-change-in-production"
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -37,16 +43,66 @@ class AuthService:
     def __init__(self, settings_repo, audit_service) -> None:
         self._settings_repo = settings_repo
         self._audit = audit_service
+        self._secret_cache: str | None = None
+        self._secret_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
     def _secret(self) -> str:
-        secret = self._settings_repo.get("jwt_secret")
-        if not secret:
-            secret = "netguard-change-in-production"
-        return secret
+        """
+        Return the JWT signing secret.
+
+        The secret lives in the settings DB (key ``jwt_secret``). When it is
+        missing — or still set to the legacy known default — a cryptographically
+        random secret is generated, persisted, and reused from an in-process
+        cache afterwards. A security appliance must never sign tokens with a
+        publicly-known constant.
+
+        If the DB write fails, a per-process ephemeral secret is used instead
+        (tokens become invalid on restart — a safe failure mode, never an
+        insecure one).
+        """
+        if self._secret_cache is not None:
+            return self._secret_cache
+
+        with self._secret_lock:
+            if self._secret_cache is not None:
+                return self._secret_cache
+
+            stored = None
+            if self._settings_repo is not None:
+                try:
+                    stored = self._settings_repo.get("jwt_secret")
+                except Exception:
+                    stored = None
+
+            if stored and stored != _LEGACY_DEFAULT_SECRET:
+                self._secret_cache = stored
+                return stored
+
+            new_secret = secrets.token_urlsafe(48)
+            persisted = False
+            if self._settings_repo is not None:
+                try:
+                    persisted = bool(self._settings_repo.set("jwt_secret", new_secret))
+                except Exception:
+                    persisted = False
+
+            if persisted:
+                logger.warning(
+                    "JWT signing secret was missing or used the known legacy default — "
+                    "a new random secret was generated and persisted. All previously "
+                    "issued tokens are now invalid; users must log in again."
+                )
+            else:
+                logger.error(
+                    "Could not persist a JWT signing secret — using a per-process "
+                    "ephemeral secret. Tokens will not survive a restart."
+                )
+            self._secret_cache = new_secret
+            return new_secret
 
     def _session_factory(self):
         # Pulled lazily to avoid circular import at module load

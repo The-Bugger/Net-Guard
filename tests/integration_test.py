@@ -8,8 +8,16 @@ import time
 import urllib.request
 import urllib.error
 import sys
+import os
 
 BASE = "http://localhost:5000/api/v1"
+
+# The API enforces JWT auth on all non-public endpoints. Log in first with the
+# seeded admin account (override via env) and attach the bearer token to every
+# request below.
+_USERNAME = os.environ.get("NETGUARD_TEST_USER", "admin")
+_PASSWORD = os.environ.get("NETGUARD_TEST_PASS", "Admin@NetGuard1")
+_TOKEN = None
 
 
 def req(method, path, body=None):
@@ -17,6 +25,8 @@ def req(method, path, body=None):
     url = BASE + path
     data = json.dumps(body).encode() if body is not None else None
     headers = {"Content-Type": "application/json"} if data else {}
+    if _TOKEN:
+        headers["Authorization"] = f"Bearer {_TOKEN}"
     r = urllib.request.Request(url, data=data, method=method, headers=headers)
     try:
         resp = urllib.request.urlopen(r, timeout=8)
@@ -32,6 +42,22 @@ def req(method, path, body=None):
             pass
         # 404 on DELETE of non-existent entry is acceptable in idempotent tests
         return e.code, False, jbody
+
+
+def _login():
+    global _TOKEN
+    code, ok, body = req("POST", "/auth/login",
+                         {"username": _USERNAME, "password": _PASSWORD})
+    data = body.get("data") if isinstance(body, dict) else None
+    if ok and isinstance(data, dict) and data.get("access_token"):
+        _TOKEN = data["access_token"]
+        print(f"[OK  ] Login as {_USERNAME}: HTTP {code}")
+    else:
+        print(f"[WARN] Login as {_USERNAME} failed (HTTP {code}) — "
+              f"protected endpoints below will report 401")
+
+
+_login()
 
 
 # ---------------------------------------------------------------------------

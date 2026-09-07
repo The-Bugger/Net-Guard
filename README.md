@@ -351,7 +351,7 @@ See [`.env.example`](.env.example) for full documentation of every variable.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SECRET_KEY` | `change-me-before-production` | Flask session secret — **must be set in production** or app refuses to start |
+| `SECRET_KEY` | random per-process | Flask session secret — set a stable value in production so sessions survive restarts; never a known constant |
 | `DATABASE_URL` | `sqlite:///database/netguard.db` | SQLAlchemy DB URL |
 | `LOG_LEVEL` | `INFO` | Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 | `FLASK_HOST` | `0.0.0.0` | Bind address; use `127.0.0.1` behind a reverse proxy |

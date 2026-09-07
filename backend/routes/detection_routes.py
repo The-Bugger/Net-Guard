@@ -99,6 +99,7 @@ def get_detection(event_id: str):
 
 
 @detection_bp.post("/detect")
+@require_role("admin", "analyst")
 def detect():
     """Internal endpoint — submit detection event from detection engine."""
     body = request.get_json(silent=True)
@@ -125,6 +126,7 @@ def detect():
 
 
 @detection_bp.get("/events/<string:event_id>/replay")
+@require_role("admin", "analyst")
 def replay_event(event_id: str):
     """
     GET /events/<id>/replay

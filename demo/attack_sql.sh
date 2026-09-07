@@ -48,7 +48,7 @@ sleep 0.5
 
 # Pattern 4: -- comment
 echo "  [4] -- (comment injection)"
-curl -s -o /dev/null "$BASE/profile?id=1--"
+curl -s -o /dev/null "$BASE/profile?id=1'--"
 
 sleep 0.5
 

@@ -96,6 +96,7 @@ def get_settings():
 # ---------------------------------------------------------------------------
 
 @settings_bp.put("/settings")
+@require_role("admin", "analyst")
 def update_settings():
     body = request.get_json(silent=True)
     if not body or not isinstance(body, dict):
@@ -105,9 +106,35 @@ def update_settings():
     if cfg is None:
         return error_response("Config service unavailable", 500, "SERVICE_UNAVAILABLE")
 
+    user = getattr(g, "current_user", {}) or {}
+    user_role = user.get("role", "viewer")
+
+    # Split enterprise keys from core settings and validate the enterprise
+    # sub-dict FIRST: without an explicit allowlist any authenticated caller
+    # could write arbitrary settings rows (e.g. the JWT signing secret) and
+    # escalate privileges. (Fixes audit finding C1.)
+    enterprise = body.pop("enterprise", {})
+    if enterprise:
+        if not isinstance(enterprise, dict):
+            return error_response("'enterprise' must be a JSON object.", 400, "VALIDATION_ERROR")
+        allowed_keys = _enterprise_defaults()
+        for key in enterprise:
+            section = key.split(".")[0].lower()
+            if key not in allowed_keys:
+                return error_response(
+                    f"Unknown enterprise setting: '{key}'", 422, "UNKNOWN_SETTING"
+                )
+            if section in _ADMIN_WRITE_SECTIONS and user_role != "admin":
+                from backend.api import dependencies
+                audit = dependencies.get("audit_service")
+                if audit:
+                    audit.log(user.get("sub", "unknown"), "FORBIDDEN_SETTINGS_WRITE",
+                              "/api/v1/settings", {"key": key})
+                return error_response(
+                    f"Admin role required to modify '{section}' settings", 403, "FORBIDDEN"
+                )
+
     # RBAC: check if any admin-only section keys are present (Req 6.5)
-    user = getattr(g, "current_user", {})
-    user_role = user.get("role", "viewer") if user else "viewer"
     for key in body:
         section = key.split(".")[0].lower()
         if section in _ADMIN_WRITE_SECTIONS and user_role != "admin":
@@ -119,9 +146,6 @@ def update_settings():
             return error_response(
                 f"Admin role required to modify '{section}' settings", 403, "FORBIDDEN"
             )
-
-    # Split enterprise keys from core settings
-    enterprise = body.pop("enterprise", {})
 
     # Validate + apply core settings
     invalid = cfg.validate_settings(body)

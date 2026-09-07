@@ -13,6 +13,7 @@ from __future__ import annotations
 from flask import Blueprint, request
 
 from backend.api.dependencies import get_whitelist_manager
+from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response, created_response, no_content_response
 from backend.utils.validators import validate_ip_address
 
@@ -29,6 +30,7 @@ def list_whitelist():
 
 
 @whitelist_bp.post("/whitelist")
+@require_role("admin", "analyst")
 def add_whitelist():
     body = request.get_json(silent=True) or {}
     ip = (body.get("ip") or "").strip()
@@ -56,6 +58,7 @@ def add_whitelist():
 
 
 @whitelist_bp.delete("/whitelist/<string:ip>")
+@require_role("admin", "analyst")
 def remove_whitelist(ip: str):
     if not validate_ip_address(ip):
         return error_response(f"Invalid IP address: {ip}", 422, "INVALID_IP")

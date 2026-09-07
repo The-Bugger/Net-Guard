@@ -10,6 +10,7 @@ from __future__ import annotations
 from flask import Blueprint
 
 from backend.api.dependencies import get
+from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response
 
 lan_devices_bp = Blueprint("lan_devices", __name__)
@@ -35,6 +36,7 @@ def list_lan_devices():
 
 
 @lan_devices_bp.post("/lan-devices/refresh")
+@require_role("admin", "analyst")
 def refresh_lan_devices():
     """Invalidate the device cache and trigger a fresh ARP scan."""
     svc = _svc()

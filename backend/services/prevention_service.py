@@ -124,13 +124,35 @@ class PreventionEngine:
             return
         self.block_ip(ip, event.attack_type, event.event_id)
 
-    def block_ip(self, ip: str, reason: str, event_id: str, *, allow_private_block: bool = False) -> bool:
+    def block_ip(
+        self,
+        ip: str,
+        reason: str,
+        event_id: str,
+        *,
+        allow_private_block: bool = False,
+        duration: Optional[int] = None,
+    ) -> bool:
         """
         Block an IP and record it in the database.
 
         Extends expiry if an active block already exists.
+
+        Args:
+            duration: optional per-call override in seconds (clamped to 1-3600).
+                When omitted, the engine's configured block_duration is used.
+                Passing the duration explicitly (instead of mutating the shared
+                ``set_block_duration`` state) keeps concurrent auto-blocks from
+                inheriting a manual block's duration.
+
         Returns True if block was applied (new or extended), False on failure.
+        Raises ValueError only when an explicit duration is not an integer.
         """
+        if duration is None:
+            effective_duration = self._block_duration
+        else:
+            effective_duration = max(1, min(3600, int(duration)))
+
         if not allow_private_block:
             private, range_name = _is_private(ip)
             if private:
@@ -141,13 +163,13 @@ class PreventionEngine:
                 return False
 
         now = _utc_now()
-        expires_at = _utc_future(self._block_duration)
+        expires_at = _utc_future(effective_duration)
 
         existing = self._block_repo.get_active(ip)
         if existing:
             logger.info("PreventionEngine: extending existing block for %s (was %s).", ip, existing["expires_at"])
             self._block_repo.extend_expiry(ip, expires_at)
-            self._log_block(ip, reason, self._block_duration)
+            self._log_block(ip, reason, effective_duration)
             return True
 
         if not self._run_iptables(["iptables", "-I", "INPUT", "-s", ip, "-j", "DROP"]):
@@ -161,7 +183,7 @@ class PreventionEngine:
             "expires_at": expires_at,
             "reason":     reason,
         })
-        self._log_block(ip, reason, self._block_duration)
+        self._log_block(ip, reason, effective_duration)
 
         if self._socketio_emit:
             try:
@@ -169,7 +191,7 @@ class PreventionEngine:
             except Exception as exc:
                 logger.warning("PreventionEngine: SocketIO emit failed: %s", exc)
 
-        logger.info("PreventionEngine: blocked %s for %ds — reason: %s", ip, self._block_duration, reason)
+        logger.info("PreventionEngine: blocked %s for %ds — reason: %s", ip, effective_duration, reason)
         return True
 
     def unblock_ip(self, ip: str) -> bool:

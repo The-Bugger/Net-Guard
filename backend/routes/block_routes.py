@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from flask import Blueprint, request
 
 from backend.api.dependencies import get_prevention_engine, get_block_repo
+from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response
 from backend.utils.validators import validate_ip_address
 
@@ -23,26 +24,30 @@ block_bp = Blueprint("blocks", __name__)
 
 
 @block_bp.post("/block")
+@require_role("admin", "analyst")
 def block_ip():
     body = request.get_json(silent=True) or {}
     ip = (body.get("ip") or "").strip()
     reason = (body.get("reason") or "Manual").strip()
-    duration = body.get("duration", 120)
+    raw_duration = body.get("duration", 120)
 
     if not ip:
         return error_response("Missing required field: ip", 400, "VALIDATION_ERROR")
     if not validate_ip_address(ip):
         return error_response(f"Invalid IP address: {ip}", 422, "INVALID_IP")
+    try:
+        duration = int(raw_duration)
+    except (TypeError, ValueError):
+        return error_response("duration must be an integer.", 422, "VALIDATION_ERROR")
 
     engine = get_prevention_engine()
     if engine is None:
         return error_response("Prevention engine unavailable", 500, "SERVICE_UNAVAILABLE")
 
     event_id = f"MANUAL-{str(uuid.uuid4())[:8]}"
-    original_duration = engine._block_duration
-    engine.set_block_duration(int(duration))
-    success = engine.block_ip(ip, reason, event_id)
-    engine.set_block_duration(original_duration)
+    # Pass the duration explicitly — mutating the shared engine state via
+    # set_block_duration() races with concurrent auto-blocks.
+    success = engine.block_ip(ip, reason, event_id, duration=duration)
 
     if not success:
         return error_response(f"Failed to block {ip}.", 500, "BLOCK_FAILED")
@@ -51,6 +56,7 @@ def block_ip():
 
 
 @block_bp.post("/unblock")
+@require_role("admin", "analyst")
 def unblock_ip():
     body = request.get_json(silent=True) or {}
     ip = (body.get("ip") or "").strip()

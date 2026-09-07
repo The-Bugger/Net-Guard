@@ -12,12 +12,14 @@ from __future__ import annotations
 from flask import Blueprint
 
 from backend.api.dependencies import get_event_repo, get_block_repo, get_stats_service
+from backend.middleware.auth_middleware import require_role
 from backend.utils.response import success_response, error_response
 
 reset_bp = Blueprint("reset", __name__)
 
 
 @reset_bp.post("/reset-data")
+@require_role("admin")
 def reset_data():
     """
     DELETE all detection events and active blocks, then invalidate stats cache.

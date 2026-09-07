@@ -71,6 +71,19 @@ by the API-key check. SocketIO paths (`/socket.io/`) are always exempt.
 Many endpoints additionally enforce role-based access control (RBAC) via
 `@require_role(...)`. Roles: `admin`, `analyst`, `hunter`, `viewer`.
 
+**Mutation endpoints require elevated roles.** The following require
+`admin` or `analyst`: `POST /block`, `POST /unblock`, `POST /whitelist`,
+`DELETE /whitelist/<ip>`, `POST /monitor/start`, `POST /monitor/stop`,
+`POST /detect`, `GET /events/<id>/replay`, `POST /lan-devices/refresh`, and
+`PUT /settings`. `POST /reset-data` requires `admin`. Read endpoints are
+available to any authenticated role. Viewers receive `403 FORBIDDEN`;
+unauthenticated callers receive `401 UNAUTHORIZED`.
+
+`PUT /settings` accepts only whitelisted `enterprise.*` keys (those returned
+by `GET /settings`); unknown keys are rejected with `422 UNKNOWN_SETTING`, and
+`security.*`, `firewall.*`, `ai.*`, `roles.*`, and `licensing.*` keys inside
+the enterprise block require the `admin` role (`403 FORBIDDEN` otherwise).
+
 ---
 
 ## Endpoints

@@ -41,8 +41,18 @@ def create_app(config: dict | None = None) -> Flask:
         template_folder="../../frontend",
     )
 
+    # Session-signing secret: prefer an explicit override (config dict / env),
+    # never fall back to a publicly-known constant. The well-known placeholder
+    # from .env.example is treated as "unset". If nothing usable is configured
+    # a per-process random secret is generated (Flask sessions are not used for
+    # auth — JWT bearer tokens are — so rotation across restarts is harmless).
+    _env_secret = os.environ.get("SECRET_KEY", "")
+    if not _env_secret or _env_secret == "change-me-before-production":
+        import secrets as _secrets
+        _env_secret = _secrets.token_hex(32)
+
     # Default configuration
-    app.config["SECRET_KEY"] = "netguard-dev-secret-change-in-production"
+    app.config["SECRET_KEY"] = _env_secret
     app.config["JSON_SORT_KEYS"] = False
 
     if config:

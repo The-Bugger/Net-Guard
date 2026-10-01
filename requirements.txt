@@ -8,7 +8,7 @@ eventlet==0.41.2
 
 # Network & Security
 scapy==2.7.0
-PyJWT==2.13.0
+PyJWT==2.15.0
 pyotp==2.10.0
 yara-python==4.5.4
 
